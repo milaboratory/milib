@@ -23,7 +23,7 @@ package com.milaboratory.core.alignment;
  * <p/>
  * <p>"Banded alignment" means that sequences to be aligned are very similar and number of mutations is very low.</p>
  */
-public final class BandedSemiLocalResult {
+public final class BandedSemiLocalResult implements java.io.Serializable {
     /**
      * Positions at which alignment terminates.
      * <p/>

@@ -132,7 +132,7 @@ public class SmartProgressReporter implements Runnable {
                         et -= minutes * 60;
                         seconds = et;
 
-                        etStr = "  ETA: " + hours + ":" + minutes + ":" + seconds;
+                        etStr = "  ETA: " + timeString(hours) + ":" + timeString(minutes) + ":" + timeString(seconds);
                     }
 
                     if (currentStage == null)
@@ -155,6 +155,11 @@ public class SmartProgressReporter implements Runnable {
             }
         } catch (InterruptedException e) {
         }
+    }
+
+    private static String timeString(long time) {
+        String timeStr = Long.toString(time);
+        return timeStr.length() < 2 ? ("0" + timeStr) : timeStr;
     }
 
     public static void startProgressReport(SmartProgressReporter reporter) {

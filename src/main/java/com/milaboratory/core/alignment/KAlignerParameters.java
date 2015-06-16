@@ -30,7 +30,7 @@ import java.util.Set;
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(asJson = true)
-public final class KAlignerParameters implements Cloneable {
+public final class KAlignerParameters implements Cloneable, java.io.Serializable {
     private static final long serialVersionUID = 1L;
     /**
      * List of known parameters presets

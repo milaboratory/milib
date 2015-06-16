@@ -15,11 +15,10 @@
  */
 package com.milaboratory.util;
 
-import java.io.Serializable;
 import java.util.Arrays;
 import java.util.List;
 
-public class BitArray implements Serializable {
+public class BitArray implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     byte[] data;

@@ -18,7 +18,7 @@ package com.milaboratory.core.alignment;
 /**
  * CachedIntArray - class which is used for storing alignment matrix.
  */
-public final class CachedIntArray {
+public final class CachedIntArray implements java.io.Serializable {
     private int[] array = null;
 
     /**

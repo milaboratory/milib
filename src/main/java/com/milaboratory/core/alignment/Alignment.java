@@ -34,7 +34,7 @@ import static com.milaboratory.core.mutations.Mutation.*;
  * @author Stanislav Poslavsky
  */
 @Serializable(by = AlignmentSerializer.class)
-public final class Alignment<S extends Sequence<S>> {
+public final class Alignment<S extends Sequence<S>> implements java.io.Serializable {
     /**
      * Initial sequence. (upper sequence in alignment; sequence1)
      */

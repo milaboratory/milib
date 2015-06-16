@@ -29,7 +29,8 @@ import com.milaboratory.util.Bit2Array;
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
  */
 @Serializable(by = IO.NucleotideSequenceSerializer.class)
-public final class NucleotideSequence extends Sequence<NucleotideSequence> implements NSeq<NucleotideSequence> {
+public final class NucleotideSequence extends Sequence<NucleotideSequence>
+        implements NSeq<NucleotideSequence>, java.io.Serializable {
     /**
      * Empty instance
      */

@@ -453,6 +453,15 @@ public class AlignerTest {
         }
     }
 
+    @Test
+    public void testSerialization1() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
+                seq2 = new NucleotideSequence("ACAGATAC");
+
+        Alignment se = Aligner.alignOnlySubstitutions(seq1, seq2);
+        com.milaboratory.core.io.util.TestUtil.assertJavaSerialization(se);
+    }
+
 //    if (alphabet.getAlphabetName().equals("nucleotide")) {
 //        // Indel shift
 //        shiftIndelsAtHomopolymers(seq1, m1);

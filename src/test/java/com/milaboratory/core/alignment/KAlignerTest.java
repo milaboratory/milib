@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.io.util.TestUtil;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
@@ -449,7 +450,7 @@ public class KAlignerTest extends AlignmentTest {
             Assert.assertEquals(1.0, 1.0 * correct.get() / total, 0.01);
             Assert.assertEquals(0.0, 1.0 * incorrect.get() / total, 0.001);
             Assert.assertEquals(0.0, 1.0 * miss.get() / total, 0.001);
-            Assert.assertEquals(0.0, 1.0 * scoreError.get() / total, 0.001);
+            Assert.assertEquals(0.0, 1.0 * scoreError.get() / total, 0.003);
             Assert.assertEquals(0.0, 1.0 * random.get() / total / baseSize, 5E-6);
         }
     }

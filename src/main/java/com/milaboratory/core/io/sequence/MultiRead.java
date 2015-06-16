@@ -24,7 +24,7 @@ import java.util.Iterator;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public class MultiRead implements SequenceRead {
+public class MultiRead implements SequenceRead, java.io.Serializable {
     final SingleRead[] data;
 
     public MultiRead(SingleRead[] data) {

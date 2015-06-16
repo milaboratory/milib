@@ -16,12 +16,19 @@
 package com.milaboratory.core.io.util;
 
 import org.apache.commons.math3.random.Well1024a;
+import org.junit.Assert;
 
 import java.io.*;
 import java.util.ArrayList;
 
 public class TestUtil {
 
+    public static void assertJavaSerialization(Object se) throws IOException, ClassNotFoundException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream(128);
+        new ObjectOutputStream(out).writeObject(se);
+        Object de = new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())).readObject();
+        Assert.assertEquals(se, de);
+    }
 
     public static String[] getAllLines(File file) throws IOException {
         BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file)));

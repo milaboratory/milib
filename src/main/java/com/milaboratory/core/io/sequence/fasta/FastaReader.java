@@ -49,7 +49,16 @@ public final class FastaReader implements SingleReader, CanReportProgress {
     private final long size;
     private final CountingInputStream countingInputStream;
 
-    private FastaReader(InputStream inputStream, boolean withWildcards, long size) {
+    /**
+     * Creates reader from the specified input stream.
+     *
+     * @param inputStream   input stream
+     * @param withWildcards if {@code true}, then for each wildcard a
+     *                      uniformly distributed nucleotide will be generated from the set of nucleotides
+     *                      corresponding to this wildcard.
+     * @param size          file size
+     */
+    public FastaReader(InputStream inputStream, boolean withWildcards, long size) {
         this.size = size;
         this.countingInputStream = new CountingInputStream(inputStream);
         this.reader = new BufferedReader(new InputStreamReader(countingInputStream));

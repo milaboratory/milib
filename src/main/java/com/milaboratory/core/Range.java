@@ -25,7 +25,7 @@ import com.milaboratory.primitivio.annotations.Serializable;
  * <p><b>Main contract:</b> upper limit (with biggest value) is always exclusive, and lower is always inclusive.</p>
  */
 @Serializable(by = RangeSerializer.class)
-public final class Range {
+public final class Range implements java.io.Serializable {
     static final long serialVersionUID = 1L;
 
     private final int lower, upper;
@@ -239,9 +239,9 @@ public final class Range {
             return absolutePosition - lower;
     }
 
-    public Range getRelativeRangeOf(Range range){
+    public Range getRelativeRangeOf(Range range) {
         int from = convertBoundaryToRelativePosition(range.getFrom()),
-        to  = convertBoundaryToRelativePosition(range.getTo());
+                to = convertBoundaryToRelativePosition(range.getTo());
         if (from == -1 || to == -1)
             return null;
         return new Range(from, to);

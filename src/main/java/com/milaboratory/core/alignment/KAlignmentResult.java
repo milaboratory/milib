@@ -28,7 +28,7 @@ import java.util.*;
  * <p> It contains link to according {@link com.milaboratory.core.alignment.KMappingResult}, list of hits found
  * in target sequence as well as range of target sequence to be aligned. </p>
  */
-public final class KAlignmentResult implements Iterable<KAlignmentHit> {
+public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.Serializable {
 
     /**
      * Custom comparator which sorts hits according to {@link com.milaboratory.core.alignment.KAlignmentHit}

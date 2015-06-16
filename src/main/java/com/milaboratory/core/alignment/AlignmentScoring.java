@@ -31,7 +31,7 @@ import com.milaboratory.primitivio.annotations.Serializable;
 @JsonSubTypes({@JsonSubTypes.Type(value = LinearGapAlignmentScoring.class, name = "linear"),
         @JsonSubTypes.Type(value = AffineGapAlignmentScoring.class, name = "affine")})
 @Serializable(asJson = true)
-public interface AlignmentScoring<S extends Sequence<S>> {
+public interface AlignmentScoring<S extends Sequence<S>> extends java.io.Serializable {
     int getScore(byte from, byte to);
 
     Alphabet<S> getAlphabet();

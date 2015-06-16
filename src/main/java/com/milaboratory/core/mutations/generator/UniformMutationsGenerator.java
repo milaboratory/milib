@@ -24,23 +24,23 @@ import org.apache.commons.math3.random.RandomGenerator;
 public class UniformMutationsGenerator {
     private static final MutationType[] types = MutationType.values();
 
-    public static final <S extends Sequence<S>> Mutations<S> createUniformMutationAsObject(S sequence,
-                                                                                           RandomGenerator generator) {
+    public static <S extends Sequence<S>> Mutations<S> createUniformMutationAsObject(S sequence,
+                                                                                     RandomGenerator generator) {
         return new Mutations<>(sequence.getAlphabet(), createUniformMutation(sequence, generator));
     }
 
-    public static final <S extends Sequence<S>> int createUniformMutation(S sequence, RandomGenerator generator) {
+    public static <S extends Sequence<S>> int createUniformMutation(S sequence, RandomGenerator generator) {
         return createUniformMutation(sequence, generator, types[generator.nextInt(3)]);
     }
 
-    public static final <S extends Sequence<S>> Mutations<S> createUniformMutationAsObject(S sequence,
-                                                                                           RandomGenerator generator,
-                                                                                           MutationType type) {
+    public static <S extends Sequence<S>> Mutations<S> createUniformMutationAsObject(S sequence,
+                                                                                     RandomGenerator generator,
+                                                                                     MutationType type) {
         return new Mutations<>(sequence.getAlphabet(), createUniformMutation(sequence, generator, type));
     }
 
-    public static final <S extends Sequence<S>> int createUniformMutation(S sequence, RandomGenerator generator,
-                                                                          MutationType type) {
+    public static <S extends Sequence<S>> int createUniformMutation(S sequence, RandomGenerator generator,
+                                                                    MutationType type) {
         int position;
         byte from, to;
         int alphabetSize = sequence.getAlphabet().size();

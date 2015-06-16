@@ -20,7 +20,7 @@ import com.milaboratory.util.BitArray;
 
 import java.util.Arrays;
 
-public class AlignmentHelper {
+public final class AlignmentHelper implements java.io.Serializable {
     protected final String seq1String, seq2String;
     protected final String markup;
     protected final int[] seq1Position, seq2Position;

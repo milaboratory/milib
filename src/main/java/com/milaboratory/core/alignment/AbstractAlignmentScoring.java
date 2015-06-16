@@ -28,7 +28,7 @@ import java.util.Arrays;
  *
  * @param <S> type of sequences to be aligned using scoring system
  */
-public class AbstractAlignmentScoring<S extends Sequence<S>> implements AlignmentScoring<S> {
+public class AbstractAlignmentScoring<S extends Sequence<S>> implements AlignmentScoring<S>, java.io.Serializable {
     /**
      * Link to alphabet
      */
@@ -45,7 +45,7 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     /**
      * Flag indicating whether substitution matrix has the same value on main diagonal or not
      */
-    final transient boolean uniformMatch;
+    final boolean uniformMatch;
 
     /**
      * Abstract class constructor. <p>Initializes substitution matrix to {@code null} and uniformMatch to {@code

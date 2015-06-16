@@ -23,7 +23,7 @@ import java.util.Arrays;
 import static java.lang.Math.round;
 import static java.lang.Math.sqrt;
 
-public final class SubstitutionModel {
+public final class SubstitutionModel implements java.io.Serializable {
     final int size;
     final double[] probabilities;
     final double[] cdf;

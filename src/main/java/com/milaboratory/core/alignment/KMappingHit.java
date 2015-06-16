@@ -18,7 +18,7 @@ package com.milaboratory.core.alignment;
 /**
  * KMappingHit - class which represents single hit for {@link com.milaboratory.core.alignment.KMappingResult}
  */
-public class KMappingHit {
+public class KMappingHit implements java.io.Serializable {
     /**
      * Best offset value (most popular offset)
      */

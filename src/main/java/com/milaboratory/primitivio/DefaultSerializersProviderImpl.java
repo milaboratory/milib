@@ -46,6 +46,9 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         if (type == UUID.class)
             return new UUIDSerializer();
 
+        if(type == String.class)
+            return new StringSerializer();
+
         return null;
     }
 
@@ -58,6 +61,28 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         @Override
         public Integer read(PrimitivI input) {
             return input.readInt();
+        }
+
+        @Override
+        public boolean isReference() {
+            return false;
+        }
+
+        @Override
+        public boolean handlesReference() {
+            return false;
+        }
+    }
+
+    private static class StringSerializer implements Serializer<String> {
+        @Override
+        public void write(PrimitivO output, String object) {
+            output.writeUTF(object);
+        }
+
+        @Override
+        public String read(PrimitivI input) {
+            return input.readUTF();
         }
 
         @Override

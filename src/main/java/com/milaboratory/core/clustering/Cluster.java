@@ -27,7 +27,7 @@ import java.util.Comparator;
  *
  * @param <T>
  */
-public final class Cluster<T> {
+public final class Cluster<T> implements java.io.Serializable {
     final T head;
     final Cluster<T> parent;
     ArrayList<Cluster<T>> children = null;
@@ -147,5 +147,4 @@ public final class Cluster<T> {
         Arrays.fill(charArray, ' ');
         return new String(charArray);
     }
-
 }

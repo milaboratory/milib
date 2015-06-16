@@ -26,7 +26,7 @@ import java.util.Arrays;
 /**
  * KAlignmentHit - class which represents single hit for {@link com.milaboratory.core.alignment.KAlignmentResult}
  */
-public final class KAlignmentHit {
+public final class KAlignmentHit implements java.io.Serializable {
     /*         Initially set      */
     /**
      * Link to result container

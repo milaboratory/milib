@@ -66,4 +66,25 @@ public final class SingleReadImpl implements SingleRead {
     public Iterator<SingleRead> iterator() {
         return new SingleIterator<>((SingleRead) this);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        SingleReadImpl that = (SingleReadImpl) o;
+
+        if (id != that.id) return false;
+        if (!sequenceWithQuality.equals(that.sequenceWithQuality)) return false;
+        return !(description != null ? !description.equals(that.description) : that.description != null);
+
+    }
+
+    @Override
+    public int hashCode() {
+        int result = (int) (id ^ (id >>> 32));
+        result = 31 * result + sequenceWithQuality.hashCode();
+        result = 31 * result + (description != null ? description.hashCode() : 0);
+        return result;
+    }
 }

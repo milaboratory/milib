@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.motif;
 
+import com.milaboratory.core.io.util.TestUtil;
 import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.NucleotideSequenceBuilder;
@@ -71,5 +72,11 @@ public class MotifTest {
             for (int i = 0; i < seq.size() - motif.size(); ++i)
                 assertTrue(motif.matches(seq, i));
         }
+    }
+
+    @Test
+    public void test4() throws Exception {
+        Motif<AminoAcidSequence> se = new Motif<>(AminoAcidSequence.ALPHABET, "CASSLAP");
+        TestUtil.assertJavaSerialization(se);
     }
 }

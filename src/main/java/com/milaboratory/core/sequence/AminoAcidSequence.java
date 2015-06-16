@@ -107,6 +107,41 @@ public final class AminoAcidSequence extends AbstractArraySequence<AminoAcidSequ
         return new AminoAcidSequence(aaData, true);
     }
 
+    public static AminoAcidSequencePosition convertPosition(int ntPosition, Boolean fromLeft, boolean includeIncomplete, int ntSequenceLength) {
+        int aaSequenceSize = (ntSequenceLength + 2) / 3;
+        if (fromLeft == null) {
+            if (!includeIncomplete)
+                throw new IllegalArgumentException("Illegal argument combination: includeIncomplete=false & fromLeft=null .");
+            int aaLength = ntSequenceLength / 3;
+            int leftAALength = (aaLength + 1) / 2;
+            int rightAALength = aaLength - leftAALength;
+            // Next position after last nucleotide in left part of sequence
+            int lastLeftNt = ntSequenceLength - rightAALength * 3;
+            return ntPosition < lastLeftNt ? convertPosition(ntPosition, true, true, ntSequenceLength) :
+                    convertPosition(ntPosition, false, true, ntSequenceLength);
+        } else if (fromLeft) {
+            int aa = ntPosition / 3;
+            return new AminoAcidSequencePosition(aa, ntPosition % 3);
+        } else {
+            ntPosition -= (ntSequenceLength % 3);
+            if ((ntSequenceLength % 3) != 0)
+                ntPosition += 3;
+            return new AminoAcidSequencePosition(ntPosition / 3, ntPosition % 3);
+        }
+    }
+
+    public static AminoAcidSequencePosition convertFromRight(int ntPosition, int ntSequenceLength) {
+        return convertPosition(ntPosition, false, true, ntSequenceLength);
+    }
+
+    public static AminoAcidSequencePosition convertFromLeft(int ntPosition, int ntSequenceLength) {
+        return convertPosition(ntPosition, true, true, ntSequenceLength);
+    }
+
+    public static AminoAcidSequencePosition convertFromCenter(int ntPosition, int ntSequenceLength) {
+        return convertPosition(ntPosition, null, true, ntSequenceLength);
+    }
+
     public static AminoAcidSequence translate(Boolean fromLeft, boolean includeIncomplete, NucleotideSequence ns) {
         byte[] data;
         data = new byte[(ns.size() + (includeIncomplete ? 2 : 0)) / 3];
@@ -139,5 +174,50 @@ public final class AminoAcidSequence extends AbstractArraySequence<AminoAcidSequ
 
     public static AminoAcidSequence translateFromLeft(NucleotideSequence ns) {
         return translate(true, true, ns);
+    }
+
+    public static AminoAcidSequence translateFromCenter(NucleotideSequence ns) {
+        return translate(null, true, ns);
+    }
+
+    public static final class AminoAcidSequencePosition {
+        public final int aminoAcidPosition;
+        public final byte positionInTriplet;
+
+        public AminoAcidSequencePosition(int aminoAcidPosition, int positionInTriplet) {
+            this.aminoAcidPosition = aminoAcidPosition;
+            this.positionInTriplet = (byte) positionInTriplet;
+        }
+
+        public int floor() {
+            return aminoAcidPosition;
+        }
+
+        public int ceil() {
+            return positionInTriplet == 0 ? aminoAcidPosition : aminoAcidPosition + 1;
+        }
+
+        @Override
+        public String toString() {
+            return "A" + aminoAcidPosition + "+" + positionInTriplet + "n";
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof AminoAcidSequencePosition)) return false;
+
+            AminoAcidSequencePosition that = (AminoAcidSequencePosition) o;
+
+            if (aminoAcidPosition != that.aminoAcidPosition) return false;
+            return positionInTriplet == that.positionInTriplet;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = aminoAcidPosition;
+            result = 31 * result + (int) positionInTriplet;
+            return result;
+        }
     }
 }

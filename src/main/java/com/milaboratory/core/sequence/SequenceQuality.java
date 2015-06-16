@@ -30,7 +30,8 @@ import java.util.Arrays;
  * @author Stanislav Poslavsky
  */
 @Serializable(by = IO.SequenceQualitySerializer.class)
-public final class SequenceQuality extends AbstractSeq<SequenceQuality> {
+public final class SequenceQuality extends AbstractSeq<SequenceQuality>
+        implements java.io.Serializable {
     /**
      * Default value of good quality
      */
@@ -136,7 +137,7 @@ public final class SequenceQuality extends AbstractSeq<SequenceQuality> {
      * @return worst sequence quality value
      */
     public byte minValue() {
-        if(data.length == 0)
+        if (data.length == 0)
             return 0;
 
         byte min = Byte.MAX_VALUE;
@@ -152,7 +153,7 @@ public final class SequenceQuality extends AbstractSeq<SequenceQuality> {
      * @return average sequence quality value
      */
     public byte meanValue() {
-        if(data.length == 0)
+        if (data.length == 0)
             return 0;
 
         int sum = 0;

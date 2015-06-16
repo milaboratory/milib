@@ -20,7 +20,7 @@ package com.milaboratory.core.alignment;
  * <p>It stores only main diagonal values as well as values of diagonal which are closed to main one (it's defined by
  * #rowFactor and #columnDelta)</p>
  */
-public final class BandedMatrix {
+public final class BandedMatrix implements java.io.Serializable {
     /**
      * Value of empty cell
      */

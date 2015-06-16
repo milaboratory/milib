@@ -15,8 +15,14 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.milaboratory.core.io.util.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 /**
  * @author Dmitry Bolotin
@@ -52,5 +58,12 @@ public class IncompleteSequenceTest {
         IncompleteSequence seq = new IncompleteNucleotideSequence("AACCTTAAACC");
         Assert.assertTrue(seq.isComplete());
         Assert.assertEquals(new NucleotideSequence("AAccTTaAaCC"), seq.convertToComplete());
+    }
+
+
+    @Test
+    public void test5() throws Exception {
+        Object se = new IncompleteNucleotideSequence("AACCTT..AAACC");
+        TestUtil.assertJavaSerialization(se);
     }
 }

@@ -31,7 +31,8 @@ import java.util.HashMap;
 @JsonSerialize(using = TreeSearchParameters.Serializer.class)
 @JsonDeserialize(using = TreeSearchParameters.Deserializer.class)
 @Serializable(asJson = true)
-public final class TreeSearchParameters {
+public final class TreeSearchParameters
+        implements java.io.Serializable {
     public static final double[] DEFAULT_PENALTY = {
             0.1, // Mismatch penalty
             0.21, // Deletion penalty

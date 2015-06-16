@@ -19,6 +19,8 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.primitivio.annotations.Serializable;
 
+import java.io.ObjectStreamException;
+
 /**
  * Interface for sequence letters alphabet (amino acid, nucleotide, etc.). {@code Alphabet} is responsible for
  * correspondence between char representation of elements (e.g. 'A', 'T', 'G', 'C' in case of
@@ -36,7 +38,7 @@ import com.milaboratory.primitivio.annotations.Serializable;
 @JsonSerialize(using = Alphabets.Serializer.class)
 @JsonDeserialize(using = Alphabets.Deserializer.class)
 @Serializable(by = IO.AlphabetSerializer.class)
-public abstract class Alphabet<S extends Sequence<S>> {
+public abstract class Alphabet<S extends Sequence<S>> implements java.io.Serializable {
     private final String alphabetName;
     private final byte id;
 
@@ -129,5 +131,26 @@ public abstract class Alphabet<S extends Sequence<S>> {
     @Override
     public final boolean equals(Object obj) {
         return obj == this;
+    }
+
+    protected Object writeReplace() throws ObjectStreamException {
+        return new AlphabetSerialization(id);
+    }
+
+    protected static class AlphabetSerialization implements java.io.Serializable {
+        final byte id;
+
+        public AlphabetSerialization() {
+            this.id = 0;
+        }
+
+        public AlphabetSerialization(byte id) {
+            this.id = id;
+        }
+
+        private Object readResolve()
+                throws ObjectStreamException {
+            return Alphabets.getById(id);
+        }
     }
 }

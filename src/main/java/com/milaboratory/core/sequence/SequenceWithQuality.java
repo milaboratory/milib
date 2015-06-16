@@ -27,7 +27,8 @@ import com.milaboratory.core.Range;
  * @see com.milaboratory.core.sequence.SequenceQuality
  * @see com.milaboratory.core.sequence.NSequenceWithQuality
  */
-public class SequenceWithQuality<S extends Sequence<S>> {//implements Seq<? extends SequenceWithQuality<S>>
+public class SequenceWithQuality<S extends Sequence<S>>
+        implements java.io.Serializable {//implements Seq<? extends SequenceWithQuality<S>>
     final S sequence;
     final SequenceQuality quality;
 

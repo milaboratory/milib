@@ -17,6 +17,7 @@ package com.milaboratory.core.clustering;
 
 import com.milaboratory.core.sequence.Sequence;
 
-public interface SequenceExtractor<T, S extends Sequence> {
+public interface SequenceExtractor<T, S extends Sequence>
+        extends java.io.Serializable {
     S getSequence(T object);
 }

@@ -23,7 +23,7 @@ import com.milaboratory.util.BitArray;
 
 import java.util.Arrays;
 
-public final class Motif<S extends Sequence<S>> {
+public final class Motif<S extends Sequence<S>> implements java.io.Serializable {
     private final Alphabet<S> alphabet;
     private final int size;
     final BitArray data;
@@ -102,6 +102,26 @@ public final class Motif<S extends Sequence<S>> {
             if (!allows(sequence.codeAt(from++), i))
                 return false;
         return true;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Motif<?> motif = (Motif<?>) o;
+
+        if (size != motif.size) return false;
+        if (!alphabet.equals(motif.alphabet)) return false;
+        return data.equals(motif.data);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = alphabet.hashCode();
+        result = 31 * result + size;
+        result = 31 * result + data.hashCode();
+        return result;
     }
 
     private final static boolean dataConsistent(BitArray data, int size) {

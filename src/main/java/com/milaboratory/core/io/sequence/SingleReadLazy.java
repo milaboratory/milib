@@ -122,5 +122,4 @@ public abstract class SingleReadLazy implements SingleRead {
             };
         throw new IllegalArgumentException("Unknown quality format.");
     }
-
 }

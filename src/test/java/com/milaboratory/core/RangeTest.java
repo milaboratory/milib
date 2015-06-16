@@ -15,7 +15,14 @@
  */
 package com.milaboratory.core;
 
+import com.milaboratory.core.io.util.TestUtil;
+import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import static org.junit.Assert.*;
 
@@ -77,12 +84,12 @@ public class RangeTest {
 
     @Test
     public void test23e14() throws Exception {
-        System.out.println(Integer.toBinaryString(((byte) 'A') ));
-        System.out.println(Integer.toBinaryString(((byte) 'T') ));
-        System.out.println(Integer.toBinaryString(((byte) 'G') ));
-        System.out.println(Integer.toBinaryString(((byte) 'C') ));
+        System.out.println(Integer.toBinaryString(((byte) 'A')));
+        System.out.println(Integer.toBinaryString(((byte) 'T')));
+        System.out.println(Integer.toBinaryString(((byte) 'G')));
+        System.out.println(Integer.toBinaryString(((byte) 'C')));
         System.out.println();
-        System.out.println(Integer.toBinaryString(((byte) 'B') ));
+        System.out.println(Integer.toBinaryString(((byte) 'B')));
         //System.out.println(Integer.toBinaryString(~(((byte) 'A') | ((byte) 'T') | ((byte) 'G') | ((byte) 'C'))));
     }
 
@@ -96,9 +103,15 @@ public class RangeTest {
 
     @Test
     public void testRelativeRange() throws Exception {
-        assertEquals(r(20,40), r(0, 100).getRelativeRangeOf(r(20, 40)));
-        assertEquals(r(20,40), r(50, 150).getRelativeRangeOf(r(70, 90)));
-        assertEquals(r(80,90), r(100, 0).getRelativeRangeOf(r(20, 10)));
-        assertEquals(r(90,80), r(100, 0).getRelativeRangeOf(r(10, 20)));
+        assertEquals(r(20, 40), r(0, 100).getRelativeRangeOf(r(20, 40)));
+        assertEquals(r(20, 40), r(50, 150).getRelativeRangeOf(r(70, 90)));
+        assertEquals(r(80, 90), r(100, 0).getRelativeRangeOf(r(20, 10)));
+        assertEquals(r(90, 80), r(100, 0).getRelativeRangeOf(r(10, 20)));
+    }
+
+    @Test
+    public void test4() throws Exception {
+        Range se = new Range(3, 5);
+        TestUtil.assertJavaSerialization(se);
     }
 }

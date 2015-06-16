@@ -27,7 +27,7 @@ import static com.milaboratory.core.alignment.ScoringMatrixIO.readAABlastMatrix;
 /**
  * BLASTMatrix - enum of available BLAST AminoAcid substitution matrices
  */
-public enum BLASTMatrix {
+public enum BLASTMatrix implements java.io.Serializable {
     BLOSUM45, BLOSUM50, BLOSUM62, BLOSUM80, BLOSUM90, PAM30, PAM70, PAM250;
     private volatile int[] iMatrix = null, matrix = null;
 

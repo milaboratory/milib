@@ -19,7 +19,7 @@ import java.util.Arrays;
 
 import static java.lang.System.arraycopy;
 
-public final class BitapMatcherFilter implements BitapMatcher {
+public final class BitapMatcherFilter implements BitapMatcher, java.io.Serializable {
     final BitapMatcher nestedMatcher;
     final int[] positionsBuffer;
     final int[] errorsBuffer;

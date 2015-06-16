@@ -236,6 +236,21 @@ public class PrimitivIOTest {
     }
 
     @Test
+    public void testDefaultSerialization4() throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO po = new PrimitivO(bos);
+        String[] vals = new String[]{"A", "Bas", "F"};
+        int cc = 10;
+        for (int i = 0; i < cc; ++i) {
+            po.writeObject(vals);
+        }
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI pi = new PrimitivI(bis);
+        for (int i = 0; i < cc; ++i)
+            Assert.assertArrayEquals(vals, pi.readObject(String[].class));
+    }
+
+    @Test
     public void testJsonSerializer1() throws Exception {
         RandomGenerator rg = new Well19937c();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

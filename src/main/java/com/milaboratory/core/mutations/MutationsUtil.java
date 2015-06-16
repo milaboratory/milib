@@ -184,10 +184,13 @@ public final class MutationsUtil {
 
     /**
      * Encodes mutations in compact human-readable string, that can be decoded by method {@link #decode(String,
-     * com.milaboratory.core.sequence.Alphabet)}. <p/> <p>For format see {@link com.milaboratory.core.mutations.Mutation#encode(int,
-     * com.milaboratory.core.sequence.Alphabet)}.</p> <p/> <p>Mutations are just concatenated. The following RegExp can
-     * be used for simple parsing of resulting string for nucleotide sequences: {@code ([SDI])([ATGC]?)(\d+)([ATGC]?)}
-     * .</p>
+     * com.milaboratory.core.sequence.Alphabet)}.
+     *
+     * <p>For format see {@link com.milaboratory.core.mutations.Mutation#encode(int,
+     * com.milaboratory.core.sequence.Alphabet)}.</p>
+     *
+     * <p>Mutations are just concatenated. The following RegExp can be used for simple parsing of resulting string for
+     * nucleotide sequences: {@code ([SDI])([ATGC]?)(\d+)([ATGC]?)} .</p>
      *
      * @param mutations mutations to encode
      * @return mutations in a human-readable string
@@ -196,6 +199,17 @@ public final class MutationsUtil {
         StringBuilder builder = new StringBuilder();
         for (int mut : mutations)
             builder.append(Mutation.encode(mut, alphabet));
+        return builder.toString();
+    }
+
+    public static String encodeFixed(int[] mutations, Alphabet alphabet) {
+        StringBuilder builder = new StringBuilder();
+        for (int mut : mutations) {
+            builder.append(Mutation.encodeFixed(mut, alphabet));
+            builder.append(":");
+        }
+        if (builder.length() > 0)
+            builder.deleteCharAt(builder.length() - 1);
         return builder.toString();
     }
 

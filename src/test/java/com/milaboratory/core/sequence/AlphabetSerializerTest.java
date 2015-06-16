@@ -22,6 +22,8 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class AlphabetSerializerTest {
     @Test
@@ -38,6 +40,16 @@ public class AlphabetSerializerTest {
         for (int i = 0; i < cc; i++) {
             Alphabet actual = pi.readObject(Alphabet.class);
             Assert.assertEquals(NucleotideSequence.ALPHABET, actual);
+        }
+    }
+
+    @Test
+    public void test2() throws Exception {
+        for (Alphabet se : Alphabets.getAll()) {
+            ByteArrayOutputStream out = new ByteArrayOutputStream(128);
+            new ObjectOutputStream(out).writeObject(se);
+            Object de = new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())).readObject();
+            Assert.assertTrue(se == de);
         }
     }
 }

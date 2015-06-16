@@ -23,6 +23,8 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 public class NucleotideSequenceSerializerTest {
     @Test
@@ -40,5 +42,11 @@ public class NucleotideSequenceSerializerTest {
 
         for (int i = 0; i < seqs.length; i++)
             Assert.assertEquals(seqs[i], pi.readObject(NucleotideSequence.class));
+    }
+
+    @Test
+    public void test2() throws Exception {
+        Object se = new NucleotideSequence("AACCTTAAACC");
+        com.milaboratory.core.io.util.TestUtil.assertJavaSerialization(se);
     }
 }

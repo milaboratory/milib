@@ -21,7 +21,8 @@ import com.milaboratory.core.tree.TreeSearchParameters;
 
 import java.util.Comparator;
 
-public interface ClusteringStrategy<T, S extends Sequence<S>> extends Comparator<T> {
+public interface ClusteringStrategy<T, S extends Sequence<S>>
+        extends Comparator<T>, java.io.Serializable {
     boolean canAddToCluster(Cluster<T> cluster, T minorObject,
                             NeighborhoodIterator<S, T[]> iterator);
 

@@ -20,6 +20,9 @@ import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 public final class BandedAligner {
+    private BandedAligner() {
+    }
+
     /**
      * Classical Banded Alignment
      * <p/>

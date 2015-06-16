@@ -27,7 +27,8 @@ import static com.milaboratory.core.alignment.ScoringUtils.getSymmetricMatrix;
 /**
  * LinearGapAlignmentScoring - scoring system which uses penalty for gap
  */
-public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends AbstractAlignmentScoring<S> {
+public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends AbstractAlignmentScoring<S>
+        implements java.io.Serializable {
     /**
      * Penalty for gap, must be < 0
      */

@@ -23,7 +23,7 @@ import java.util.Arrays;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public final class IntArrayList {
+public final class IntArrayList implements java.io.Serializable {
 
     int[] data;
     int size = 0;

@@ -22,7 +22,7 @@ import java.util.TreeMap;
 
 import static java.util.Map.Entry;
 
-public final class RangeMap<T> {
+public final class RangeMap<T> implements java.io.Serializable {
     private final TreeMap<Range, T> map = new TreeMap<>(rangeComparator);
 
     public RangeMap() {

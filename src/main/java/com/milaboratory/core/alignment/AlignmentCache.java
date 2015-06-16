@@ -23,6 +23,9 @@ import java.util.Arrays;
  * <p>This cache helps to avoid creating new alignment array every time banded alignment is performed.</p>
  */
 public final class AlignmentCache {
+    private AlignmentCache() {
+    }
+
     static {
         if (System.getProperty("enableAlignmentCache") != null)
             enable();
@@ -45,9 +48,6 @@ public final class AlignmentCache {
      * Maximum number of CachedArrays in AlignemtnCache
      */
     private static int limit = 20;
-
-    private AlignmentCache() {
-    }
 
     /**
      * Enables CachedArray system

@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.motif;
 
-public interface BitapMatcher {
+public interface BitapMatcher extends java.io.Serializable {
     int findNext();
 
     int getNumberOfErrors();

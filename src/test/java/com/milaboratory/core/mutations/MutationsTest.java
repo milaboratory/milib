@@ -18,9 +18,15 @@ package com.milaboratory.core.mutations;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
+import com.milaboratory.core.io.util.TestUtil;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -153,5 +159,17 @@ public class MutationsTest {
         Mutations<NucleotideSequence> mutations = builder.createAndDestroy();
         assertEquals(1, mutations.firsMutationPosition());
         assertEquals(10, mutations.lastMutationPosition());
+    }
+
+    @Test
+    public void test3() throws Exception {
+        MutationsBuilder<NucleotideSequence> builder = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
+        builder.appendDeletion(1, 2);
+        builder.appendDeletion(2, 1);
+        builder.appendSubstitution(7, 3, 1);
+        builder.appendInsertion(9, 2);
+        builder.appendSubstitution(10, 3, 1);
+        Mutations<NucleotideSequence> se = builder.createAndDestroy();
+        TestUtil.assertJavaSerialization(se);
     }
 }

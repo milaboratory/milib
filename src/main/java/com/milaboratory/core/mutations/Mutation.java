@@ -81,7 +81,8 @@ public final class Mutation {
     /**
      * Returns: 0x20 for substitution, 0x40 for Deletion, 0x60 for insertion.
      *
-     * @param code mutation code form mutations array returned by {@link com.milaboratory.core.alignment.Aligner#alignGlobal(com.milaboratory.core.alignment.AlignmentScoring, com.milaboratory.core.sequence.Sequence, com.milaboratory.core.sequence.Sequence)} method.
+     * @param code mutation code form mutations array returned by {@link com.milaboratory.core.alignment.Aligner#alignGlobal(com.milaboratory.core.alignment.AlignmentScoring,
+     *             com.milaboratory.core.sequence.Sequence, com.milaboratory.core.sequence.Sequence)} method.
      * @return 0x20 for substitution, 0x40 for Deletion, 0x60 for insertion
      */
     public static int getRawTypeCode(int code) {
@@ -138,13 +139,22 @@ public final class Mutation {
     }
 
     /**
-     * Encodes single mutation in compact human-readable string, that can be decoded by method {@link MutationsUtil#decode(String, com.milaboratory.core.sequence.Alphabet)}. <p/> <p>The format is following: <ul> <p/> <li><b>Substitution</b>:
-     * starts with {@code S} then nucleotide in initial sequence encoded in one letter (<b>from</b>) then
-     * <b>position</b> then resulting nucleotide (<b>to</b>) encoded in one letter. (Example: {@code SA12T} =
-     * substitution from A to T at position 12).</li> <p/> <li><b>Deletion</b>: starts with {@code D} then nucleotide
-     * that was deleted encoded in one letter (<b>from</b>) then <b>position</b>. (Example: {@code DG43} = G deleted at
-     * position 43).</li> <p/> <li><b>Insertion</b>: starts with {@code I} then <b>position</b> then inserted letter
-     * <b>to</b>. (Example: {@code I54C} = C inserted before letter at position 54).</li> <p/> </ul> </p>
+     * Encodes single mutation in compact human-readable string, that can be decoded by method {@link
+     * MutationsUtil#decode(String, com.milaboratory.core.sequence.Alphabet)}.
+     *
+     * <p>The format is following:
+     *
+     * <ul> <li><b>Substitution</b>: starts with {@code S} then nucleotide in initial sequence encoded in one letter
+     * (<b>from</b>) then <b>position</b> then resulting nucleotide (<b>to</b>) encoded in one letter. (Example: {@code
+     * SA12T} = substitution from A to T at position 12).</li>
+     *
+     * <li><b>Deletion</b>: starts with {@code D} then nucleotide that was deleted encoded in one letter (<b>from</b>)
+     * then <b>position</b>. (Example: {@code DG43} = G deleted at position 43).</li>
+     *
+     * <li><b>Insertion</b>: starts with {@code I} then <b>position</b> then inserted letter <b>to</b>. (Example: {@code
+     * I54C} = C inserted before letter at position 54).</li>
+     *
+     * </ul>
      *
      * @param mutation mutation to encode
      * @return mutation in a human-readable format
@@ -161,4 +171,15 @@ public final class Mutation {
         throw new IllegalArgumentException("Illegal mutation code.");
     }
 
+    public static String encodeFixed(int mutation, Alphabet alphabet) {
+        switch (mutation & MUTATION_TYPE_MASK) {
+            case RAW_MUTATION_TYPE_SUBSTITUTION:
+                return "S" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+            case RAW_MUTATION_TYPE_DELETION:
+                return "D" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + ".";
+            case RAW_MUTATION_TYPE_INSERTION:
+                return "I" + "." + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+        }
+        throw new IllegalArgumentException("Illegal mutation code.");
+    }
 }

@@ -18,10 +18,9 @@ package com.milaboratory.util;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.io.Serializable;
 import java.util.Arrays;
 
-public final class Bit2Array implements Serializable {
+public final class Bit2Array implements java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     byte[] data;

@@ -38,7 +38,7 @@ import static java.util.Arrays.copyOf;
  * <p><b>Algorithm inspired by:</b> <i>Liao Y et al.</i> The Subread aligner: fast, accurate and scalable read mapping
  * by seed-and-vote. <i>Nucleic Acids Res. 2013 May 1;41(10):e108. doi: 10.1093/nar/gkt214. Epub 2013 Apr 4.</i></p>
  */
-public final class KMapper {
+public final class KMapper implements java.io.Serializable {
     public static final int SEED_NOT_FOUND_OFFSET = Integer.MIN_VALUE + 1;
 
     /*

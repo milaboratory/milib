@@ -34,7 +34,8 @@ import java.util.Map;
  * @param <S> - key type (must be a sequence)
  * @param <O> - value type
  */
-public class SequenceTreeMap<S extends Sequence<S>, O> {
+public class SequenceTreeMap<S extends Sequence<S>, O>
+        implements java.io.Serializable {
     public final Alphabet<S> alphabet;
     public final Node<O> root;
 
@@ -194,7 +195,7 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         return new NeighborhoodIterator<>(reference, parameters, guide, root);
     }
 
-    public static final class Node<O> {
+    public static final class Node<O> implements java.io.Serializable {
         final Node<O>[] links;
         O object;
 
@@ -231,7 +232,7 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         }
     }
 
-    public final class NodeOp implements OutputPort<Node<O>> {
+    public final class NodeOp implements OutputPort<Node<O>>, java.io.Serializable {
         int pointer = 0;
         NodeWrapper<O>[] wrappers = new NodeWrapper[10];
 
@@ -278,7 +279,8 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         }
     }
 
-    public final class NodeIterator extends CUtils.OPIterator<Node<O>> {
+    public final class NodeIterator extends CUtils.OPIterator<Node<O>>
+            implements java.io.Serializable {
         public NodeIterator(Node<O> root) {
             super(new NodeOp(root));
         }
@@ -293,7 +295,7 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         }
     }
 
-    public final class ValuesOp implements OutputPort<O> {
+    public final class ValuesOp implements OutputPort<O>, java.io.Serializable {
         final NodeOp nodeOp;
 
         public ValuesOp(Node<O> root) {
@@ -311,7 +313,7 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         }
     }
 
-    private static final class NodeWrapper<O> {
+    private static final class NodeWrapper<O> implements java.io.Serializable {
         private byte position = -1;
         private Node<O> node;
 
@@ -328,9 +330,8 @@ public class SequenceTreeMap<S extends Sequence<S>, O> {
         }
 
         Node<O> getNext() {
-            Node<O> n;
             while (++position < node.links.length)
-                if ((n = node.links[position]) != null)
+                if (node.links[position] != null)
                     return node.links[position];
             return null;
         }

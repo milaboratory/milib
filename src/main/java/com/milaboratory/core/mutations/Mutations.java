@@ -31,7 +31,8 @@ import static com.milaboratory.core.mutations.Mutation.*;
  * @author Stanislav Poslavsky
  */
 @Serializable(by = IO.MutationsSerializer.class)
-public final class Mutations<S extends Sequence<S>> {
+public final class Mutations<S extends Sequence<S>>
+        implements java.io.Serializable {
     final Alphabet<S> alphabet;
     final int[] mutations;
 
@@ -472,6 +473,10 @@ public final class Mutations<S extends Sequence<S>> {
 
     public String encode() {
         return MutationsUtil.encode(mutations, alphabet);
+    }
+
+    public String encodeFixed() {
+        return MutationsUtil.encodeFixed(mutations, alphabet);
     }
 
     public static <S extends Sequence<S>> Mutations<S> decode(String string, Alphabet<S> alphabet) {

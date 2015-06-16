@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.mutations.generator;
 
-public interface NucleotideMutationModel {
+public interface NucleotideMutationModel extends java.io.Serializable {
     void reseed(long seed);
 
     int generateMutation(int position, int inputLetter);

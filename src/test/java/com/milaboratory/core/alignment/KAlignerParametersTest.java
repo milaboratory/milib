@@ -15,11 +15,12 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.io.util.TestUtil;
 import com.milaboratory.util.GlobalObjectMappers;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.IOException;
+import java.io.*;
 
 public class KAlignerParametersTest extends AlignmentTest {
     private static final KAlignerParameters gParams = new KAlignerParameters(5, false, false,
@@ -34,6 +35,13 @@ public class KAlignerParametersTest extends AlignmentTest {
         for (String key : KAlignerParameters.getAvailableNames())
             check(KAlignerParameters.getByName(key));
     }
+
+    @Test
+    public void test2() throws Exception {
+        Object se = gParams;
+        TestUtil.assertJavaSerialization(se);
+    }
+
 
     private void check(KAlignerParameters params) throws IOException {
         String seialized = GlobalObjectMappers.PRETTY.writeValueAsString(params);

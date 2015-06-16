@@ -21,7 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
-public final class BandedAlignerParameters {
+public final class BandedAlignerParameters implements java.io.Serializable {
     LinearGapAlignmentScoring scoring;
     int width;
     int stopPenalty;

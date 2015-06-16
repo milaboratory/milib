@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.motif;
 
-public abstract class BitapMatcherImpl implements BitapMatcher {
+public abstract class BitapMatcherImpl implements BitapMatcher, java.io.Serializable {
     int errors;
     final long[] R;
     final int to;

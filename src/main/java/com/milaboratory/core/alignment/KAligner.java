@@ -31,7 +31,7 @@ import java.util.List;
  * <p/>
  * <p>All settings are stored in {@link #parameters} property.</p>
  */
-public class KAligner {
+public class KAligner implements java.io.Serializable {
     /**
      * Link to KMapper
      */

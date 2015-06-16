@@ -17,7 +17,7 @@ package com.milaboratory.core.motif;
 
 import com.milaboratory.core.sequence.Sequence;
 
-public final class BitapPattern {
+public final class BitapPattern implements java.io.Serializable {
     final int size;
     final long[] patternMask;
     final long[] reversePatternMask;

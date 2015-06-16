@@ -29,7 +29,8 @@ import static com.milaboratory.core.alignment.ScoringUtils.getSymmetricMatrix;
  *
  * @param <S> type of sequences to be aligned using this scoring
  */
-public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends AbstractAlignmentScoring<S> {
+public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends AbstractAlignmentScoring<S>
+        implements java.io.Serializable {
     /**
      * Penalty value for opening gap
      */
