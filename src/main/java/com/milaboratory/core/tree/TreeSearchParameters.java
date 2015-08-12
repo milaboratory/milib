@@ -46,6 +46,18 @@ public final class TreeSearchParameters
     public static final TreeSearchParameters ONE_INDEL = new TreeSearchParameters(0, 1, 1, 1);
     public static final TreeSearchParameters ONE_MISMATCH_OR_INDEL = new TreeSearchParameters(1, 1, 1, 1);
 
+    public static final TreeSearchParameters TWO_MISMATCHES = new TreeSearchParameters(2, 0, 0, 2);
+    public static final TreeSearchParameters TWO_INDELS = new TreeSearchParameters(0, 2, 2, 2);
+    public static final TreeSearchParameters TWO_MISMATCHES_OR_INDELS = new TreeSearchParameters(2, 2, 2, 2);
+
+    public static final TreeSearchParameters THREE_MISMATCHES = new TreeSearchParameters(3, 0, 0, 3);
+    public static final TreeSearchParameters THREE_INDELS = new TreeSearchParameters(0, 3, 3, 3);
+    public static final TreeSearchParameters THREE_MISMATCHES_OR_INDELS = new TreeSearchParameters(3, 3, 3, 3);
+
+    public static final TreeSearchParameters FOUR_MISMATCHES = new TreeSearchParameters(4, 0, 0, 4);
+    public static final TreeSearchParameters FOUR_INDELS = new TreeSearchParameters(0, 4, 4, 4);
+    public static final TreeSearchParameters FOUR_MISMATCHES_OR_INDELS = new TreeSearchParameters(4, 4, 4, 4);
+
     private final int[] maxErrors;
     private final double[] penalty;
     private final double maxPenalty;
@@ -61,7 +73,8 @@ public final class TreeSearchParameters
     }
 
     /**
-     * Parameters to search with limited number of each mutation type. <p/> <p>Ordering of search is according to {@link
+     * Parameters to search with limited number of each mutation type. <p/> <p>Ordering of search is according to
+     * {@link
      * #DEFAULT_PENALTY}.</p>
      *
      * @param mismatches maximum number of mismatches
@@ -172,9 +185,22 @@ public final class TreeSearchParameters
     static {
         parametersByName = new HashMap<>();
         nameByParameters = new HashMap<>();
+
         addKnown("oneMismatch", ONE_MISMATCH);
         addKnown("oneIndel", ONE_INDEL);
         addKnown("oneMismatchOrIndel", ONE_MISMATCH_OR_INDEL);
+
+        addKnown("twoMismatches", TWO_MISMATCHES);
+        addKnown("twoIndels", TWO_INDELS);
+        addKnown("twoMismatchesOrIndels", TWO_MISMATCHES_OR_INDELS);
+
+        addKnown("threeMismatches", THREE_MISMATCHES);
+        addKnown("threeIndels", THREE_INDELS);
+        addKnown("threeMismatchesOrIndels", THREE_MISMATCHES_OR_INDELS);
+
+        addKnown("fourMismatches", FOUR_MISMATCHES);
+        addKnown("fourIndels", FOUR_INDELS);
+        addKnown("fourMismatchesOrIndels", FOUR_MISMATCHES_OR_INDELS);
     }
 
     public static final class Deserializer extends JsonDeserializer<TreeSearchParameters> {
