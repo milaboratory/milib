@@ -18,18 +18,30 @@ package com.milaboratory.core.sequence;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.primitivio.annotations.Serializable;
+import gnu.trove.impl.Constants;
+import gnu.trove.map.hash.TCharByteHashMap;
 
 import java.io.ObjectStreamException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Interface for sequence letters alphabet (amino acid, nucleotide, etc.). {@code Alphabet} is responsible for
- * correspondence between char representation of elements (e.g. 'A', 'T', 'G', 'C' in case of
+ * conversion between char representation of letters (e.g. 'A', 'T', 'G', 'C' in case of
  * {@link com.milaboratory.core.sequence.NucleotideAlphabet}) and their internal byte representation.
+ *
+ * <p>Alphabet also responsible for storing information about symbols wildcards.</p>
+ *
+ * <p>All alphabets letters grouped in two sets: <b>pure letters</b> and <b>wildcards</b>. Pure letters has codes less
+ * than {@link #basicSize()}, wildcards has codes greater or equals to {@link #basicSize()}.</p>
+ *
  * <p>Implementation note: all alphabets should be singletons.</p>
  *
- * @param <S> type of sequences that correspond to this alphabet
- * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
- * @author Shugay Mikhail (mikhail.shugay@gmail.com)
+ * @param <S> corresponding type of sequence
+ * @author Dmitriy Bolotin (bolotin.dmitriy@gmail.com)
+ * @author Stanislav Poslavsky (stvlpos@mail.ru)
+ * @author Mikhail Shugay (mikhail.shugay@gmail.com)
  * @see com.milaboratory.core.sequence.Sequence
  * @see com.milaboratory.core.sequence.SequenceBuilder
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
@@ -39,37 +51,186 @@ import java.io.ObjectStreamException;
 @JsonDeserialize(using = Alphabets.Deserializer.class)
 @Serializable(by = IO.AlphabetSerializer.class)
 public abstract class Alphabet<S extends Sequence<S>> implements java.io.Serializable {
-    private final String alphabetName;
-    private final byte id;
+    /* ID */
 
-    protected Alphabet(String alphabetName, byte id) {
+    /**
+     * Alphabet id
+     */
+    private final byte alphabetId;
+    /**
+     * Alphabet name
+     */
+    private final String alphabetName;
+
+    /* Content */
+
+    /**
+     * Every code below this threshold represents definite letter, codes >= countOfPureLetters represents wildcards
+     */
+    private final int countOfBasicLetters;
+    /**
+     * Code to char upper case symbol mapping
+     */
+    private final char[] codeToSymbol;
+    /**
+     * Code to wildcard object mapping
+     */
+    private final Wildcard[] codeToWildcard;
+    /**
+     * Unmodifiable list of wildcards
+     */
+    private final List<Wildcard> wildcardsList;
+    /**
+     * Backward mapping for both cases
+     */
+    private final TCharByteHashMap symbolToCode;
+    /**
+     * Wildcard for any letter (e.g. N for nucleotides, X for amino acids)
+     */
+    private final Wildcard wildcardForAnyLetter;
+
+    Alphabet(String alphabetName, byte alphabetId, int countOfBasicLetters, Wildcard wildcardForAnyLetter,
+             Wildcard... wildcards) {
         this.alphabetName = alphabetName;
-        this.id = id;
+        this.alphabetId = alphabetId;
+        this.countOfBasicLetters = countOfBasicLetters;
+        this.wildcardForAnyLetter = wildcardForAnyLetter;
+
+        // Initialization of internal storage
+        int size = wildcards.length;
+        codeToSymbol = new char[size];
+        // For error checking (see below)
+        Arrays.fill(codeToSymbol, (char) 0xFFFF);
+        codeToWildcard = new Wildcard[size];
+        // -1 in constructor here is to simplify return of -1 for undefined symbols in symbolToCode
+        symbolToCode = new TCharByteHashMap(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR,
+                (char) -1, (byte) -1);
+
+        // Filling internal maps/arrays
+        for (Wildcard wildcard : wildcards) {
+            if (wildcard.isBasic() && wildcard.getCode() >= countOfBasicLetters)
+                throw new IllegalArgumentException("Definite letter outside countOfPureLetters range.");
+            if (codeToSymbol[wildcard.getCode()] != 0xFFFF)
+                throw new IllegalArgumentException("Duplicate code.");
+            codeToSymbol[wildcard.getCode()] = wildcard.getSymbol();
+            codeToWildcard[wildcard.getCode()] = wildcard;
+            symbolToCode.put(wildcard.getSymbol(), wildcard.getCode());
+            symbolToCode.put(Character.toLowerCase(wildcard.getSymbol()), wildcard.getCode());
+        }
+
+        // Error checking
+        for (int i = 0; i < codeToSymbol.length; i++)
+            if (codeToSymbol[i] == 0xFFFF)
+                throw new IllegalArgumentException("Symbol for code " + i + " is not set.");
+
+        this.wildcardsList = Collections.unmodifiableList(Arrays.asList(codeToWildcard));
     }
 
     /**
-     * Gets a char from binary code
+     * Gets a char symbol for an alphabet code of the letter
      *
-     * @param code binary code of segment
-     * @return corresponding char
+     * @param code alphabet code of segment
+     * @return char symbol for an alphabet code of the letter
      */
-    public abstract char symbolFromCode(byte code);
+    public final char codeToSymbol(byte code) {
+        return codeToSymbol[code];
+    }
 
     /**
-     * Gets the number of letters in this alphabet
+     * Gets number of letters in this alphabet including wildcard letters
      *
-     * @return the number of letters in this alphabet
+     * @return number of letters in this alphabet including wildcard letters
      */
-    public abstract int size();
+    public final int size() {
+        return codeToSymbol.length;
+    }
 
     /**
-     * Gets the binary code corresponding to given symbol (case insensitive) or -1 if there
+     * Gets number of letters in this alphabet without wildcard letters
+     *
+     * @return number of letters in this alphabet without wildcard letters
+     */
+    public final int basicSize() {
+        return countOfBasicLetters;
+    }
+
+    /**
+     * Returns {@literal true} if this code represents wildcard symbol
+     *
+     * @param code code of letter
+     * @return {@literal true} if this code represents wildcard symbol
+     */
+    public final boolean isWildcard(byte code) {
+        return code >= basicSize();
+    }
+
+    /* Wildcard methods */
+
+    /**
+     * Returns wildcard defined by specified code (letter).
+     *
+     * @param code code
+     * @return wildcard defined by specified code (letter)
+     */
+    public final Wildcard codeToWildcard(byte code) {
+        return codeToWildcard[code];
+    }
+
+    /**
+     * Returns a wildcard object for specified letter.
+     *
+     * @param symbol symbol
+     * @return wildcard object for specified letter
+     */
+    public final Wildcard symbolToWildcard(char symbol) {
+        return codeToWildcard[symbolToCode.get(symbol)];
+    }
+
+    /**
+     * Returns a collection of all wildcards defined for this.
+     *
+     * @return a collection of all wildcards defined for this.
+     */
+    public final List<Wildcard> getAllWildcards() {
+        return wildcardsList;
+    }
+
+    /**
+     * Returns wildcard for any letter (e.g. N for nucleotides, X for amino acids).
+     *
+     * @return wildcard for any letter (e.g. N for nucleotides, X for amino acids)
+     */
+    public final Wildcard getWildcardForAnyLetter() {
+        return wildcardForAnyLetter;
+    }
+
+    /* Conversion */
+
+    /**
+     * Gets the binary code representing given symbol (case insensitive) or -1 if there
      * is no such symbol in this alphabet
      *
      * @param symbol symbol to convert
      * @return binary code of the symbol (case insensitive) or -1 if there is no such symbol in the alphabet
      */
-    public abstract byte codeFromSymbol(char symbol);
+    public byte symbolToCode(char symbol) {
+        return symbolToCode.get(symbol);
+    }
+
+    /**
+     * Gets the binary code corresponding to given symbol (case insensitive) or throws {@link IllegalArgumentException}
+     * if there is no such symbol in this alphabet
+     *
+     * @param symbol symbol to convert
+     * @return binary code of the symbol (case insensitive)
+     * @throws IllegalArgumentException if there is no such symbol in the alphabet
+     */
+    public final byte symbolToCodeWithException(char symbol) {
+        byte b = symbolToCode(symbol);
+        if (b == -1)
+            throw new IllegalArgumentException("Unknown letter \'" + symbol + "\'");
+        return b;
+    }
 
     /**
      * Returns a sequence builder for corresponding sequence type.
@@ -96,8 +257,8 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * com.milaboratory.core.sequence.Alphabets#getById(byte)} method if it is registered (see {@link
      * com.milaboratory.core.sequence.Alphabets#register(Alphabet)}).</p>
      */
-    public byte getId() {
-        return id;
+    public final byte getId() {
+        return alphabetId;
     }
 
     /**
@@ -106,10 +267,14 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * @param string string representation of sequence
      * @return sequence
      */
-    public S parse(String string) {
+    public final S parse(String string) {
         SequenceBuilder<S> builder = getBuilder().ensureCapacity(string.length());
-        for (int i = 0; i < string.length(); ++i)
-            builder.append(codeFromSymbol(string.charAt(i)));
+        for (int i = 0; i < string.length(); ++i) {
+            byte code = symbolToCode(string.charAt(i));
+            if (code == -1)
+                throw new IllegalArgumentException("Letter \'" + string.charAt(i) + "\' is not defined in \'" + toString() + "\'.");
+            builder.append(code);
+        }
         return builder.createAndDestroy();
     }
 
@@ -119,22 +284,35 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * @return alphabet as a readable string
      */
     @Override
-    public String toString() {
+    public final String toString() {
         return "Alphabet{" + alphabetName + '}';
     }
 
+    /**
+     * Returns "address in memory" (hash code as specified by {@link Object#hashCode()}. All Alphabet implementations
+     * must be singletons.
+     */
     @Override
     public final int hashCode() {
         return super.hashCode();
     }
 
+    /**
+     * Checks that in is the same object (this points to the same address as {@code obj})
+     * All Alphabet implementations must be singletons.
+     *
+     * @param obj alphabet to check for equality with
+     * @return {@literal true} if alphabets are the same
+     */
     @Override
     public final boolean equals(Object obj) {
         return obj == this;
     }
 
+    /* Internal methods for Java Serialization */
+
     protected Object writeReplace() throws ObjectStreamException {
-        return new AlphabetSerialization(id);
+        return new AlphabetSerialization(alphabetId);
     }
 
     protected static class AlphabetSerialization implements java.io.Serializable {

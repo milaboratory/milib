@@ -27,7 +27,8 @@ public class NSequenceWithQualityPrintHelperTest {
     public void test1() throws Exception {
         try (SingleFastqReader reader = new SingleFastqReader(
                 NSequenceWithQualityPrintHelperTest.class
-                        .getResourceAsStream("/sequences/sample_r2.fastq")
+                        .getResourceAsStream("/sequences/sample_r2.fastq"),
+                true
         )) {
             for (SingleRead singleRead : CUtils.it(reader)) {
                 NSequenceWithQualityPrintHelper helper = new NSequenceWithQualityPrintHelper(singleRead.getData(), 7, 20);

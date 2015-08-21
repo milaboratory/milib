@@ -32,6 +32,7 @@ public abstract class SingleReadLazy implements SingleRead {
     final byte[] buffer;
     final int descriptionFrom;
     final short sequenceOffset, qualityOffset, dataLength, descriptionLength;
+    final boolean replaceWildcards;
     NSequenceWithQuality sequenceWithQuality;
     String description;
 
@@ -41,7 +42,8 @@ public abstract class SingleReadLazy implements SingleRead {
                            short sequenceOffset,
                            short qualityOffset,
                            short dataLength,
-                           short descriptionLength) {
+                           short descriptionLength,
+                           boolean replaceWildcards) {
         this.id = id;
         this.buffer = buffer;
         this.descriptionFrom = descriptionFrom;
@@ -49,6 +51,7 @@ public abstract class SingleReadLazy implements SingleRead {
         this.qualityOffset = qualityOffset;
         this.dataLength = dataLength;
         this.descriptionLength = descriptionLength;
+        this.replaceWildcards = replaceWildcards;
     }
 
     abstract byte getQualityOffset();
@@ -73,7 +76,7 @@ public abstract class SingleReadLazy implements SingleRead {
 
     private NSequenceWithQuality createNSequenceWithQuality() {
         return UnsafeFactory.fastqParse(buffer, descriptionFrom + sequenceOffset,
-                descriptionFrom + qualityOffset, dataLength, getQualityOffset(), id);
+                descriptionFrom + qualityOffset, dataLength, getQualityOffset(), id, replaceWildcards);
     }
 
     @Override
@@ -105,16 +108,19 @@ public abstract class SingleReadLazy implements SingleRead {
                                         short dataOffset,
                                         short qualityOffset,
                                         short dataLength,
-                                        short descriptionLength) {
+                                        short descriptionLength,
+                                        boolean replaceWildcards) {
         if (format == QualityFormat.Phred33)
-            return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength, descriptionLength) {
+            return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength,
+                    descriptionLength, replaceWildcards) {
                 @Override
                 byte getQualityOffset() {
                     return 33;
                 }
             };
         else if (format == QualityFormat.Phred64)
-            return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength, descriptionLength) {
+            return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength,
+                    descriptionLength, replaceWildcards) {
                 @Override
                 byte getQualityOffset() {
                     return 64;

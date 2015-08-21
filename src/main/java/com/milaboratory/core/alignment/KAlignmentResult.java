@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.alignment.batch.AlignmentResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 import java.util.*;
@@ -24,12 +25,12 @@ import java.util.*;
  * {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
  * int, int)}, {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
  * int, int, boolean)} methods.
- * <p/>
+ *
  * <p> It contains link to according {@link com.milaboratory.core.alignment.KMappingResult}, list of hits found
  * in target sequence as well as range of target sequence to be aligned. </p>
  */
-public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.Serializable {
-
+public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
+        Iterable<KAlignmentHit<P>>, java.io.Serializable {
     /**
      * Custom comparator which sorts hits according to {@link com.milaboratory.core.alignment.KAlignmentHit}
      * alignment scores
@@ -56,7 +57,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
     /**
      * Link to {@link com.milaboratory.core.alignment.KAligner}
      */
-    final KAligner aligner;
+    final KAligner<P> aligner;
     /**
      * Link to according {@link com.milaboratory.core.alignment.KMappingResult}
      */
@@ -64,7 +65,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
     /**
      * List of hits
      */
-    final List<KAlignmentHit> hits;
+    final List<KAlignmentHit<P>> hits;
     /**
      * Target sequence to be aligned
      */
@@ -85,7 +86,8 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
      * @param targetFrom    position of first nucleotide of target sequence to be aligned
      * @param targetTo      position of last nucleotide of target sequence to be aligned
      */
-    public KAlignmentResult(KAligner aligner, KMappingResult mappingResult, NucleotideSequence target, int targetFrom, int targetTo) {
+    public KAlignmentResult(KAligner<P> aligner, KMappingResult mappingResult, NucleotideSequence target,
+                            int targetFrom, int targetTo) {
         this.aligner = aligner;
         this.mappingResult = mappingResult;
         this.target = target;
@@ -93,7 +95,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
         this.targetTo = targetTo;
         this.hits = new ArrayList<>(mappingResult.hits.size());
         for (int i = 0; i < mappingResult.hits.size(); ++i)
-            this.hits.add(new KAlignmentHit(this, i));
+            this.hits.add(new KAlignmentHit<>(this, i));
     }
 
     /**
@@ -142,7 +144,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
      *
      * @return list of hits found in target sequence
      */
-    public List<KAlignmentHit> getHits() {
+    public List<KAlignmentHit<P>> getHits() {
         return hits;
     }
 
@@ -178,7 +180,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
      */
     private void _calculateAllAlignments() {
         for (KAlignmentHit hit : hits)
-            hit.calculateAlignmnet();
+            hit.calculateAlignment();
     }
 
     /**
@@ -223,7 +225,7 @@ public final class KAlignmentResult implements Iterable<KAlignmentHit>, java.io.
     }
 
     @Override
-    public Iterator<KAlignmentHit> iterator() {
+    public Iterator<KAlignmentHit<P>> iterator() {
         return hits.iterator();
     }
 }

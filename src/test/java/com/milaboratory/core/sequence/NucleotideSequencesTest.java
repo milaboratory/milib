@@ -78,11 +78,11 @@ public class NucleotideSequencesTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testUnknownSymbol1() throws Exception {
-        new NucleotideSequence("ATTAN");
+        new NucleotideSequence("ATTANQ");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testUnknownSymbol2() throws Exception {
-        new NucleotideSequence(new char[]{'a', 'n', 'k'});
+        new NucleotideSequence(new char[]{'a', 'n', 'q'});
     }
 }

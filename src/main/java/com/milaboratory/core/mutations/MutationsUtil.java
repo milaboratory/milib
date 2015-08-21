@@ -43,7 +43,7 @@ public final class MutationsUtil {
         int size = seq.size();
         int newSize = seq.size() + mutations.getLengthDelta();
         SequenceQualityBuilder qualityBuilder = new SequenceQualityBuilder().ensureCapacity(newSize);
-        NucleotideSequenceBuilder sequenceBuilder = new NucleotideSequenceBuilder().ensureCapacity(newSize);
+        SequenceBuilder<NucleotideSequence> sequenceBuilder = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(newSize);
         int pointer = 0;
         int mutPointer = 0;
         int mut;
@@ -164,7 +164,7 @@ public final class MutationsUtil {
         StringBuilder sb = new StringBuilder();
         StringBuilder t = new StringBuilder("([\\Q");
         for (byte i = 0; i < alphabet.size(); ++i)
-            t.append(alphabet.symbolFromCode(i));
+            t.append(alphabet.codeToSymbol(i));
         t.append("\\E])");
         sb.append("S").append(t).append("(\\d+)").append(t);
         sb.append("|");
@@ -225,21 +225,62 @@ public final class MutationsUtil {
         IntArrayList list = new IntArrayList();
         while (matcher.find()) {
             switch (matcher.group(0).charAt(0)) {
+                //TODO codeFromSymbolWithError ?
                 case 'S':
                     list.add(createSubstitution(Integer.parseInt(matcher.group(2)),
-                            alphabet.codeFromSymbol(matcher.group(1).charAt(0)),
-                            alphabet.codeFromSymbol(matcher.group(3).charAt(0))));
+                            alphabet.symbolToCode(matcher.group(1).charAt(0)),
+                            alphabet.symbolToCode(matcher.group(3).charAt(0))));
                     break;
                 case 'D':
                     list.add(createDeletion(Integer.parseInt(matcher.group(5)),
-                            alphabet.codeFromSymbol(matcher.group(4).charAt(0))));
+                            alphabet.symbolToCode(matcher.group(4).charAt(0))));
                     break;
                 case 'I':
                     list.add(createInsertion(Integer.parseInt(matcher.group(6)),
-                            alphabet.codeFromSymbol(matcher.group(7).charAt(0))));
+                            alphabet.symbolToCode(matcher.group(7).charAt(0))));
                     break;
             }
         }
         return list.toArray();
+    }
+
+    private static final Pattern btopPattern = Pattern.compile("([a-zA-Z]{2}|-[a-zA-Z]|[a-zA-Z]-|[0-9]+)");
+
+    /**
+     * Decodes btop-encoded mutations.
+     *
+     * @param alignment btop-encoded mutations
+     * @return MiLib mutations
+     */
+    public static int[] btopDecode(String alignment, Alphabet alphabet) {
+        Matcher matcher = btopPattern.matcher(alignment);
+        IntArrayList mutations = new IntArrayList();
+        int sPosition = 0;
+        while (matcher.find()) {
+            String g = matcher.group();
+            if (isPositiveInteger(g))
+                sPosition += Integer.parseInt(g);
+            else if (g.charAt(0) == '-') {
+                mutations.add(createDeletion(sPosition, alphabet.symbolToCodeWithException(g.charAt(1))));
+                ++sPosition;
+            } else if (g.charAt(1) == '-')
+                mutations.add(createInsertion(sPosition, alphabet.symbolToCodeWithException(g.charAt(0))));
+            else {
+                mutations.add(createSubstitution(sPosition, alphabet.symbolToCodeWithException(g.charAt(1)), alphabet.symbolToCodeWithException(g.charAt(0))));
+                ++sPosition;
+            }
+        }
+        return mutations.toArray();
+    }
+
+    private static boolean isPositiveInteger(String str) {
+        if (str.isEmpty())
+            return false;
+        for (int i = 0, length = str.length(); i < length; i++) {
+            char c = str.charAt(i);
+            if (c <= '/' || c >= ':')
+                return false;
+        }
+        return true;
     }
 }

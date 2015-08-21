@@ -22,7 +22,7 @@ import org.junit.Test;
 
 import java.io.File;
 
-import static com.milaboratory.core.io.util.TestUtil.*;
+import static com.milaboratory.core.io.util.IOTestUtil.*;
 
 public class AbstractRandomAccessReaderTest {
     @Test

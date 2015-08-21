@@ -72,35 +72,35 @@ final class IO {
         }
     }
 
-    public static class NucleotideSequenceSerializer implements Serializer<NucleotideSequence> {
-        @Override
-        public void write(PrimitivO output, NucleotideSequence object) {
-            try {
-                object.data.writeTo(output);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public NucleotideSequence read(PrimitivI input) {
-            try {
-                return new NucleotideSequence(Bit2Array.readFrom(input), true);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        @Override
-        public boolean isReference() {
-            return true;
-        }
-
-        @Override
-        public boolean handlesReference() {
-            return false;
-        }
-    }
+    //public static class NucleotideSequenceSerializer implements Serializer<NucleotideSequence> {
+    //    @Override
+    //    public void write(PrimitivO output, NucleotideSequence object) {
+    //        try {
+    //            object.data.writeTo(output);
+    //        } catch (IOException e) {
+    //            throw new RuntimeException(e);
+    //        }
+    //    }
+    //
+    //    @Override
+    //    public NucleotideSequence read(PrimitivI input) {
+    //        try {
+    //            return new NucleotideSequence(Bit2Array.readFrom(input), true);
+    //        } catch (IOException e) {
+    //            throw new RuntimeException(e);
+    //        }
+    //    }
+    //
+    //    @Override
+    //    public boolean isReference() {
+    //        return true;
+    //    }
+    //
+    //    @Override
+    //    public boolean handlesReference() {
+    //        return false;
+    //    }
+    //}
 
     public static class SequenceQualitySerializer implements Serializer<SequenceQuality> {
         @Override

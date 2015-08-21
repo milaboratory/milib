@@ -15,22 +15,22 @@
  */
 package com.milaboratory.core.io.sequence.fasta;
 
-import com.milaboratory.core.io.sequence.SingleRead;
-import com.milaboratory.core.io.sequence.SingleSequenceWriter;
+import com.milaboratory.core.sequence.Sequence;
 
 import java.io.*;
 
 /**
- * @author Dmitry Bolotin
- * @author Stanislav Poslavsky
+ * Writer of FASTA files.
+ *
+ * @param <S> sequence type
  */
-public final class FastaWriter implements SingleSequenceWriter {
+public final class FastaWriter<S extends Sequence<S>> implements AutoCloseable {
     public static final int DEFAULT_MAX_LENGTH = 75;
     final int maxLength;
     final OutputStream outputStream;
 
     /**
-     * Creates the writer
+     * Creates FASTA writer
      *
      * @param fileName file to be created
      */
@@ -39,37 +39,46 @@ public final class FastaWriter implements SingleSequenceWriter {
     }
 
     /**
-     * Creates the writer
+     * Creates FASTA writer
      *
-     * @param file output file
+     * @param file      output file
+     * @param maxLength line length limit after which sequence will be split into several lines
      */
     public FastaWriter(File file, int maxLength) throws FileNotFoundException {
         this.outputStream = new BufferedOutputStream(new FileOutputStream(file));
         this.maxLength = maxLength;
     }
 
+    /**
+     * Creates FASTA writer
+     *
+     * @param outputStream output stream
+     * @param maxLength    line length limit after which sequence will be split into several lines
+     */
     public FastaWriter(OutputStream outputStream, int maxLength) {
         this.outputStream = outputStream;
         this.maxLength = maxLength;
     }
 
-    @Override
-    public synchronized void write(SingleRead read) {
+    public void write(FastaRecord<S> record) {
+        write(record.getDescription(), record.getSequence());
+    }
+
+    public synchronized void write(String description, S sequence) {
         try {
-            String description = read.getDescription();
             outputStream.write('>');
             if (description != null)
                 outputStream.write(description.getBytes());
             outputStream.write('\n');
 
-            byte[] sequence = read.getData().getSequence().toString().getBytes();
+            byte[] seq = sequence.toString().getBytes();
             int pointer = 0;
             while (true) {
-                if (sequence.length - pointer <= maxLength) {
-                    outputStream.write(sequence, pointer, sequence.length - pointer);
+                if (seq.length - pointer <= maxLength) {
+                    outputStream.write(seq, pointer, seq.length - pointer);
                     break;
                 } else {
-                    outputStream.write(sequence, pointer, maxLength);
+                    outputStream.write(seq, pointer, maxLength);
                     pointer += maxLength;
                 }
             }
@@ -79,8 +88,10 @@ public final class FastaWriter implements SingleSequenceWriter {
         }
     }
 
-    @Override
-    public void flush() {
+    /**
+     * Flush underlying stream.
+     */
+    public synchronized void flush() {
         try {
             outputStream.flush();
         } catch (IOException e) {
@@ -88,8 +99,11 @@ public final class FastaWriter implements SingleSequenceWriter {
         }
     }
 
+    /**
+     * Close writer.
+     */
     @Override
-    public void close() {
+    public synchronized void close() {
         try {
             outputStream.close();
         } catch (IOException e) {

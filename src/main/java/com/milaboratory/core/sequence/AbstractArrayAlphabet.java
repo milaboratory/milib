@@ -20,8 +20,9 @@ package com.milaboratory.core.sequence;
  * @author Stanislav Poslavsky
  */
 abstract class AbstractArrayAlphabet<S extends AbstractArraySequence<S>> extends Alphabet<S>  {
-    protected AbstractArrayAlphabet(String alphabetName, byte id) {
-        super(alphabetName, id);
+    public AbstractArrayAlphabet(String alphabetName, byte alphabetId, int countOfBasicLetters,
+                                 Wildcard wildcardForAnyLetter, Wildcard... wildcards) {
+        super(alphabetName, alphabetId, countOfBasicLetters, wildcardForAnyLetter, wildcards);
     }
 
     @Override

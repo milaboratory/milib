@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.alignment.batch.AlignmentHit;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -26,12 +27,12 @@ import java.util.Arrays;
 /**
  * KAlignmentHit - class which represents single hit for {@link com.milaboratory.core.alignment.KAlignmentResult}
  */
-public final class KAlignmentHit implements java.io.Serializable {
+public final class KAlignmentHit<P> implements java.io.Serializable, AlignmentHit<NucleotideSequence, P> {
     /*         Initially set      */
     /**
      * Link to result container
      */
-    private final KAlignmentResult result;
+    private final KAlignmentResult<P> result;
     /**
      * According hit index in {@link com.milaboratory.core.alignment.KMappingResult#hits} array
      */
@@ -49,16 +50,21 @@ public final class KAlignmentHit implements java.io.Serializable {
      * @param result
      * @param index
      */
-    public KAlignmentHit(KAlignmentResult result, int index) {
+    public KAlignmentHit(KAlignmentResult<P> result, int index) {
         this.result = result;
         this.index = index;
+    }
+
+    @Override
+    public P getRecordPayload() {
+        return result.aligner.payloads.get(getId());
     }
 
     public int getId() {
         return result.mappingResult.hits.get(index).id;
     }
 
-    public void calculateAlignmnet() {
+    public void calculateAlignment() {
         final CachedIntArray array = AlignmentCache.get();
 
         try {

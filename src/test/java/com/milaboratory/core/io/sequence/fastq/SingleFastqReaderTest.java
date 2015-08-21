@@ -61,95 +61,103 @@ public class SingleFastqReaderTest {
     }
 
     private static void assertReaderOnSampleWithGZ(String file) throws IOException, URISyntaxException {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
-        File sampleGZIP = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file + ".gz").toURI());
-        TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
+        for (int wc = 0; wc < 2; ++wc) {
+            boolean replaceWildcards = (wc == 1);
 
-        try (SingleFastqReader reader = new SingleFastqReader(
-                new FileInputStream(sample),
-                QualityFormat.Phred33,
-                CompressionType.None,
-                false,
-                253,
-                false)) {
-            for (SingleRead read : CUtils.it(reader))
-                set.add(read);
-        }
+            File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
+            File sampleGZIP = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file + ".gz").toURI());
+            // Without wildcards replacement
+            TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
 
-        for (int bufferSize = 253; bufferSize < 5000; ) {
-            assertSameReadContent(set, new SingleFastqReader(
+            try (SingleFastqReader reader = new SingleFastqReader(
                     new FileInputStream(sample),
                     QualityFormat.Phred33,
                     CompressionType.None,
                     false,
-                    bufferSize,
-                    false));
-            assertSameReadContent(set, new SingleFastqReader(
-                    new FileInputStream(sample),
-                    QualityFormat.Phred33,
-                    CompressionType.None,
-                    false,
-                    bufferSize,
-                    true));
-            assertSameReadContent(set, new SingleFastqReader(
-                    new FileInputStream(sampleGZIP),
-                    QualityFormat.Phred33,
-                    CompressionType.detectCompressionType(sampleGZIP),
-                    false,
-                    bufferSize,
-                    true));
-            assertSameReadContent(set, new SingleFastqReader(
-                    new FileInputStream(sampleGZIP),
-                    QualityFormat.Phred33,
-                    CompressionType.detectCompressionType(sampleGZIP),
-                    false,
-                    bufferSize,
-                    false));
+                    253,
+                    replaceWildcards, false)) {
+                for (SingleRead read : CUtils.it(reader))
+                    set.add(read);
+            }
 
+            for (int bufferSize = 253; bufferSize < 5000; ) {
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sample),
+                        QualityFormat.Phred33,
+                        CompressionType.None,
+                        false,
+                        bufferSize,
+                        replaceWildcards, false));
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sample),
+                        QualityFormat.Phred33,
+                        CompressionType.None,
+                        false,
+                        bufferSize,
+                        replaceWildcards, true));
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sampleGZIP),
+                        QualityFormat.Phred33,
+                        CompressionType.detectCompressionType(sampleGZIP),
+                        false,
+                        bufferSize,
+                        replaceWildcards, true));
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sampleGZIP),
+                        QualityFormat.Phred33,
+                        CompressionType.detectCompressionType(sampleGZIP),
+                        false,
+                        bufferSize,
+                        replaceWildcards, false));
 
-            bufferSize += (HashFunctions.JenkinWang32shift(bufferSize) & 15) + 1;
+                bufferSize += (HashFunctions.JenkinWang32shift(bufferSize) & 15) + 1;
+            }
+            assertSameReadContent(set, new SingleFastqReader(sample, replaceWildcards, true));
+            assertSameReadContent(set, new SingleFastqReader(sampleGZIP, replaceWildcards, true));
+            assertSameReadContent(set, new SingleFastqReader(sample, replaceWildcards, false));
+            assertSameReadContent(set, new SingleFastqReader(sampleGZIP, replaceWildcards, false));
         }
-        assertSameReadContent(set, new SingleFastqReader(sample, true));
-        assertSameReadContent(set, new SingleFastqReader(sampleGZIP, true));
-        assertSameReadContent(set, new SingleFastqReader(sample, false));
-        assertSameReadContent(set, new SingleFastqReader(sampleGZIP, false));
     }
 
     private static void assertReaderOnSample(String file) throws IOException, URISyntaxException {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
-        TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
+        for (int wc = 0; wc < 2; ++wc) {
+            boolean replaceWildcards = (wc == 1);
 
-        try (SingleFastqReader reader = new SingleFastqReader(
-                new FileInputStream(sample),
-                QualityFormat.Phred64,
-                CompressionType.GZIP,
-                false,
-                253,
-                false)) {
-            for (SingleRead read : CUtils.it(reader))
-                set.add(read);
-        }
+            File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
+            TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
 
-        for (int bufferSize = 253; bufferSize < 5000; ) {
-            assertSameReadContent(set, new SingleFastqReader(
+            try (SingleFastqReader reader = new SingleFastqReader(
                     new FileInputStream(sample),
                     QualityFormat.Phred64,
                     CompressionType.GZIP,
                     false,
-                    bufferSize,
-                    false));
-            assertSameReadContent(set, new SingleFastqReader(
-                    new FileInputStream(sample),
-                    QualityFormat.Phred64,
-                    CompressionType.GZIP,
-                    false,
-                    bufferSize,
-                    true));
+                    253,
+                    replaceWildcards, false)) {
+                for (SingleRead read : CUtils.it(reader))
+                    set.add(read);
+            }
 
-            bufferSize += (HashFunctions.JenkinWang32shift(bufferSize) & 15) + 1;
+            for (int bufferSize = 253; bufferSize < 5000; ) {
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sample),
+                        QualityFormat.Phred64,
+                        CompressionType.GZIP,
+                        false,
+                        bufferSize,
+                        replaceWildcards, false));
+                assertSameReadContent(set, new SingleFastqReader(
+                        new FileInputStream(sample),
+                        QualityFormat.Phred64,
+                        CompressionType.GZIP,
+                        false,
+                        bufferSize,
+                        replaceWildcards, true));
+
+                bufferSize += (HashFunctions.JenkinWang32shift(bufferSize) & 15) + 1;
+            }
+            assertSameReadContent(set, new SingleFastqReader(sample, replaceWildcards, true));
+            assertSameReadContent(set, new SingleFastqReader(sample, replaceWildcards, false));
         }
-        assertSameReadContent(set, new SingleFastqReader(sample, true));
-        assertSameReadContent(set, new SingleFastqReader(sample, false));
     }
 
     private static void assertSameReadContent(TreeSet<SingleRead> expected, SingleFastqReader reader) {

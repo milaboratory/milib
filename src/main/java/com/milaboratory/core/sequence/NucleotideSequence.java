@@ -16,21 +16,19 @@
 package com.milaboratory.core.sequence;
 
 import com.milaboratory.core.Range;
-import com.milaboratory.primitivio.annotations.Serializable;
-import com.milaboratory.util.Bit2Array;
 
 /**
- * Representation of nucleotide sequence. <p> Implementation note: the array of data is packed into a bit array ({@link
- * com.milaboratory.util.Bit2Array}) for memory saving. </p>
+ * Representation of nucleotide sequence.
  *
  * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
  * @author Shugay Mikhail (mikhail.shugay@gmail.com)
  * @see com.milaboratory.core.sequence.Sequence
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
  */
-@Serializable(by = IO.NucleotideSequenceSerializer.class)
-public final class NucleotideSequence extends Sequence<NucleotideSequence>
+public final class NucleotideSequence extends AbstractArraySequence<NucleotideSequence>
         implements NSeq<NucleotideSequence>, java.io.Serializable {
+    private static final long serialVersionUID = 2L;
+
     /**
      * Empty instance
      */
@@ -39,8 +37,6 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      * Nucleotide alphabet
      */
     public static final NucleotideAlphabet ALPHABET = NucleotideAlphabet.INSTANCE;
-    final Bit2Array data;
-    private static final long serialVersionUID = 1L;
 
     /**
      * Creates nucleotide sequence from its string representation (e.g. "ATCGG" or "atcgg").
@@ -49,13 +45,7 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      * @throws java.lang.IllegalArgumentException if sequence contains unknown nucleotide symbol
      */
     public NucleotideSequence(String sequence) {
-        data = new Bit2Array(sequence.length());
-        for (int i = 0; i < sequence.length(); ++i) {
-            byte code = ALPHABET.codeFromSymbol(sequence.charAt(i));
-            if (code == -1)
-                throw new IllegalArgumentException("Unknown nucleotide: \"" + sequence.charAt(i) + "\".");
-            data.set(i, code);
-        }
+        super(sequence);
     }
 
     /**
@@ -65,13 +55,7 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      * @throws java.lang.IllegalArgumentException if sequence contains unknown nucleotide symbol
      */
     public NucleotideSequence(char[] sequence) {
-        data = new Bit2Array(sequence.length);
-        for (int i = 0; i < sequence.length; ++i) {
-            byte code = ALPHABET.codeFromSymbol(sequence[i]);
-            if (code == -1)
-                throw new IllegalArgumentException("Unknown nucleotide: \"" + sequence[i] + "\".");
-            data.set(i, code);
-        }
+        super(sequence);
     }
 
     /**
@@ -79,28 +63,13 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      *
      * @param data Bit2Array
      */
-    public NucleotideSequence(Bit2Array data) {
-        this.data = data.clone();
+    public NucleotideSequence(byte[] data) {
+        super(data.clone());
     }
 
-    NucleotideSequence(Bit2Array data, boolean unsafe) {
+    NucleotideSequence(byte[] data, boolean unsafe) {
+        super(data);
         assert unsafe;
-        this.data = data;
-    }
-
-    @Override
-    public byte codeAt(int position) {
-        return (byte) data.get(position);
-    }
-
-    @Override
-    public int size() {
-        return data.size();
-    }
-
-    @Override
-    public NucleotideSequence getRange(int from, int to) {
-        return getRange(new Range(from, to));
     }
 
     @Override
@@ -116,8 +85,7 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
             return new NucleotideSequence(
                     transformToRC(data, range.getLower(), range.getUpper()), true);
         else
-            return new NucleotideSequence(
-                    data.getRange(range.getLower(), range.getUpper()), true);
+            return super.getRange(range);
     }
 
     /**
@@ -127,35 +95,12 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      */
     @Override
     public NucleotideSequence getReverseComplement() {
-        return new NucleotideSequence(transformToRC(data, 0, data.size()), true);
-    }
-
-    /**
-     * Returns a copy of inner data container.
-     *
-     * @return a copy of inner data container
-     */
-    public Bit2Array getInnerData() {
-        return data.clone();
+        return new NucleotideSequence(transformToRC(data, 0, data.length), true);
     }
 
     @Override
     public NucleotideAlphabet getAlphabet() {
         return ALPHABET;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = ALPHABET.hashCode();
-        result = 31 * result + data.hashCode();
-        return result;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        return data.equals(((NucleotideSequence) o).data);
     }
 
     /**
@@ -167,18 +112,18 @@ public final class NucleotideSequence extends Sequence<NucleotideSequence>
      * @return nucleotide sequence
      */
     public static NucleotideSequence fromSequence(byte[] sequence, int offset, int length) {
-        Bit2Array storage = new Bit2Array(length);
+        byte[] storage = new byte[length];
         for (int i = 0; i < length; ++i)
-            storage.set(i, ALPHABET.codeFromSymbol((char) sequence[offset + i]));
+            storage[i] = ALPHABET.symbolToCode((char) sequence[offset + i]);
         return new NucleotideSequence(storage, true);
     }
 
-    private static Bit2Array transformToRC(Bit2Array data, int from, int to) {
-        Bit2Array newData = new Bit2Array(to - from);
+    private static byte[] transformToRC(byte[] data, int from, int to) {
+        byte[] newData = new byte[to - from];
         int reverseCord;
         for (int cord = 0, s = to - from; cord < s; ++cord) {
             reverseCord = to - 1 - cord;
-            newData.set(cord, (~data.get(reverseCord)) & 0x3);
+            newData[cord] = NucleotideAlphabet.getComplement(data[reverseCord]);
         }
         return newData;
     }

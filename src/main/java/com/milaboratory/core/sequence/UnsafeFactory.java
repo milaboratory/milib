@@ -19,33 +19,13 @@ import com.milaboratory.util.Bit2Array;
 import com.milaboratory.util.HashFunctions;
 
 /**
+ * Don't use this class.
+ *
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-
 public final class UnsafeFactory {
     private UnsafeFactory() {
-    }
-
-    public static NSequenceWithQuality fastqParse(final String sequenceString,
-                                                  final String qualityString,
-                                                  final byte qualityValueOffset,
-                                                  final long id) {
-        assert sequenceString.length() == qualityString.length();
-        Bit2Array data = new Bit2Array(sequenceString.length());
-        byte[] quality = new byte[sequenceString.length()];
-        byte code;
-        for (int i = 0; i < sequenceString.length(); ++i) {
-            quality[i] = (byte) (qualityString.charAt(i) - qualityValueOffset);
-            code = NucleotideSequence.ALPHABET.codeFromSymbol(sequenceString.charAt(i));
-            if (code == -1) {
-                code = rndByte(i, id);
-                quality[i] = 0;
-            }
-            data.set(i, code);
-        }
-        return new NSequenceWithQuality(new NucleotideSequence(data, true),
-                new SequenceQuality(quality, true));
     }
 
     public static NSequenceWithQuality fastqParse(
@@ -54,25 +34,39 @@ public final class UnsafeFactory {
             int fromQuality,
             int length,
             byte qualityValueOffset,
-            long id) {
-        Bit2Array data = new Bit2Array(length);
-        byte[] quality = new byte[length];
-        int pointerSeq = fromSequence, pointerQua = fromQuality;
-        byte code;
-        for (int i = 0; i < length; ++i) {
-            quality[i] = (byte) (buffer[pointerQua++] - qualityValueOffset);
-            code = NucleotideAlphabet.codeFromSymbolByte(buffer[pointerSeq++]);
-            if (code == -1) {
-                code = rndByte(i, id);
-                quality[i] = 0;
-            }
-            data.set(i, code);
-        }
-        return new NSequenceWithQuality(new NucleotideSequence(data, true),
-                new SequenceQuality(quality, true));
-    }
+            long id,
+            boolean replaceWildcards) {
+        // Seed for random generator of letters substituting wildcards
+        long seed = id;
 
-    private static byte rndByte(int i, long id) {
-        return (byte) (HashFunctions.JenkinWang64shift(i + id) & 3); // :)
+        // Creating builders for sequence and quality
+        SequenceBuilder<NucleotideSequence> sequence = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(length);
+        SequenceQualityBuilder quality = new SequenceQualityBuilder().ensureCapacity(length);
+
+        byte qual, code;
+        int pointerSeq = fromSequence, pointerQua = fromQuality;
+
+        // Parsing quality and sequence
+        for (int i = 0; i < length; ++i) {
+            qual = (byte) (buffer[pointerQua++] - qualityValueOffset);
+
+            code = NucleotideAlphabet.byteSymbolToCode(buffer[pointerSeq++]);
+
+            if (code == -1)
+                throw new IllegalArgumentException("Unknown letter \"" + buffer[pointerSeq - 1] + "\"");
+
+            if (replaceWildcards && NucleotideSequence.ALPHABET.isWildcard(code)) {
+                seed = HashFunctions.JenkinWang64shift(seed + i);
+                code = NucleotideSequence.ALPHABET.codeToWildcard(code).getUniformlyDistributedBasicCode(seed);
+                qual = 0;
+            }
+
+            sequence.append(code);
+            quality.append(qual);
+        }
+
+        // Returning result
+        return new NSequenceWithQuality(sequence.createAndDestroy(),
+                quality.createAndDestroy());
     }
 }

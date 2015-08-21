@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.test.TestUtil;
@@ -23,8 +24,6 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 public class NucleotideSequenceSerializerTest {
     @Test
@@ -47,6 +46,6 @@ public class NucleotideSequenceSerializerTest {
     @Test
     public void test2() throws Exception {
         Object se = new NucleotideSequence("AACCTTAAACC");
-        com.milaboratory.core.io.util.TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
     }
 }

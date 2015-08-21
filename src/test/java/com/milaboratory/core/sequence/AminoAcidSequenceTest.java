@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
-import com.milaboratory.core.io.util.TestUtil;
+import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.sequence.AminoAcidSequence.AminoAcidSequencePosition;
 import org.junit.Assert;
 import org.junit.Test;
@@ -77,31 +77,31 @@ public class AminoAcidSequenceTest {
     @Test
     public void testConvertPositionLeft1() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(0, 1),
-                AminoAcidSequence.convertFromLeft(1, 10));
+                AminoAcidSequence.convertPositionFromLeft(1, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 0),
-                AminoAcidSequence.convertFromLeft(0, 10));
+                AminoAcidSequence.convertPositionFromLeft(0, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(2, 1),
-                AminoAcidSequence.convertFromLeft(7, 13));
+                AminoAcidSequence.convertPositionFromLeft(7, 13));
     }
 
     @Test
     public void testConvertPositionRight1() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(1, 0),
-                AminoAcidSequence.convertFromRight(1, 10));
+                AminoAcidSequence.convertPositionFromRight(1, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 2),
-                AminoAcidSequence.convertFromRight(0, 10));
+                AminoAcidSequence.convertPositionFromRight(0, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(3, 2),
-                AminoAcidSequence.convertFromRight(9, 10));
+                AminoAcidSequence.convertPositionFromRight(9, 10));
     }
 
     @Test
     public void testConvertPositionRight2() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(0, 1),
-                AminoAcidSequence.convertFromRight(1, 9));
+                AminoAcidSequence.convertPositionFromRight(1, 9));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 0),
-                AminoAcidSequence.convertFromRight(0, 9));
+                AminoAcidSequence.convertPositionFromRight(0, 9));
         Assert.assertEquals(new AminoAcidSequencePosition(2, 2),
-                AminoAcidSequence.convertFromRight(8, 9));
+                AminoAcidSequence.convertPositionFromRight(8, 9));
     }
 
     @Test
@@ -120,7 +120,7 @@ public class AminoAcidSequenceTest {
         };
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertFromCenter(i, 10));
+                    AminoAcidSequence.convertPositionFromCenter(i, 10));
         }
     }
 
@@ -139,7 +139,7 @@ public class AminoAcidSequenceTest {
         };
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertFromCenter(i, 9));
+                    AminoAcidSequence.convertPositionFromCenter(i, 9));
         }
     }
 
@@ -160,18 +160,18 @@ public class AminoAcidSequenceTest {
         };
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertFromCenter(i, 11));
+                    AminoAcidSequence.convertPositionFromCenter(i, 11));
         }
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testUnknownSymbol1() throws Exception {
-        new AminoAcidSequence("ATTAGACANX");
+        new AminoAcidSequence("ATTAGACANXOD");
     }
 
     @Test
     public void test4() throws Exception {
         AminoAcidSequence se = new AminoAcidSequence("ATTAGACAN");
-        TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
     }
 }

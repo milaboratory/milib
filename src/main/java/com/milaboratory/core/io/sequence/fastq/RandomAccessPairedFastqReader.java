@@ -32,26 +32,26 @@ public final class RandomAccessPairedFastqReader
 
     public RandomAccessPairedFastqReader(String file1, String index1,
                                          String file2, String index2) throws IOException {
-        this(file1, index1, file2, index2, true);
+        this(file1, index1, file2, index2, false, true);
     }
 
     public RandomAccessPairedFastqReader(RandomAccessFile file1, FileIndex index1,
                                          RandomAccessFile file2, FileIndex index2) throws IOException {
-        this(file1, index1, file2, index2, true);
+        this(file1, index1, file2, index2, false, true);
     }
 
     public RandomAccessPairedFastqReader(String file1, String index1,
                                          String file2, String index2,
-                                         boolean lazyReads) throws IOException {
-        this(new RandomAccessFastqReader(file1, index1, lazyReads),
-                new RandomAccessFastqReader(file2, index2, lazyReads));
+                                         boolean replaceWildcards, boolean lazyReads) throws IOException {
+        this(new RandomAccessFastqReader(file1, index1, replaceWildcards, lazyReads),
+                new RandomAccessFastqReader(file2, index2, replaceWildcards, lazyReads));
     }
 
     public RandomAccessPairedFastqReader(RandomAccessFile file1, FileIndex index1,
                                          RandomAccessFile file2, FileIndex index2,
-                                         boolean lazyReads) throws IOException {
-        this(new RandomAccessFastqReader(file1, index1, lazyReads),
-                new RandomAccessFastqReader(file2, index2, lazyReads));
+                                         boolean replaceWildcards, boolean lazyReads) throws IOException {
+        this(new RandomAccessFastqReader(file1, index1, replaceWildcards, lazyReads),
+                new RandomAccessFastqReader(file2, index2, replaceWildcards, lazyReads));
     }
 
     public RandomAccessPairedFastqReader(RandomAccessFastqReader reader1, RandomAccessFastqReader reader2) {

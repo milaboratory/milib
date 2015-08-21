@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 public class RandomAccessFastqReaderTest {
-
     @Test
     public void test1() throws Exception {
         File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
@@ -41,7 +40,7 @@ public class RandomAccessFastqReaderTest {
         FileIndex index = indexer.createIndex();
 
         reader = new SingleFastqReader(sample);
-        RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false);
+        RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false, false);
         SingleRead read;
         while ((read = reader.take()) != null) {
             SingleRead actual = rreader.take(read.getId());
@@ -65,7 +64,7 @@ public class RandomAccessFastqReaderTest {
             index = FileIndex.read(new ByteArrayInputStream(outputStream.toByteArray()));
 
             reader = new SingleFastqReader(sample);
-            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false);
+            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false, false);
             SingleRead read;
             while ((read = reader.take()) != null) {
                 SingleRead actual = rreader.take(read.getId());
@@ -83,7 +82,7 @@ public class RandomAccessFastqReaderTest {
         for (int step = 1; step < 5; ++step) {
             SingleRead[] reads = allReads(sample);
             FileIndex index = buildeIndex(sample, step);
-            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, true);
+            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false, true);
             for (int i = 0; i < 100; ++i) {
                 int p = rnd.nextInt(reads.length);
                 SingleRead actual = rreader.take(p);
@@ -100,7 +99,7 @@ public class RandomAccessFastqReaderTest {
         for (int step = 1; step < 5; ++step) {
             SingleRead[] reads = allReads(sample);
             FileIndex index = buildeIndex(sample, step);
-            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, true);
+            RandomAccessFastqReader rreader = new RandomAccessFastqReader(sample, index, false, true);
             SingleRead actual = rreader.take(reads.length + 1);
             Assert.assertTrue(actual == null);
             actual = rreader.take(reads.length);

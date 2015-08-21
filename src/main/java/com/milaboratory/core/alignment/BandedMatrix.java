@@ -16,7 +16,7 @@
 package com.milaboratory.core.alignment;
 
 /**
- * BandedMatrix - class which used to store alignment matrix for {@link BandedAligner0}.
+ * BandedMatrix - class which used to store alignment matrix for {@link BandedAligner}.
  * <p>It stores only main diagonal values as well as values of diagonal which are closed to main one (it's defined by
  * #rowFactor and #columnDelta)</p>
  */

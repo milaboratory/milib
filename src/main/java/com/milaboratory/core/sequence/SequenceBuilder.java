@@ -16,7 +16,7 @@
 package com.milaboratory.core.sequence;
 
 /**
- * Interface for classes that build sequences from different alphabets.
+ * Interface for factory class for a certain type of sequence.
  *
  * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
  * @author Shugay Mikhail (mikhail.shugay@gmail.com)

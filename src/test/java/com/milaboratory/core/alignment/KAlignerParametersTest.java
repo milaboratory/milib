@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
-import com.milaboratory.core.io.util.TestUtil;
+import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.util.GlobalObjectMappers;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,7 +39,7 @@ public class KAlignerParametersTest extends AlignmentTest {
     @Test
     public void test2() throws Exception {
         Object se = gParams;
-        TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
     }
 
 

@@ -15,91 +15,88 @@
  */
 package com.milaboratory.core.io.sequence.fasta;
 
+import cc.redberry.pipe.OutputPortCloseable;
 import com.milaboratory.core.io.sequence.IllegalFileFormatException;
-import com.milaboratory.core.io.sequence.SingleRead;
-import com.milaboratory.core.io.sequence.SingleReadImpl;
-import com.milaboratory.core.io.sequence.SingleReader;
-import com.milaboratory.core.sequence.NSequenceWithQuality;
-import com.milaboratory.core.sequence.NucleotideSequence;
-import com.milaboratory.core.sequence.SequenceQuality;
-import com.milaboratory.core.sequence.WildcardSymbol;
-import com.milaboratory.util.Bit2Array;
+import com.milaboratory.core.sequence.Alphabet;
+import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.util.CanReportProgress;
 import com.milaboratory.util.CountingInputStream;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.milaboratory.core.sequence.NucleotideSequence.ALPHABET;
-
 /**
- * FASTA reader for nucleotide sequences.
+ * Reads amino acid or nucleotide sequence from FASTA formatted file
  *
- * @author Dmitry Bolotin
- * @author Stanislav Poslavsky
+ * @param <S> sequence type
  */
-public final class FastaReader implements SingleReader, CanReportProgress {
+public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
+        OutputPortCloseable<FastaRecord<S>>, AutoCloseable {
+    /**
+     * For atomic close.
+     */
     private final AtomicBoolean closed = new AtomicBoolean(false);
     //lets read line by line
-    private BufferedReader reader;
-    private final boolean withWildcards;
+    private final BufferedReader reader;
     private String bufferedLine;
+    /**
+     * Id counter
+     */
     private long id;
+    /**
+     * Used to calculate progress in percent
+     */
     private final long size;
     private final CountingInputStream countingInputStream;
+    private final Alphabet<S> alphabet;
 
     /**
      * Creates reader from the specified input stream.
      *
-     * @param inputStream   input stream
-     * @param withWildcards if {@code true}, then for each wildcard a
-     *                      uniformly distributed nucleotide will be generated from the set of nucleotides
-     *                      corresponding to this wildcard.
-     * @param size          file size
+     * @param inputStream input stream
+     * @param size        file size
      */
-    public FastaReader(InputStream inputStream, boolean withWildcards, long size) {
+    public FastaReader(InputStream inputStream, Alphabet<S> alphabet, long size) {
+        if (inputStream == null)
+            throw new NullPointerException();
         this.size = size;
+        this.alphabet = alphabet;
         this.countingInputStream = new CountingInputStream(inputStream);
         this.reader = new BufferedReader(new InputStreamReader(countingInputStream));
-        this.withWildcards = withWildcards;
     }
 
     /**
-     * Creates reader from the specified input stream.
+     * Creates reader for stream with unknown size.
      *
-     * @param inputStream   input stream
-     * @param withWildcards if {@code true}, then for each wildcard a
-     *                      uniformly distributed nucleotide will be generated from the set of nucleotides
-     *                      corresponding to this wildcard.
+     * @param inputStream input stream
+     * @param alphabet    alphabet
      */
-    public FastaReader(InputStream inputStream, boolean withWildcards) {
-        this(inputStream, withWildcards, 0);
+    public FastaReader(InputStream inputStream, Alphabet<S> alphabet) {
+        this(inputStream, alphabet, 0);
     }
 
     /**
-     * Creates reader from the specified file.
+     * Creates FASTA reader for file
      *
-     * @param file          file
-     * @param withWildcards if {@code true}, then for each wildcard a
-     *                      uniformly distributed nucleotide will be generated from the set of nucleotides
-     *                      corresponding to this wildcard.
+     * @param file     file name
+     * @param alphabet alphabet
+     * @throws FileNotFoundException
      */
-    public FastaReader(String file, boolean withWildcards)
+    public FastaReader(String file, Alphabet<S> alphabet)
             throws FileNotFoundException {
-        this(new File(file), withWildcards);
+        this(new File(file), alphabet);
     }
 
     /**
-     * Creates reader from the specified file.
+     * Creates FASTA reader for file
      *
-     * @param file          file
-     * @param withWildcards if {@code true}, then for each wildcard a
-     *                      uniformly distributed nucleotide will be generated from the set of nucleotides
-     *                      corresponding to this wildcard.
+     * @param file     file
+     * @param alphabet alphabet
+     * @throws FileNotFoundException
      */
-    public FastaReader(File file, boolean withWildcards) throws FileNotFoundException {
-        this(new FileInputStream(file), withWildcards, file.length());
+    public FastaReader(File file, Alphabet<S> alphabet)
+            throws FileNotFoundException {
+        this(new FileInputStream(file), alphabet, file.length());
     }
 
     @Override
@@ -109,6 +106,7 @@ public final class FastaReader implements SingleReader, CanReportProgress {
         return countingInputStream.getBytesRead() * 1.0 / size;
     }
 
+    // Used only for reporting finished state for progress monitor
     private volatile boolean isFinished = false;
 
     @Override
@@ -116,8 +114,14 @@ public final class FastaReader implements SingleReader, CanReportProgress {
         return isFinished;
     }
 
-    @Override
-    public synchronized SingleRead take() {
+    /**
+     * Return next FASTA record or {@literal null} if end of stream is reached.
+     *
+     * <p>This method is thread-safe.</p>
+     *
+     * @return next FASTA record or {@literal null} if end of stream is reached
+     */
+    public synchronized FastaRecord<S> take() {
         Item item;
         try {
             item = nextItem();
@@ -129,42 +133,7 @@ public final class FastaReader implements SingleReader, CanReportProgress {
             return null;
         }
 
-        SingleRead read = new SingleReadImpl(id, getSequenceWithQuality(item.sequence), item.description);
-        ++id; // don't increment before this point, because id is used in #getSequenceWithQuality(...)
-        return read;
-    }
-
-    @Override
-    public synchronized long getNumberOfReads() {
-        return id;
-    }
-
-    private NSequenceWithQuality getSequenceWithQuality(String sequence) {
-        byte[] qualityData = new byte[sequence.length()];
-        Arrays.fill(qualityData, SequenceQuality.GOOD_QUALITY_VALUE);
-
-        Bit2Array sequenceData = new Bit2Array(sequence.length());
-        byte nucleotide;
-        char symbol;
-        for (int i = 0; i < sequence.length(); ++i) {
-            symbol = sequence.charAt(i);
-            nucleotide = ALPHABET.codeFromSymbol(symbol);
-            if (nucleotide == -1) //wildChard
-            {
-                if (withWildcards) {
-                    WildcardSymbol wildcard = ALPHABET.getWildcardFor(symbol);
-                    if (wildcard == null)
-                        throw new IllegalFileFormatException("Unknown wildcard: " + symbol + ".");
-                    nucleotide = wildcard.getUniformlyDistributedSymbol(id ^ i);
-                } else
-                    throw new RuntimeException("Unknown letter: " + symbol);
-                qualityData[i] = SequenceQuality.BAD_QUALITY_VALUE;
-            }
-            sequenceData.set(i, nucleotide);
-        }
-
-        return new NSequenceWithQuality(new NucleotideSequence(sequenceData),
-                new SequenceQuality(qualityData));
+        return new FastaRecord<>(id++, item.description, alphabet.parse(item.sequence));
     }
 
     private Item nextItem() throws IOException {
@@ -211,6 +180,21 @@ public final class FastaReader implements SingleReader, CanReportProgress {
         }
     }
 
+    /**
+     * For sequential readers returns the number of reads read till this moment, after reader is exhausted returns total
+     * number of reads.
+     *
+     * <p>This method is thread-safe.</p>
+     *
+     * @return number of reads read till this moment for sequential readers
+     */
+    public synchronized long getNumberOfReads() {
+        return id;
+    }
+
+    /**
+     * Used internally
+     */
     private static final class Item {
         final String description;
         final String sequence;

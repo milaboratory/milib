@@ -37,7 +37,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     public int exactSearch(Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().size() != patternMask.length)
+        if (sequence.getAlphabet().basicSize() != patternMask.length)
             throw new IllegalArgumentException();
 
         long R = ~1L;
@@ -53,7 +53,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     public BitapMatcher exactMatcher(final Sequence sequence, final int from, final int to) {
-        if (sequence.getAlphabet().size() != patternMask.length)
+        if (sequence.getAlphabet().basicSize() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcher() {
@@ -107,7 +107,7 @@ public final class BitapPattern implements java.io.Serializable {
      * @return matcher which will return positions of first matched letter in the motif in ascending order
      */
     public BitapMatcher substitutionOnlyMatcherFirst(int substitutions, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().size() != patternMask.length)
+        if (sequence.getAlphabet().basicSize() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(substitutions + 1, from, to) {
@@ -182,7 +182,7 @@ public final class BitapPattern implements java.io.Serializable {
      * @return matcher which will return positions of last matched letter in the motif in ascending order
      */
     public BitapMatcher substitutionAndIndelMatcherLast(int maxNumberOfErrors, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().size() != patternMask.length)
+        if (sequence.getAlphabet().basicSize() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(maxNumberOfErrors + 1, from, to) {
@@ -263,7 +263,7 @@ public final class BitapPattern implements java.io.Serializable {
      * @return matcher which will return positions of first matched letter in the motif in descending order
      */
     public BitapMatcher mismatchAndIndelMatcherFirst(int maxNumberOfErrors, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().size() != patternMask.length)
+        if (sequence.getAlphabet().basicSize() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(maxNumberOfErrors + 1, to - 1, from) {

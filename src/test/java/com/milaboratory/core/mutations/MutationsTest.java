@@ -15,18 +15,18 @@
  */
 package com.milaboratory.core.mutations;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
-import com.milaboratory.core.io.util.TestUtil;
+import com.milaboratory.core.io.util.IOTestUtil;
+import com.milaboratory.core.mutations.generator.MutationModels;
+import com.milaboratory.core.mutations.generator.MutationsGenerator;
+import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.test.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -106,10 +106,10 @@ public class MutationsTest {
 //        int p;
 //        for (int i = helper.size() - 1; i >= 0; --i) {
 //            if ((p = helper.getSequence1PositionAt(i)) > 0)
-//                assertEquals(NucleotideSequence.ALPHABET.symbolFromCode(seq1.codeAt(p)),
+//                assertEquals(NucleotideSequence.ALPHABET.codeToSymbol(seq1.codeAt(p)),
 //                        helper.getLine1().charAt(i));
 //            if ((p = helper.getSequence2PositionAt(i)) > 0)
-//                assertEquals(NucleotideSequence.ALPHABET.symbolFromCode(seq2.codeAt(p)),
+//                assertEquals(NucleotideSequence.ALPHABET.codeToSymbol(seq2.codeAt(p)),
 //                        helper.getLine3().charAt(i));
 //        }
 
@@ -170,6 +170,33 @@ public class MutationsTest {
         builder.appendInsertion(9, 2);
         builder.appendSubstitution(10, 3, 1);
         Mutations<NucleotideSequence> se = builder.createAndDestroy();
-        TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
+    }
+
+    @Test
+    public void testCanonical1() throws Exception {
+        NucleotideSequence seq0 = TestUtil.randomSequence(NucleotideSequence.ALPHABET, 400, 800);
+        NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(10);
+        Mutations<NucleotideSequence> mutsA = MutationsGenerator.generateMutations(seq0, model);
+        NucleotideSequence seqA = mutsA.mutate(seq0);
+        Mutations<NucleotideSequence> mutsB = MutationsGenerator.generateMutations(seqA, model);
+        NucleotideSequence seqAB = mutsB.mutate(seqA);
+        System.out.println(seq0);
+        System.out.println(seqA);
+        System.out.println(seqAB);
+
+        Alignment<NucleotideSequence> alignment = Aligner.alignGlobalLinear(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seqAB, seq0);
+        System.out.println(alignment.getAlignmentHelper());
+
+        Mutations<NucleotideSequence> mutsAB = mutsA.combineWith(mutsB);
+        Mutations<NucleotideSequence> mutsnAB = alignment.getAbsoluteMutations();
+        Mutations<NucleotideSequence> mutsABnAB = mutsAB.combineWith(mutsnAB);
+
+        Assert.assertEquals(0, mutsABnAB.getLengthDelta());
+
+        Alignment<NucleotideSequence> alignment0 = new Alignment<>(seq0, mutsABnAB, new Range(0, seq0.size()),
+                new Range(0, seq0.size()), 0.0f);
+        System.out.println(mutsABnAB);
+        System.out.println(alignment0.getAlignmentHelper());
     }
 }

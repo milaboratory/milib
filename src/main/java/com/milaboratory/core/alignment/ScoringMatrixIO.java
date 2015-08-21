@@ -22,7 +22,7 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.SerializerProvider;
-import com.milaboratory.core.sequence.Alphabet;
+import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.util.IntArrayList;
 
 import java.io.BufferedReader;
@@ -30,6 +30,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Arrays;
+
+import static com.milaboratory.core.sequence.AminoAcidAlphabet.INCOMPLETE_CODON;
+import static com.milaboratory.core.sequence.AminoAcidAlphabet.STOP;
 
 final class ScoringMatrixIO {
     public static final class Deserializer extends JsonDeserializer<int[]> {
@@ -126,25 +129,20 @@ final class ScoringMatrixIO {
      * Reads BLAST AminoAcid substitution matrix from InputStream
      *
      * @param stream   InputStream
-     * @param alphabet alphabet
-     * @param xChars   alphabet letters
      * @return BLAST AminoAcid substitution matrix
      * @throws java.io.IOException
      */
-    public static int[] readAABlastMatrix(InputStream stream, Alphabet alphabet, char... xChars) throws IOException {
+    public static int[] readAABlastMatrix(InputStream stream) throws IOException {
         BufferedReader br = new BufferedReader(new InputStreamReader(stream));
         String line;
 
-        //Creating xValues array
-        int[] xValues = new int[xChars.length];
-        for (int i = 0; i < xValues.length; ++i)
-            if ((xValues[i] = alphabet.codeFromSymbol(xChars[i])) == -1)
-                throw new IllegalArgumentException("XChar not from this alphabet.");
+        //Creating stopValues array
+        int[] stopValues = new int[]{STOP, INCOMPLETE_CODON};
 
         //~AminoAcidAlphabet.
         IntArrayList mappings = new IntArrayList(30);
 
-        int alSize = alphabet.size();
+        int alSize = AminoAcidSequence.ALPHABET.size();
         int[] matrix = new int[alSize * alSize];
         Arrays.fill(matrix, Integer.MIN_VALUE);
 
@@ -158,7 +156,7 @@ final class ScoringMatrixIO {
             if (line.startsWith(" ")) {
                 String[] letters = line.trim().split("\\s+");
                 for (int i = 0; i < letters.length; ++i)
-                    mappings.add(getAACode(letters[i], alphabet));
+                    mappings.add(getAACode(letters[i]));
                 continue;
             }
 
@@ -166,12 +164,15 @@ final class ScoringMatrixIO {
             cells = line.trim().split("\\s+");
 
             //Parsing letter in the first column
-            for (int from : getVals(getAACode(cells[0], alphabet), xValues)) {
+            for (int from : getVals(getAACode(cells[0]), stopValues)) {
                 for (int i = 1; i < cells.length; ++i)
-                    for (int to : getVals(mappings.get(i - 1), xValues))
+                    for (int to : getVals(mappings.get(i - 1), stopValues))
                         matrix[from * alSize + to] = Integer.parseInt(cells[i]);
             }
         }
+
+        // Filling gaps in matrix
+        // ScoringUtils.fillWildcardScores(matrix, AminoAcidSequence.ALPHABET, X, INCOMPLETE_CODON);
 
         //Checking for matrix fullness
         for (int val : matrix)
@@ -181,11 +182,11 @@ final class ScoringMatrixIO {
         return matrix;
     }
 
-    private static int[] getVals(int ll, int[] xValues) {
+    private static int[] getVals(int ll, int[] stopValues) {
         if (ll == -1)
             return new int[0];
         if (ll == -2)
-            return xValues;
+            return stopValues;
         return new int[]{ll};
     }
 
@@ -193,15 +194,14 @@ final class ScoringMatrixIO {
      * Returns AminoAcid code
      *
      * @param letter   letter
-     * @param alphabet alphabet
      * @return code
      */
-    private static byte getAACode(String letter, Alphabet alphabet) {
+    private static byte getAACode(String letter) {
         if (letter.length() != 1)
             throw new IllegalArgumentException();
         char l = letter.charAt(0);
-        if (l == 'x' || l == 'X')
+        if (l == '*' || l == '*')
             return -2;
-        return alphabet.codeFromSymbol(l);
+        return AminoAcidSequence.ALPHABET.symbolToCode(l);
     }
 }

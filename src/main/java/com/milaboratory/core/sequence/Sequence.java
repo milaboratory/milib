@@ -15,7 +15,8 @@
  */
 package com.milaboratory.core.sequence;
 
-import com.milaboratory.primitivio.annotations.CustomSerializer;
+import com.milaboratory.core.alignment.batch.HasSequence;
+import com.milaboratory.core.motif.Motif;
 import com.milaboratory.primitivio.annotations.Serializable;
 
 /**
@@ -32,12 +33,10 @@ import com.milaboratory.primitivio.annotations.Serializable;
  * @see com.milaboratory.core.sequence.NucleotideSequence
  * @see com.milaboratory.core.sequence.AminoAcidSequence
  */
-@Serializable(by = IO.SequenceSerializer.class, custom = {
-        @CustomSerializer(id = 1, type = NucleotideSequence.class)
-})
-public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> implements Comparable<S> {
+@Serializable(by = IO.SequenceSerializer.class)
+public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> implements Comparable<S>, HasSequence<S> {
     /**
-     * Returns element at specified position.
+     * Returns letter code at specified position.
      *
      * @param position position in sequence
      * @return element at specified position
@@ -70,7 +69,30 @@ public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> imp
      * @return character representation of element at specified position
      */
     public char charFromCodeAt(int position) {
-        return getAlphabet().symbolFromCode(codeAt(position));
+        return getAlphabet().codeToSymbol(codeAt(position));
+    }
+
+    /**
+     * Converts sequnce to motif data structure efficient for exact and fuzzy wildcard-aware matching and searching of
+     * sequences.
+     *
+     * @return motif
+     */
+    @SuppressWarnings("unchecked")
+    public Motif<S> toMotif() {
+        return new Motif(this);
+    }
+
+    public boolean containWildcards() {
+        for (int i = 0; i < size(); i++)
+            if (getAlphabet().isWildcard(codeAt(i)))
+                return true;
+        return false;
+    }
+
+    @Override
+    public S getSequence() {
+        return (S) this;
     }
 
     @Override
@@ -108,7 +130,7 @@ public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> imp
     public String toString() {
         char[] chars = new char[size()];
         for (int i = 0; i < size(); i++)
-            chars[i] = getAlphabet().symbolFromCode(codeAt(i));
+            chars[i] = getAlphabet().codeToSymbol(codeAt(i));
         return new String(chars);
     }
 

@@ -15,14 +15,8 @@
  */
 package com.milaboratory.core;
 
-import com.milaboratory.core.io.util.TestUtil;
-import org.junit.Assert;
+import com.milaboratory.core.io.util.IOTestUtil;
 import org.junit.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 
 import static org.junit.Assert.*;
 
@@ -112,6 +106,6 @@ public class RangeTest {
     @Test
     public void test4() throws Exception {
         Range se = new Range(3, 5);
-        TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
     }
 }

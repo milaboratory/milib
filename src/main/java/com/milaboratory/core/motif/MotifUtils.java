@@ -23,6 +23,7 @@ public class MotifUtils {
                                                                     int length) {
         if (seq1 == null || seq2 == null)
             throw new NullPointerException();
+
         if (offset1 < 0 || offset2 < 0 ||
                 seq1.size() < offset1 + length ||
                 seq2.size() < offset2 + length)

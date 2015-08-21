@@ -41,9 +41,12 @@ public class UniformMutationsGenerator {
 
     public static <S extends Sequence<S>> int createUniformMutation(S sequence, RandomGenerator generator,
                                                                     MutationType type) {
+        if(sequence.containWildcards())
+            throw new IllegalArgumentException("Sequences with wildcards are not supported.");
+
         int position;
         byte from, to;
-        int alphabetSize = sequence.getAlphabet().size();
+        int alphabetSize = sequence.getAlphabet().basicSize();
         switch (type) {
             case Substitution:
                 position = generator.nextInt(sequence.size());

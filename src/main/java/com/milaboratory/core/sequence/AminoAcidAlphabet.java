@@ -15,83 +15,271 @@
  */
 package com.milaboratory.core.sequence;
 
+import gnu.trove.map.hash.TCharObjectHashMap;
+
+import java.util.Collection;
+import java.util.Collections;
+
+import static java.lang.Character.toUpperCase;
+
 /**
- * Amino acid alphabet with additional symbols.<br/> "~" - non full codon. 2 or 1 nucleotides.<br/> "-" - no nucleotides
- * <p>
- * This class is a singleton, and the access provided by
- * {@link com.milaboratory.core.sequence.AminoAcidSequence#ALPHABET}
- * or {@link #INSTANCE}.
- * </p>
+ * Amino acid alphabet with additional symbols.
+ *
+ * <p>"_" represents incomplete codon (residual 1 or 2 nucleotides remaining after translation of all full codons)</p>
  *
  * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
  * @author Shugay Mikhail (mikhail.shugay@gmail.com)
+ *
  * @see com.milaboratory.core.sequence.Alphabet
  * @see com.milaboratory.core.sequence.AminoAcidSequence
  * @see com.milaboratory.core.sequence.Sequence
  */
 public final class AminoAcidAlphabet extends AbstractArrayAlphabet<AminoAcidSequence> {
-    static final AminoAcidAlphabet INSTANCE = new AminoAcidAlphabet();
-    public static final byte Stop = 0;
+    /**
+     * Stop codon byte representation
+     */
+    public static final byte STOP = 0;
+    /**
+     * Alanine byte representation
+     */
     public static final byte A = 1;
+    /**
+     * Cysteine byte representation
+     */
     public static final byte C = 2;
+    /**
+     * Aspartic Acid byte representation
+     */
     public static final byte D = 3;
+    /**
+     * Glutamic Acid representation
+     */
     public static final byte E = 4;
+    /**
+     * Phenylalanine byte representation
+     */
     public static final byte F = 5;
+    /**
+     * Glycine byte representation
+     */
     public static final byte G = 6;
+    /**
+     * Histidine byte representation
+     */
     public static final byte H = 7;
+    /**
+     * Isoleucine byte representation
+     */
     public static final byte I = 8;
+    /**
+     * Lysine byte representation
+     */
     public static final byte K = 9;
+    /**
+     * Leucine byte representation
+     */
     public static final byte L = 10;
+    /**
+     * Methionine byte representation
+     */
     public static final byte M = 11;
+    /**
+     * Asparagine byte representation
+     */
     public static final byte N = 12;
+    /**
+     * Proline byte representation
+     */
     public static final byte P = 13;
+    /**
+     * Glutamine byte representation
+     */
     public static final byte Q = 14;
+    /**
+     * Arginine byte representation
+     */
     public static final byte R = 15;
+    /**
+     * Serine byte representation
+     */
     public static final byte S = 16;
+    /**
+     * Threonine byte representation
+     */
     public static final byte T = 17;
+    /**
+     * Valine byte representation
+     */
     public static final byte V = 18;
+    /**
+     * Tryptophan byte representation
+     */
     public static final byte W = 19;
+    /**
+     * Tyrosine byte representation
+     */
     public static final byte Y = 20;
-    public static final byte IncompleteCodon = 21;
+    /**
+     * Incomplete codon byte representation
+     */
+    public static final byte INCOMPLETE_CODON = 21;
 
-    private static final char[] aa = {
-            '*',
-            'A', 'C', 'D', 'E', 'F',
-            'G', 'H', 'I', 'K', 'L',
-            'M', 'N', 'P', 'Q', 'R',
-            'S', 'T', 'V', 'W', 'Y',
-            '_'};
+    /* Wildcard symbols */
+
+    /**
+     * Any amino acid byte representation
+     */
+    public static final byte X = 22;
+    /**
+     * Aspartic acid or Asparagine (N or D) byte representation
+     */
+    public static final byte B = 23;
+    /**
+     * Leucine or Isoleucine (I or L) byte representation
+     */
+    public static final byte J = 24;
+    /**
+     * Glutamine or Glutamic acid (E or Q) byte representation
+     */
+    public static final byte Z = 25;
+
+    /* Wildcards */
+
+    /**
+     * Stop codon wildcard
+     */
+    public static final Wildcard STOP_WILDCARD = new Wildcard('*', STOP);
+    /**
+     * Alanine wildcard
+     */
+    public static final Wildcard A_WILDCARD = new Wildcard('A', A);
+    /**
+     * Cysteine wildcard
+     */
+    public static final Wildcard C_WILDCARD = new Wildcard('C', C);
+    /**
+     * Aspartic Acid wildcard
+     */
+    public static final Wildcard D_WILDCARD = new Wildcard('D', D);
+    /**
+     * Glutamic Acid wildcard
+     */
+    public static final Wildcard E_WILDCARD = new Wildcard('E', E);
+    /**
+     * Phenylalanine wildcard
+     */
+    public static final Wildcard F_WILDCARD = new Wildcard('F', F);
+    /**
+     * Glycine wildcard
+     */
+    public static final Wildcard G_WILDCARD = new Wildcard('G', G);
+    /**
+     * Histidine wildcard
+     */
+    public static final Wildcard H_WILDCARD = new Wildcard('H', H);
+    /**
+     * Isoleucine wildcard
+     */
+    public static final Wildcard I_WILDCARD = new Wildcard('I', I);
+    /**
+     * Lysine wildcard
+     */
+    public static final Wildcard K_WILDCARD = new Wildcard('K', K);
+    /**
+     * Leucine wildcard
+     */
+    public static final Wildcard L_WILDCARD = new Wildcard('L', L);
+    /**
+     * Methionine wildcard
+     */
+    public static final Wildcard M_WILDCARD = new Wildcard('M', M);
+    /**
+     * Asparagine wildcard
+     */
+    public static final Wildcard N_WILDCARD = new Wildcard('N', N);
+    /**
+     * Proline wildcard
+     */
+    public static final Wildcard P_WILDCARD = new Wildcard('P', P);
+    /**
+     * Glutamine wildcard
+     */
+    public static final Wildcard Q_WILDCARD = new Wildcard('Q', Q);
+    /**
+     * Arginine wildcard
+     */
+    public static final Wildcard R_WILDCARD = new Wildcard('R', R);
+    /**
+     * Serine wildcard
+     */
+    public static final Wildcard S_WILDCARD = new Wildcard('S', S);
+    /**
+     * Threonine wildcard
+     */
+    public static final Wildcard T_WILDCARD = new Wildcard('T', T);
+    /**
+     * Valine wildcard
+     */
+    public static final Wildcard V_WILDCARD = new Wildcard('V', V);
+    /**
+     * Tryptophan wildcard
+     */
+    public static final Wildcard W_WILDCARD = new Wildcard('W', W);
+    /**
+     * Tyrosine wildcard
+     */
+    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y);
+    /**
+     * Incomplete codon wildcard
+     */
+    public static final Wildcard INCOMPLETE_CODON_WILDCARD = new Wildcard('_', INCOMPLETE_CODON);
+
+
+    /**
+     * Any amino acid wildcard
+     */
+    public static final Wildcard X_WILDCARD = new Wildcard('X', X, new byte[]{A, C, D, E, F, G, H, I, K, L, M, N, P,
+            Q, R, S, T, V, W, Y});
+    /**
+     * Aspartic acid or Asparagine (N or D) wildcard
+     */
+    public static final Wildcard B_WILDCARD = new Wildcard('B', B, new byte[]{N, D});
+    /**
+     * Leucine or Isoleucine (I or L) wildcard
+     */
+    public static final Wildcard J_WILDCARD = new Wildcard('J', J, new byte[]{I, L});
+    /**
+     * Glutamine or Glutamic acid (E or Q) wildcard
+     */
+    public static final Wildcard Z_WILDCARD = new Wildcard('Z', Z, new byte[]{E, Q});
+
+    /**
+     * Instance of amino acid alphabet.
+     */
+    static final AminoAcidAlphabet INSTANCE = new AminoAcidAlphabet();
 
     private AminoAcidAlphabet() {
-        super("aminoacid", (byte) 2);
+        super("aminoacid", (byte) 2, 22,
+                // Any letter
+                X_WILDCARD,
+                // Content
+                STOP_WILDCARD, A_WILDCARD, C_WILDCARD, D_WILDCARD, E_WILDCARD, F_WILDCARD, G_WILDCARD, H_WILDCARD,
+                I_WILDCARD, K_WILDCARD, L_WILDCARD, M_WILDCARD, N_WILDCARD, P_WILDCARD, Q_WILDCARD, R_WILDCARD,
+                S_WILDCARD, T_WILDCARD, V_WILDCARD, W_WILDCARD, Y_WILDCARD,
+                INCOMPLETE_CODON_WILDCARD,
+                // Wildcards
+                X_WILDCARD,
+                B_WILDCARD, J_WILDCARD, Z_WILDCARD);
     }
 
     @Override
-    public char symbolFromCode(byte code) {
-        return aa[code];
-    }
-
-    @Override
-    public byte codeFromSymbol(char symbol) {
+    public byte symbolToCode(char symbol) {
         // Special case for backward compatibility
         if (symbol == '~')
-            return IncompleteCodon;
+            return INCOMPLETE_CODON;
 
-        // For case insensitive conversion
-        symbol = Character.toUpperCase(symbol);
-
-        // Normal conversion (can be optimized :) )
-        for (int i = 0; i < aa.length; ++i)
-            if (aa[i] == symbol)
-                return (byte) i;
-
-        // Unknown symbol
-        return -1;
-    }
-
-    @Override
-    public int size() {
-        return aa.length;
+        // Normal conversion (-1 will be returned for unknown symbols, see symbolToWildcard constructor parameters)
+        return super.symbolToCode(symbol);
     }
 
     @Override

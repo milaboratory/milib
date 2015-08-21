@@ -32,7 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Container of all defined alphabets.
+ * Registry of all alphabets.
  */
 public final class Alphabets {
     private final static Map<String, Alphabet> alphabetsByName = new HashMap<>();
@@ -58,8 +58,6 @@ public final class Alphabets {
     static {
         register(NucleotideAlphabet.INSTANCE);
         register(AminoAcidAlphabet.INSTANCE);
-        register(IncompleteAlphabet.INCOMPLETE_NUCLEOTIDE_ALPHABET);
-        register(IncompleteAlphabet.INCOMPLETE_AMINO_ACID_ALPHABET);
     }
 
     /**
@@ -82,9 +80,20 @@ public final class Alphabets {
         return alphabetsById.get(id);
     }
 
+    /**
+     * Returns unmodifiable collection of all registered alphabets.
+     *
+     * @return unmodifiable collection of all registered alphabets
+     */
+    public static Collection<Alphabet> getAll() {
+        return Collections.unmodifiableCollection(alphabetsByName.values());
+    }
+
+    /* JSON serializers / deserializers */
+
     public static final class Deserializer extends JsonDeserializer<Alphabet> {
         @Override
-        public Alphabet deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        public Alphabet deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
             return Alphabets.getByName(jp.readValueAs(String.class));
         }
 
@@ -101,18 +110,8 @@ public final class Alphabets {
 
     public static final class Serializer extends JsonSerializer<Alphabet> {
         @Override
-        public void serialize(Alphabet value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException {
+        public void serialize(Alphabet value, JsonGenerator jgen, SerializerProvider provider) throws IOException {
             jgen.writeString(value.getAlphabetName());
         }
     }
-
-    /**
-     * Returns unmodifiable collection of all registered alphabets.
-     *
-     * @return unmodifiable collection of all registered alphabets
-     */
-    public static Collection<Alphabet> getAll() {
-        return Collections.unmodifiableCollection(alphabetsByName.values());
-    }
-
 }

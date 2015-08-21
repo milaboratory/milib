@@ -15,75 +15,171 @@
  */
 package com.milaboratory.core.sequence;
 
-import gnu.trove.map.hash.TCharObjectHashMap;
-
-import java.util.Collection;
-import java.util.Collections;
-
 /**
  * An alphabet for nucleotide sequences. This alphabet defines the following mapping:
- * <br>0 - 'A', 1 - 'G', 2 - 'C', 3 - 'T'.
- * <p>
- * This class is a singleton, and the access provided by
- * {@link com.milaboratory.core.sequence.NucleotideSequence#ALPHABET}
- * or {@link #INSTANCE}.
- * </p>
- * <p>
- * Nucleotide alphabet contains wildcards as specified in e.g. FASTA format: 'R' for 'A' or 'G',
- * 'Y' for 'C' or 'T' etc.
- * </p>
+ *
+ * <p>0 - 'A', 1 - 'G', 2 - 'C', 3 - 'T'</p>
+ *
+ * <p> This class also defines wildcards as specified by IUPAC: 'R' for 'A' or 'G', 'Y' for 'C' or 'T' etc. </p>
  *
  * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
  * @author Shugay Mikhail (mikhail.shugay@gmail.com)
- * @see com.milaboratory.core.sequence.WithWildcards
  * @see com.milaboratory.core.sequence.Alphabet
  * @see com.milaboratory.core.sequence.NucleotideSequence
  */
-public final class NucleotideAlphabet extends Alphabet<NucleotideSequence> implements WithWildcards {
+public final class NucleotideAlphabet extends AbstractArrayAlphabet<NucleotideSequence> {
     /**
-     * Adenine byte
+     * Adenine byte representation
      */
-    public static final byte A = 0x00;
+    public static final byte A = 0;
     /**
-     * Guanine byte
+     * Guanine byte representation
      */
-    public static final byte G = 0x01;
+    public static final byte G = 1;
     /**
-     * Cytosine byte
+     * Cytosine byte representation
      */
-    public static final byte C = 0x02;
+    public static final byte C = 2;
     /**
-     * Thymine byte
+     * Thymine byte representation
      */
-    public static final byte T = 0x03;
-    private static char[] chars = {'A', 'G', 'C', 'T'};
-    private static byte[] bytes = {'A', 'G', 'C', 'T'};
+    public static final byte T = 3;
+
+    /* Codes for wildcards */
+    /**
+     * any Nucleotide
+     */
+    public static final byte N = 4;
+
+    /* Two-letter wildcard */
+    /**
+     * puRine
+     */
+    public static final byte R = 5;
+    /**
+     * pYrimidine
+     */
+    public static final byte Y = 6;
+    /**
+     * Strong
+     */
+    public static final byte S = 7;
+    /**
+     * Weak
+     */
+    public static final byte W = 8;
+    /**
+     * Keto
+     */
+    public static final byte K = 9;
+    /**
+     * aMino
+     */
+    public static final byte M = 10;
+
+    /* Three-letter wildcard */
+    /**
+     * not A (B comes after A)
+     */
+    public static final byte B = 11;
+    /**
+     * not C (D comes after C)
+     */
+    public static final byte D = 12;
+    /**
+     * not G (H comes after G)
+     */
+    public static final byte H = 13;
+    /**
+     * not T (V comes after T and U)
+     */
+    public static final byte V = 14;
+
+
+    /* Wildcards */
+
+    /* Basic wildcards */
+    /**
+     * Adenine byte representation
+     */
+    public static final Wildcard A_WILDCARD = new Wildcard('A', A);
+    /**
+     * Guanine byte representation
+     */
+    public static final Wildcard G_WILDCARD = new Wildcard('G', G);
+    /**
+     * Cytosine byte representation
+     */
+    public static final Wildcard C_WILDCARD = new Wildcard('C', C);
+    /**
+     * Thymine byte representation
+     */
+    public static final Wildcard T_WILDCARD = new Wildcard('T', T);
+
+    /* N wildcard */
+    /**
+     * any Nucleotide
+     */
+    public static final Wildcard N_WILDCARD = new Wildcard('N', N, new byte[]{A, T, G, C});
+
+    /* Two-letter wildcards */
+    /**
+     * puRine
+     */
+    public static final Wildcard R_WILDCARD = new Wildcard('R', R, new byte[]{A, G});
+    /**
+     * pYrimidine
+     */
+    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y, new byte[]{C, T});
+    /**
+     * Strong
+     */
+    public static final Wildcard S_WILDCARD = new Wildcard('S', S, new byte[]{G, C});
+    /**
+     * Weak
+     */
+    public static final Wildcard W_WILDCARD = new Wildcard('W', W, new byte[]{A, T});
+    /**
+     * Keto
+     */
+    public static final Wildcard K_WILDCARD = new Wildcard('K', K, new byte[]{G, T});
+    /**
+     * aMino
+     */
+    public static final Wildcard M_WILDCARD = new Wildcard('M', M, new byte[]{A, C});
+
+    /* Three-letter wildcards */
+    /**
+     * not A (B comes after A)
+     */
+    public static final Wildcard B_WILDCARD = new Wildcard('B', B, new byte[]{C, G, T});
+    /**
+     * not C (D comes after C)
+     */
+    public static final Wildcard D_WILDCARD = new Wildcard('D', D, new byte[]{A, G, T});
+    /**
+     * not G (H comes after G)
+     */
+    public static final Wildcard H_WILDCARD = new Wildcard('H', H, new byte[]{A, C, T});
+    /**
+     * not T (V comes after T and U)
+     */
+    public static final Wildcard V_WILDCARD = new Wildcard('V', V, new byte[]{A, C, G});
+
     /**
      * Singleton instance.
      */
     final static NucleotideAlphabet INSTANCE = new NucleotideAlphabet();
-    private static TCharObjectHashMap<WildcardSymbol> wildcardsMap =
-            new WildcardMapBuilder()
-                    /* Exact match letters */
-                    .addAlphabet(INSTANCE)
-                    /* Two-letter wildcard */
-                    .addWildcard('R', A, G)
-                    .addWildcard('Y', C, T)
-                    .addWildcard('S', G, C)
-                    .addWildcard('W', A, T)
-                    .addWildcard('K', G, T)
-                    .addWildcard('M', A, C)
-                    /* Three-letter wildcard */
-                    .addWildcard('B', C, G, T)
-                    .addWildcard('D', A, G, T)
-                    .addWildcard('H', A, C, T)
-                    .addWildcard('V', A, C, G)
-                    /* N */
-                    .addWildcard('N', A, T, G, C)
-                    .get();
 
     private NucleotideAlphabet() {
-        super("nucleotide", (byte) 1);
+        super("nucleotide", (byte) 1, 4,
+                // Any letter
+                N_WILDCARD,
+                // Content
+                A_WILDCARD, T_WILDCARD, G_WILDCARD, C_WILDCARD,
+                N_WILDCARD,
+                R_WILDCARD, Y_WILDCARD, S_WILDCARD, W_WILDCARD, K_WILDCARD, M_WILDCARD,
+                B_WILDCARD, D_WILDCARD, H_WILDCARD, V_WILDCARD);
     }
 
     /**
@@ -93,51 +189,10 @@ public final class NucleotideAlphabet extends Alphabet<NucleotideSequence> imple
      * @return complement nucleotide to the specified one
      */
     public static byte getComplement(byte nucleotide) {
-        return (byte) (nucleotide ^ 3);
-    }
-
-    @Override
-    public byte codeFromSymbol(char symbol) {
-        switch (symbol) {
-            case 'a':
-            case 'A':
-                return (byte) 0x00;
-            case 't':
-            case 'T':
-                return (byte) 0x03;
-            case 'g':
-            case 'G':
-                return (byte) 0x01;
-            case 'c':
-            case 'C':
-                return (byte) 0x02;
-        }
-        return -1;
-    }
-
-    /**
-     * Returns a byte-code for UTF-8 nucleotide symbol(i.e. {@code symbol} is a character that is
-     * casted to byte, but not a real nucleotide byte-code).
-     *
-     * @param symbol letter
-     * @return byte-code for nucleotide letter or -1 if this letter does not represent any nucleotide.
-     */
-    public static byte codeFromSymbolByte(byte symbol) {
-        switch (symbol) {
-            case (byte) 'a':
-            case (byte) 'A':
-                return (byte) 0x00;
-            case (byte) 't':
-            case (byte) 'T':
-                return (byte) 0x03;
-            case (byte) 'g':
-            case (byte) 'G':
-                return (byte) 0x01;
-            case (byte) 'c':
-            case (byte) 'C':
-                return (byte) 0x02;
-        }
-        return -1;
+        if (nucleotide < 4)
+            return (byte) (nucleotide ^ 3);
+        else
+            throw new UnsupportedOperationException("Not implemeted yet.");
     }
 
     /**
@@ -147,40 +202,17 @@ public final class NucleotideAlphabet extends Alphabet<NucleotideSequence> imple
      * @return UTF-8 character corresponding to specified byte-code
      */
     public static byte symbolByteFromCode(byte code) {
-        if (code < 0 || code >= chars.length)
-            throw new IllegalArgumentException("Illegal byte-code of nucleotide.");
-        return bytes[code];
+        //TODO optimize
+        return (byte) INSTANCE.codeToSymbol(code);
     }
 
-    /**
-     * Returns a letter corresponding to specified byte-code.
-     *
-     * @param code byte-code of nucleotide
-     * @return letter corresponding to specified byte-code
-     */
-    public char symbolFromCode(byte code) {
-        if (code < 0 || code >= chars.length)
-            throw new IllegalArgumentException("Illegal byte-code of nucleotide.");
-        return chars[code];
+    public static byte byteSymbolToCode(byte symbol) {
+        //TODO optimize
+        return INSTANCE.symbolToCode((char) symbol);
     }
 
     @Override
-    public int size() {
-        return 4;
-    }
-
-    @Override
-    public Collection<WildcardSymbol> getAllWildcards() {
-        return Collections.unmodifiableCollection(wildcardsMap.valueCollection());
-    }
-
-    @Override
-    public WildcardSymbol getWildcardFor(char symbol) {
-        return wildcardsMap.get(symbol);
-    }
-
-    @Override
-    public NucleotideSequenceBuilder getBuilder() {
-        return new NucleotideSequenceBuilder();
+    NucleotideSequence createUnsafe(byte[] array) {
+        return new NucleotideSequence(array, true);
     }
 }

@@ -28,6 +28,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * High performance reader of FASTQ records.
+ *
+ * Used internally in all FastqReaders.
  */
 final class FastqRecordsReader implements AutoCloseable {
     private static final byte DELIMITER = '\n';
@@ -40,22 +42,47 @@ final class FastqRecordsReader implements AutoCloseable {
     int pointer;
     int descriptionBegin, sequenceBegin, sequenceEnd, qualityBegin, qualityEnd;
     /**
-     * If true, then this reader will be automatically closed after it will read the last record
+     * If true, then this reader will be automatically closed after reading the last record
      */
     final boolean autoClose;
+    /**
+     * If this parameter is {@literal true}, then all wildcards (like N) will be converted to a random basic letters
+     * matching corresponding wildcards, and their corresponding quality scores will be set to a minimum possible
+     * values.
+     */
+    final boolean replaceWildcards;
 
-    FastqRecordsReader(boolean lazyReads, RandomAccessFile inputStream, int bufferSize, boolean autoClose) {
-        this(lazyReads, create(inputStream), bufferSize, autoClose);
+    /**
+     * See main constructor for parameters.
+     */
+    FastqRecordsReader(boolean lazyReads, RandomAccessFile inputStream, int bufferSize, boolean replaceWildcards,
+                       boolean autoClose) {
+        this(lazyReads, create(inputStream), bufferSize, replaceWildcards, autoClose);
     }
 
-    FastqRecordsReader(boolean lazyReads, InputStream inputStream, int bufferSize, boolean autoClose) {
-        this(lazyReads, create(inputStream), bufferSize, autoClose);
+    /**
+     * See main constructor for parameters.
+     */
+    FastqRecordsReader(boolean lazyReads, InputStream inputStream, int bufferSize, boolean replaceWildcards,
+                       boolean autoClose) {
+        this(lazyReads, create(inputStream), bufferSize, replaceWildcards, autoClose);
     }
 
-    private FastqRecordsReader(boolean lazyReads, InputDataWrapper inputStream, int bufferSize, boolean autoClose) {
+    /**
+     * @param lazyReads        use lazy implementation of reads (increases performance if reads processed in parallel)
+     * @param inputStream      input stream
+     * @param bufferSize       buffer size to use
+     * @param replaceWildcards if {@literal true}, all wildcards (like N) will be converted to a random basic letters
+     *                         matching corresponding wildcards, and their corresponding quality scores will be set to
+     * @param autoClose        if {@literal true}, then this reader will be automatically closed after reading the last
+     *                         record
+     */
+    private FastqRecordsReader(boolean lazyReads, InputDataWrapper inputStream, int bufferSize,
+                               boolean replaceWildcards, boolean autoClose) {
         this.lazyReads = lazyReads;
         this.inputStream = inputStream;
         this.bufferSize = bufferSize;
+        this.replaceWildcards = replaceWildcards;
         this.autoClose = autoClose;
     }
 
@@ -68,11 +95,12 @@ final class FastqRecordsReader implements AutoCloseable {
                     (short) (sequenceBegin - descriptionBegin),
                     (short) (qualityBegin - descriptionBegin),
                     (short) (sequenceEnd - sequenceBegin),
-                    (short) (sequenceBegin - descriptionBegin - 1));
+                    (short) (sequenceBegin - descriptionBegin - 1),
+                    replaceWildcards);
         else
             return new SingleReadImpl(id,
                     UnsafeFactory.fastqParse(buffer, sequenceBegin, qualityBegin,
-                            sequenceEnd - sequenceBegin, format.getOffset(), id),
+                            sequenceEnd - sequenceBegin, format.getOffset(), id, replaceWildcards),
                     new String(buffer, descriptionBegin,
                             sequenceBegin - descriptionBegin - 1));
     }

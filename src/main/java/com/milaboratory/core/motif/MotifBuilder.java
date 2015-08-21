@@ -27,10 +27,12 @@ public final class MotifBuilder<S extends Sequence<S>> {
     public MotifBuilder(Alphabet<S> alphabet, int size) {
         this.alphabet = alphabet;
         this.size = size;
-        this.data = new BitArray(alphabet.size() * size);
+        this.data = new BitArray(alphabet.basicSize() * size);
     }
 
     public void setAllowedLetter(int position, byte letter) {
+        if (letter > alphabet.basicSize())
+            throw new IllegalArgumentException();
         data.set(letter * size + position);
     }
 

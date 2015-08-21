@@ -42,41 +42,64 @@ public final class RandomAccessFastqReader
      */
     public RandomAccessFastqReader(String file, String fileIndex)
             throws IOException {
-        this(new RandomAccessFile(file, "r"), FileIndex.read(fileIndex), true);
+        this(new RandomAccessFile(file, "r"), FileIndex.read(fileIndex), false, true);
     }
 
     /**
      * Creates reader of specified FASTQ file with specified index.
-     *  @param file      FASTQ file
-     * @param fileIndex file index
-     * @param lazyReads create reads data on demand
+     *
+     * @param file             FASTQ file
+     * @param fileIndex        file index
+     * @param replaceWildcards if {@literal true}, all wildcards (like N) will be converted to a random basic letters
+     *                         matching corresponding wildcards, and their corresponding quality scores will be set to
      */
-    public RandomAccessFastqReader(String file, String fileIndex, boolean lazyReads)
+    public RandomAccessFastqReader(String file, String fileIndex, boolean replaceWildcards)
             throws IOException {
-        this(new RandomAccessFile(file, "r"), FileIndex.read(fileIndex), lazyReads);
+        this(new RandomAccessFile(file, "r"), FileIndex.read(fileIndex), replaceWildcards, true);
     }
 
     /**
      * Creates reader of specified FASTQ file with specified index.
-     *  @param file      FASTQ file
-     * @param fileIndex file index
-     * @param lazyReads create reads data on demand
+     *
+     * @param file             FASTQ file
+     * @param fileIndex        file index
+     * @param replaceWildcards if {@literal true}, all wildcards (like N) will be converted to a random basic letters
+     *                         matching corresponding wildcards, and their corresponding quality scores will be set to
+     * @param lazyReads        create reads data on demand
      */
-    public RandomAccessFastqReader(File file, FileIndex fileIndex, boolean lazyReads)
+    public RandomAccessFastqReader(String file, String fileIndex, boolean replaceWildcards, boolean lazyReads)
+            throws IOException {
+        this(new RandomAccessFile(file, "r"), FileIndex.read(fileIndex), replaceWildcards, lazyReads);
+    }
+
+    /**
+     * Creates reader of specified FASTQ file with specified index.
+     *
+     * @param file             FASTQ file
+     * @param fileIndex        file index
+     * @param replaceWildcards if {@literal true}, all wildcards (like N) will be converted to a random basic letters
+     *                         matching corresponding wildcards, and their corresponding quality scores will be set to
+     * @param lazyReads        create reads data on demand
+     */
+    public RandomAccessFastqReader(File file, FileIndex fileIndex, boolean replaceWildcards, boolean lazyReads)
             throws FileNotFoundException {
-        this(new RandomAccessFile(file, "r"), fileIndex, lazyReads);
+        this(new RandomAccessFile(file, "r"), fileIndex, replaceWildcards, lazyReads);
     }
 
     /**
      * Creates reader of specified FASTQ file with specified index.
-     *  @param file      FASTQ file
-     * @param fileIndex file index
-     * @param lazyReads create reads data on demand
+     *
+     * @param file             FASTQ file
+     * @param fileIndex        file index
+     * @param replaceWildcards if {@literal true}, all wildcards (like N) will be converted to a random basic letters
+     *                         matching corresponding wildcards, and their corresponding quality scores will be set to
+     * @param lazyReads        create reads data on demand
      */
-    public RandomAccessFastqReader(RandomAccessFile file, FileIndex fileIndex, boolean lazyReads) {
+    public RandomAccessFastqReader(RandomAccessFile file, FileIndex fileIndex, boolean replaceWildcards, boolean lazyReads) {
         super(fileIndex, file);
         this.qualityFormat = QualityFormat.fromName(fileIndex.getMetadata("format"));
-        this.recordsReader = new FastqRecordsReader(lazyReads, file, SingleFastqReader.DEFAULT_BUFFER_SIZE, false);
+        this.recordsReader = new FastqRecordsReader(lazyReads, file, SingleFastqReader.DEFAULT_BUFFER_SIZE,
+                replaceWildcards, false);
     }
 
     @Override

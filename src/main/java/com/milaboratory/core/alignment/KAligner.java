@@ -15,23 +15,32 @@
  */
 package com.milaboratory.core.alignment;
 
+import cc.redberry.pipe.CUtils;
+import cc.redberry.pipe.OutputPort;
+import cc.redberry.pipe.Processor;
+import cc.redberry.pipe.blocks.ParallelProcessor;
+import com.milaboratory.core.alignment.batch.*;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * <p>KAligner - class which performs comprehensive alignment of sequence.</p>
- * <p/>
- * <p>Complete alignment of sequence performed using {@link com.milaboratory.core.alignment.KMapper#addReference(com.milaboratory.core.sequence.NucleotideSequence, int, int)}
+ * <p>KAligner is a comprehensive aligner for nucleotide sequences.
+ *
+ * <p>Complete alignment of sequence performed using {@link com.milaboratory.core.alignment.KMapper#addReference(com.milaboratory.core.sequence.NucleotideSequence,
+ * int, int)}
  * method from which preliminary hits are obtained and used by {@link #align(com.milaboratory.core.sequence.NucleotideSequence)},
  * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int)},
  * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)}
  * methods.</p>
- * <p/>
+ *
  * <p>All settings are stored in {@link #parameters} property.</p>
  */
-public class KAligner implements java.io.Serializable {
+public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence, P, KAlignmentHit<P>>,
+        BatchAlignerWithBase<NucleotideSequence, P, KAlignmentHit<P>>,
+        java.io.Serializable {
     /**
      * Link to KMapper
      */
@@ -45,14 +54,26 @@ public class KAligner implements java.io.Serializable {
      */
     final List<NucleotideSequence> sequences = new ArrayList<>();
     /**
-     * Flag indicating how to load final alignments - at first request or immediately after obtaining {@link com.milaboratory.core.alignment.KAlignmentResult}
+     * Record payloads.
+     */
+    final TIntObjectHashMap<P> payloads = new TIntObjectHashMap<>();
+    /**
+     * Flag indicating how to load final alignments - at first request or immediately after obtaining {@link
+     * com.milaboratory.core.alignment.KAlignmentResult}
      */
     final boolean lazyResults;
+    /**
+     * Number fo threads to use in piped processing.
+     */
+    volatile int threads = 1;
 
     /**
      * <p>Creates new KAligner.</p>
-     * <p>Sets {@link #lazyResults} flag to {@code false}, which means that all alignments inside {@link com.milaboratory.core.alignment.KAlignmentResult}
-     * obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method
+     *
+     * <p>Sets {@link #lazyResults} flag to {@code false}, which means that all alignments inside {@link
+     * com.milaboratory.core.alignment.KAlignmentResult}
+     * obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+     * int, int, boolean)} method
      * will be loaded immediately.
      * </p>
      *
@@ -67,13 +88,25 @@ public class KAligner implements java.io.Serializable {
      *
      * @param parameters  parameters from which new KAligner needs to be created
      * @param lazyResults {@code true} if all alignments inside {@link com.milaboratory.core.alignment.KAlignmentResult}
-     *                    obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method
+     *                    obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+     *                    int, int, boolean)} method
      *                    need to be loaded at first request
      */
     public KAligner(KAlignerParameters parameters, boolean lazyResults) {
         this.mapper = KMapper.createFromParameters(parameters);
         this.parameters = parameters.clone();
         this.lazyResults = lazyResults;
+    }
+
+    /**
+     * Sets number of threads to be used in piped processing.<br><br>
+     *
+     * 0    -> Runtime.getRuntime().availableProcessors()<br>
+     * 1    -> process in the same thread as take() method call<br>
+     * 2... -> parallel processor<br>
+     */
+    public void setThreadCount(int threads) {
+        this.threads = threads;
     }
 
     /**
@@ -98,6 +131,8 @@ public class KAligner implements java.io.Serializable {
      * @return index assigned to the sequence
      */
     public int addReference(NucleotideSequence sequence, int offset, int length) {
+        if (sequence.containWildcards())
+            throw new IllegalArgumentException("Reference sequences with wildcards not supported.");
         int id = mapper.addReference(sequence, offset, length);
         assert sequences.size() == id;
         sequences.add(sequence);
@@ -119,19 +154,23 @@ public class KAligner implements java.io.Serializable {
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)} which contains preliminary hits
+     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
+     * com.milaboratory.core.alignment.KMapper}
+     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
+     * com.milaboratory.core.alignment.KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
-     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults} flag value)
+     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
+     * flag value)
      * </li>
      * </ul>
      *
      * @param sequence sequence to be aligned
      * @return a list of hits found in target sequence
      */
-    public KAlignmentResult align(NucleotideSequence sequence) {
+    public KAlignmentResult<P> align(NucleotideSequence sequence) {
         return align(sequence, 0, sequence.size());
     }
 
@@ -140,12 +179,16 @@ public class KAligner implements java.io.Serializable {
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)} which contains preliminary hits
+     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
+     * com.milaboratory.core.alignment.KMapper}
+     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
+     * com.milaboratory.core.alignment.KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
-     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults} flag value)
+     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
+     * flag value)
      * </li>
      * </ul>
      *
@@ -154,7 +197,7 @@ public class KAligner implements java.io.Serializable {
      * @param to       last nucleotide to be aligned (exclusive)
      * @return a list of hits found in target sequence
      */
-    public KAlignmentResult align(NucleotideSequence sequence, int from, int to) {
+    public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to) {
         return align(sequence, from, to, true);
     }
 
@@ -163,30 +206,37 @@ public class KAligner implements java.io.Serializable {
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)} which contains preliminary hits
+     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
+     * com.milaboratory.core.alignment.KMapper}
+     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
+     * com.milaboratory.core.alignment.KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
-     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults} flag value)
+     * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
+     * flag value)
      * </li>
      * </ul>
      *
      * @param sequence        sequence to be aligned
-     * @param from            first nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper} (inclusive)
-     * @param to              last nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper}  (exclusive)
-     * @param restrictToRange {@code} true if hits alignments from obtained {@link com.milaboratory.core.alignment.KAlignmentResult} should be
+     * @param from            first nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper}
+     *                        (inclusive)
+     * @param to              last nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper}
+     *                        (exclusive)
+     * @param restrictToRange {@code} true if hits alignments from obtained {@link com.milaboratory.core.alignment.KAlignmentResult}
+     *                        should be
      *                        restricted by the same range ({@code from} - {@code to})
      * @return a list of hits found in target sequence
      */
-    public KAlignmentResult align(NucleotideSequence sequence, int from, int to, boolean restrictToRange) {
+    public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to, boolean restrictToRange) {
         KMappingResult kResult = mapper.align(sequence, from, to);
 
-        KAlignmentResult result;
+        KAlignmentResult<P> result;
         if (restrictToRange)
-            result = new KAlignmentResult(this, kResult, sequence, from, to);
+            result = new KAlignmentResult<>(this, kResult, sequence, from, to);
         else
-            result = new KAlignmentResult(this, kResult, sequence, 0, sequence.size());
+            result = new KAlignmentResult<>(this, kResult, sequence, 0, sequence.size());
 
         if (!lazyResults)
             result.calculateAllAlignments();
@@ -194,5 +244,56 @@ public class KAligner implements java.io.Serializable {
             result.sortAccordingToMapperScores();
 
         return result;
+    }
+
+    @Override
+    public <Q> OutputPort<KAlignmentResultP<P, Q>> align(OutputPort<Q> input,
+                                                         final SequenceExtractor<Q, NucleotideSequence> extractor) {
+        if (lazyResults)
+            throw new IllegalStateException("Piped processing is supported for lazy results.");
+
+        Processor<Q, KAlignmentResultP<P, Q>> proc = new Processor<Q, KAlignmentResultP<P, Q>>() {
+            @Override
+            public KAlignmentResultP<P, Q> process(Q input) {
+                NucleotideSequence seq = extractor.extract(input);
+                KMappingResult kResult = mapper.align(seq);
+                return new KAlignmentResultP<>(input, KAligner.this, kResult, seq, 0, seq.size());
+            }
+        };
+
+
+        return wrapPipe(proc, input);
+    }
+
+    @Override
+    public <Q extends HasSequence<NucleotideSequence>> OutputPort<KAlignmentResultP<P, Q>> align(OutputPort<Q> input) {
+        if (lazyResults)
+            throw new IllegalStateException("Piped processing is supported for lazy results.");
+
+        Processor<Q, KAlignmentResultP<P, Q>> proc = new Processor<Q, KAlignmentResultP<P, Q>>() {
+            @Override
+            public KAlignmentResultP<P, Q> process(Q input) {
+                NucleotideSequence seq = input.getSequence();
+                KMappingResult kResult = mapper.align(seq);
+                return new KAlignmentResultP<>(input, KAligner.this, kResult, seq, 0, seq.size());
+            }
+        };
+
+        return wrapPipe(proc, input);
+    }
+
+    @Override
+    public void addReference(NucleotideSequence sequence, P payload) {
+        int id = addReference(sequence);
+        payloads.put(id, payload);
+    }
+
+    private <Q> OutputPort<KAlignmentResultP<P, Q>> wrapPipe(Processor<Q, KAlignmentResultP<P, Q>> proc, OutputPort<Q> input) {
+        if (threads == 1)
+            return CUtils.wrap(input, proc);
+
+        int t = (threads == 0 ? Runtime.getRuntime().availableProcessors() : threads);
+
+        return new ParallelProcessor<>(input, proc, t);
     }
 }

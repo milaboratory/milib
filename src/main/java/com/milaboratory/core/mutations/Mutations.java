@@ -83,11 +83,11 @@ public final class Mutations<S extends Sequence<S>>
     }
 
     public char getFromAsSymbolByIndex(int index) {
-        return alphabet.symbolFromCode(getFromAsCodeByIndex(index));
+        return alphabet.codeToSymbol(getFromAsCodeByIndex(index));
     }
 
     public char getToAsSymbolByIndex(int index) {
-        return alphabet.symbolFromCode(getToAsCodeByIndex(index));
+        return alphabet.codeToSymbol(getToAsCodeByIndex(index));
     }
 
     public int getRawTypeByIndex(int index) {
@@ -245,9 +245,10 @@ public final class Mutations<S extends Sequence<S>>
                         if (getTo(mutations[p1]) != getFrom(other.mutations[p2]))
                             throw new IllegalArgumentException();
 
-                        if (isSubstitution(other.mutations[p2]))
-                            appendInCombine(result, (mutations[p1] & (~LETTER_MASK)) | (other.mutations[p2] & LETTER_MASK));
-                        else if (isDeletion(other.mutations[p2]))
+                        if (isSubstitution(other.mutations[p2])) {
+                            if (getFrom(mutations[p1]) != getTo(other.mutations[p2]))
+                                appendInCombine(result, (mutations[p1] & (~LETTER_MASK)) | (other.mutations[p2] & LETTER_MASK));
+                        } else if (isDeletion(other.mutations[p2]))
                             appendInCombine(result, createDeletion(position0, getFrom(mutations[p1])));
                         else
                             throw new RuntimeException("Insertion after Del. or Subs.");
@@ -303,8 +304,10 @@ public final class Mutations<S extends Sequence<S>>
 
     /**
      * Extracts mutations for a range of positions in the original sequence and performs shift of corresponding
-     * positions (moves them to {@code -from}). <p/> <p>Insertions before {@code from} excluded. Insertions after {@code
-     * (to - 1)} included.</p> <p/> <p><b>Important:</b> to extract leftmost insertions (trailing insertions) use {@code
+     * positions (moves them to {@code -from}). <p/> <p>Insertions before {@code from} excluded. Insertions after
+     * {@code
+     * (to - 1)} included.</p> <p/> <p><b>Important:</b> to extract leftmost insertions (trailing insertions) use
+     * {@code
      * from = -1}. So {@code extractMutationsForRange(mut, -1, seqLength) == mut}.</p>
      *
      * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.

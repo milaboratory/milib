@@ -15,7 +15,10 @@
  */
 package com.milaboratory.core.sequence;
 
-final class Translator {
+/**
+ * Defines standard genetic code.
+ */
+final class GeneticCode {
     private static byte[] code = null;
 
     static {
@@ -27,11 +30,11 @@ final class Translator {
         int triplet;
         byte b0, b1, b2;
         for (int i = 0; i < Base1.length; ++i) {
-            b0 = NucleotideAlphabet.INSTANCE.codeFromSymbol(Base1[i]);
-            b1 = NucleotideAlphabet.INSTANCE.codeFromSymbol(Base2[i]);
-            b2 = NucleotideAlphabet.INSTANCE.codeFromSymbol(Base3[i]);
+            b0 = NucleotideAlphabet.INSTANCE.symbolToCode(Base1[i]);
+            b1 = NucleotideAlphabet.INSTANCE.symbolToCode(Base2[i]);
+            b2 = NucleotideAlphabet.INSTANCE.symbolToCode(Base3[i]);
             triplet = (b0 << 4) | (b1 << 2) | b2;
-            code[triplet] = AminoAcidAlphabet.INSTANCE.codeFromSymbol(Amino[i]);
+            code[triplet] = AminoAcidAlphabet.INSTANCE.symbolToCode(Amino[i]);
         }
     }
 

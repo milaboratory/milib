@@ -1,4 +1,19 @@
 
+MiLib 1.1 (21 Aug 2015)
+========================
+
+-- Substantial modification for basic Sequence abstraction
+-- Wildcars are incorporated into normal alphabets
+-- IncompleteSequences are removed
+-- `FastaReader` isolated into sepparate entity (now it can read AminoAcid sequences) and special 
+   wrapper is created (`FastaSequenceReaderWrapper`) to wire it back to SequenceReader abstraction
+-- `BatchAligner` abstraction
+-- `SimpleBatchAligner`
+-- Extancive binding to Blast implemeting BatchAligner abstraction for interoperability with other 
+   BatchAligners
+-- many other small modifications to support new abstraction
+
+
 MiLib 1.0.2 (12 Aug 2015)
 ========================
 

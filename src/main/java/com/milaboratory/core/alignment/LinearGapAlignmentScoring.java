@@ -74,7 +74,7 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
                                      int match, int mismatch,
                                      int gap) {
         this(alphabet,
-                getSymmetricMatrix(match, mismatch, alphabet.size()),
+                getSymmetricMatrix(match, mismatch, alphabet),
                 gap);
     }
 
@@ -147,7 +147,7 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     public static LinearGapAlignmentScoring<AminoAcidSequence> getAminoAcidBLASTScoring(BLASTMatrix matrix, int gapPenalty) {
         return new LinearGapAlignmentScoring<>(AminoAcidSequence.ALPHABET,
-                matrix.getMatrix(AminoAcidSequence.ALPHABET),
+                matrix.getMatrix(),
                 gapPenalty);
     }
 }

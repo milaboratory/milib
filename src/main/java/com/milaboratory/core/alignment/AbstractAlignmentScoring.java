@@ -45,22 +45,23 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     /**
      * Flag indicating whether substitution matrix has the same value on main diagonal or not
      */
-    final boolean uniformMatch;
+    final boolean uniformBasicMatch;
 
     /**
-     * Abstract class constructor. <p>Initializes substitution matrix to {@code null} and uniformMatch to {@code
-     * true}</p>
+     * Abstract class constructor. Used in deserialization.
+     *
+     * <p>Initializes substitution matrix to {@code null} and uniformBasicMatch to {@code true}</p>
      *
      * @param alphabet alphabet to be used by scoring system
      */
     protected AbstractAlignmentScoring(Alphabet<S> alphabet) {
         this.alphabet = alphabet;
         this.subsMatrix = null;
-        this.uniformMatch = true;
+        this.uniformBasicMatch = true;
     }
 
     /**
-     * Abstract class constructor. <p>Initializes uniformMatch to {@code true}</p>
+     * Abstract class constructor. <p>Initializes uniformBasicMatch to {@code true}</p>
      *
      * @param alphabet   alphabet to be used by scoring system
      * @param subsMatrix substitution matrix
@@ -70,7 +71,7 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
 
         //For deserialization see ScoringMatrixIO.Deserializer
         if (subsMatrix.length == 2)
-            subsMatrix = ScoringUtils.getSymmetricMatrix(subsMatrix[0], subsMatrix[1], size);
+            subsMatrix = ScoringUtils.getSymmetricMatrix(subsMatrix[0], subsMatrix[1], alphabet);
         else {
             //Normal arguments check
             if (subsMatrix.length != size * size)
@@ -84,12 +85,12 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
         // Setting uniformity of match score flag
         int val = getScore((byte) 0, (byte) 0);
         boolean e = true;
-        for (byte i = (byte) (size - 1); i > 0; --i)
+        for (byte i = (byte) (alphabet.basicSize() - 1); i > 0; --i)
             if (getScore(i, i) != val) {
                 e = false;
                 break;
             }
-        this.uniformMatch = e;
+        this.uniformBasicMatch = e;
     }
 
     /**
@@ -113,12 +114,12 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     }
 
     /**
-     * Returns @code{true} if @code{getScore(i, i)} returns the same score for all possible values of @code{i}.
+     * Returns @code{true} if @code{getScore(i, i)} returns the same score for all basic letters values of @code{i}.
      *
-     * @return @code{true} if @code{getScore(i, i)} returns the same score for all possible values of @code{i}
+     * @return @code{true} if @code{getScore(i, i)} returns the same score for all basic letters values of @code{i}
      */
-    public boolean uniformMatchScore() {
-        return uniformMatch;
+    public boolean uniformBasicMatchScore() {
+        return uniformBasicMatch;
     }
 
     @Override

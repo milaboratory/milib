@@ -29,6 +29,10 @@ abstract class AbstractArraySequence<S extends AbstractArraySequence<S>> extends
         this.data = dataFromChars(getAlphabet(), sequence.toCharArray());
     }
 
+    protected AbstractArraySequence(char[] sequence) {
+        this.data = dataFromChars(getAlphabet(), sequence);
+    }
+
     protected AbstractArraySequence(byte[] data) {
         this.data = data;
     }
@@ -73,7 +77,7 @@ abstract class AbstractArraySequence<S extends AbstractArraySequence<S>> extends
     protected static byte[] dataFromChars(Alphabet alphabet, char[] chars) {
         byte[] data = new byte[chars.length];
         for (int i = 0; i < chars.length; ++i)
-            if ((data[i] = alphabet.codeFromSymbol(chars[i])) == -1)
+            if ((data[i] = alphabet.symbolToCode(chars[i])) == -1)
                 throw new IllegalArgumentException("Unknown symbol \"" + chars[i] + "\"");
         return data;
     }

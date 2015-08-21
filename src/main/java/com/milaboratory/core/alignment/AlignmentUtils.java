@@ -39,17 +39,21 @@ public final class AlignmentUtils {
      * @return score of alignment
      */
     public static float calculateScore(LinearGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
-        if (!scoring.uniformMatchScore())
+        if (!scoring.uniformBasicMatchScore())
             throw new IllegalArgumentException("Scoring with non-uniform match score is not supported.");
 
         float matchScore = scoring.getScore((byte) 0, (byte) 0);
         float score = matchScore * initialLength;
         for (int i = 0; i < mutations.size(); ++i) {
             int mutation = mutations.getMutation(i);
+
+            if (scoring.getAlphabet().isWildcard(getFrom(mutation)) || scoring.getAlphabet().isWildcard(getTo(mutation)))
+                throw new IllegalArgumentException("Mutations with wildcards are not supported.");
+
             if (isDeletion(mutation) || isInsertion(mutation))
                 score += scoring.getGapPenalty();
             else //Substitution
-                score += scoring.getScore((byte) getFrom(mutation), (byte) getTo(mutation));
+                score += scoring.getScore(getFrom(mutation), getTo(mutation));
             if (isDeletion(mutation) || isSubstitution(mutation))
                 score -= matchScore;
         }
@@ -71,7 +75,7 @@ public final class AlignmentUtils {
                             throw new IllegalArgumentException("Mutation = " + Mutation.toString(initialSequence.getAlphabet(), mut) +
                                     " but seq[" + pointer + "]=" + initialSequence.charFromCodeAt(pointer));
                         sb1.append(Character.toLowerCase(initialSequence.charFromCodeAt(pointer++)));
-                        sb2.append(Character.toLowerCase(alphabet.symbolFromCode((byte) (mut & LETTER_MASK))));
+                        sb2.append(Character.toLowerCase(alphabet.codeToSymbol((byte) (mut & LETTER_MASK))));
                         ++mutPointer;
                         break;
                     case RAW_MUTATION_TYPE_DELETION:
@@ -84,7 +88,7 @@ public final class AlignmentUtils {
                         break;
                     case RAW_MUTATION_TYPE_INSERTION:
                         sb1.append("-");
-                        sb2.append(alphabet.symbolFromCode((byte) (mut & LETTER_MASK)));
+                        sb2.append(alphabet.codeToSymbol((byte) (mut & LETTER_MASK)));
                         ++mutPointer;
                         break;
                 }
@@ -97,4 +101,7 @@ public final class AlignmentUtils {
         return sb1.toString() + "\n" + sb2.toString() + '\n';
     }
 
+    public static <S extends Sequence<S>> S getAlignedSequence2Part(Alignment<S> alignment) {
+        return alignment.getRelativeMutations().mutate(alignment.getSequence1().getRange(alignment.getSequence1Range()));
+    }
 }

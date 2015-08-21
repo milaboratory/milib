@@ -16,7 +16,6 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.Range;
-import com.milaboratory.core.io.util.TestUtil;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
@@ -61,7 +60,7 @@ public class KAlignerTest extends AlignmentTest {
 
     @Test
     public void test1() throws Exception {
-        KAligner aligner = new KAligner(gParams.clone().setFloatingRightBound(true));
+        KAligner<?> aligner = new KAligner(gParams.clone().setFloatingRightBound(true));
         aligner.addReference(new NucleotideSequence("ATTAGACACAATATATCTATGATCCTCTATTAGCTACGTACGGCTGATGCTAGTGTCGAT"));
         aligner.addReference(new NucleotideSequence("ACTAGCTGAGCTGTGTAGCTAGTATCTCGAACTATGCTACATCGTGGGTCGATTAGCTACGT"));
         aligner.addReference(new NucleotideSequence("GCTGTCGGCCTAGGCGCGATCGAACGCGCTGCGCGATGATATATCGCGATAATTCTCTGACT"));
@@ -72,7 +71,7 @@ public class KAlignerTest extends AlignmentTest {
         int[] refs = new int[4];
         int n = 10000;
         for (int i = 0; i < n; ++i) {
-            KAlignmentResult result = aligner.align(target);
+            KAlignmentResult<?> result = aligner.align(target);
             result.calculateAllAlignments();
             for (KAlignmentHit hit : result.getHits()) {
                 Alignment la = hit.getAlignment();
@@ -91,12 +90,12 @@ public class KAlignerTest extends AlignmentTest {
 
     @Test
     public void test2() throws Exception {
-        KAligner aligner = new KAligner(gParams.clone().setFloatingLeftBound(true));
+        KAligner<?> aligner = new KAligner(gParams.clone().setFloatingLeftBound(true));
         aligner.addReference(new NucleotideSequence("ATTAGACACAATATATCTATGATCCTCTATTAGCTACGTACGGCTGATGCTAGTGTCGAT"));
         aligner.addReference(new NucleotideSequence("ACTAGCTGAGCTGTGTAGCTAGTATCTCGATATGCTACATCGTGGGTCGATTAGCTACGT"));
         aligner.addReference(new NucleotideSequence("GCTGTCGGCCTAGGCGCGATCGAACGCGCTGCGCGATGATATATCGCGATAATTCTCTGA"));
 
-        KAlignmentResult result = aligner.align(new NucleotideSequence("atgcgtagtcgcgtcgtagtgactcgGCTGGTCGGCCTAGGCGCGATCGAACCGCTGCTCGA"));
+        KAlignmentResult<?> result = aligner.align(new NucleotideSequence("atgcgtagtcgcgtcgtagtgactcgGCTGGTCGGCCTAGGCGCGATCGAACCGCTGCTCGA"));
         Assert.assertEquals(1, result.hits.size());
         Assert.assertEquals(2, result.hits.get(0).getId());
     }
@@ -105,15 +104,16 @@ public class KAlignerTest extends AlignmentTest {
     public void test3() throws Exception {
         KAlignerParameters parameters = gParams.clone();
         parameters
-                .setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET, ScoringUtils.getSymmetricMatrix(4, -4, 4), -5))
+                .setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET,
+                        ScoringUtils.getSymmetricMatrix(4, -4, NucleotideSequence.ALPHABET), -5))
                 .setFloatingRightBound(true).setMaxAdjacentIndels(2);
-        KAligner aligner = new KAligner(parameters);
+        KAligner<?> aligner = new KAligner(parameters);
         aligner.addReference(new NucleotideSequence("ATTAGACACAATATATCTATGATCCTCTATTAGCTACGTACGGCTGATGCTAGTGTCGAT"));
         aligner.addReference(new NucleotideSequence("ACTAGCTGAGCTGTGTAGCTAGTATCTCGATATGCTACATCGTGGGTCGATTAGCTACGT"));
         aligner.addReference(new NucleotideSequence("CACAGCTGTCGGCCTAGGCGCGATCGAACGCGCTGCGCGATGATATATCGCGATAATTCTCTGA"));
 
         //KAlignmentResult result = aligner.align(new NucleotideSequence("GTAGCTAGTATCTCGATATGCTACATCGTGGGTCGATTAGCattagacagacagcgctacgtcgta"));
-        KAlignmentResult result = aligner.align(new NucleotideSequence("TCTGTCGGCCTAGGCGCGATCGAacACGCGCTGCGCGATGATATATCGCGATAATTCTCattagaccgcgaggcgag"));
+        KAlignmentResult<?> result = aligner.align(new NucleotideSequence("TCTGTCGGCCTAGGCGCGATCGAacACGCGCTGCGCGATGATATATCGCGATAATTCTCattagaccgcgaggcgag"));
         result.calculateAllAlignments();
         //for (KAlignmentHit hit : result.hits) {
         //    printHitAlignment(hit);
@@ -148,7 +148,8 @@ public class KAlignerTest extends AlignmentTest {
     public void testRandomCorrectness() throws Exception {
         KAlignerParameters p = gParams.clone().setMapperKValue(6).setAlignmentStopPenalty(Integer.MIN_VALUE)
                 .setMapperAbsoluteMinScore(2.1f).setMapperMinSeedsDistance(4).setAbsoluteMinScore(100.0f).setMapperRelativeMinScore(0.8f);
-        p.setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET, ScoringUtils.getSymmetricMatrix(4, -4, 4), -5)).setMaxAdjacentIndels(2);
+        p.setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET,
+                ScoringUtils.getSymmetricMatrix(4, -4, NucleotideSequence.ALPHABET), -5)).setMaxAdjacentIndels(2);
 
         KAlignerParameters[] params = new KAlignerParameters[]{p.clone(),
                 p.clone().setFloatingLeftBound(true), p.clone().setFloatingRightBound(true),
@@ -164,7 +165,7 @@ public class KAlignerTest extends AlignmentTest {
 
         for (KAlignerParameters parameters : params) {
             long time = 0, timestamp;
-            KAligner aligner = new KAligner(parameters);
+            KAligner<Integer> aligner = new KAligner<>(parameters);
 
             int correct = 0, incorrect = 0, miss = 0, scoreError = 0, random = 0;
 
@@ -172,7 +173,7 @@ public class KAlignerTest extends AlignmentTest {
             for (i = 0; i < baseSize; ++i) {
                 NucleotideSequence reference = randomSequence(NucleotideSequence.ALPHABET, rdi, 100, 300);
                 ncs.add(reference);
-                aligner.addReference(reference);
+                aligner.addReference(reference, i);
             }
 
             for (i = 0; i < total; ++i) {
@@ -223,12 +224,13 @@ public class KAlignerTest extends AlignmentTest {
                 NucleotideSequence target = left.concatenate(mutate(subSeq, subSeqMutations)).concatenate(right);
 
                 timestamp = System.nanoTime();
-                KAlignmentResult result = aligner.align(target);
+                KAlignmentResult<Integer> result = aligner.align(target);
                 result.calculateAllAlignments();
                 time += System.nanoTime() - timestamp;
 
                 boolean found = false;
-                for (KAlignmentHit hit : result.hits) {
+                for (KAlignmentHit<Integer> hit : result.hits) {
+                    Assert.assertEquals((Integer) hit.getId(), hit.getRecordPayload());
                     if (hit.getId() == id) {
                         //System.out.println(hit.getAlignmentScore());
                         found = true;
@@ -270,7 +272,7 @@ public class KAlignerTest extends AlignmentTest {
 
                 NucleotideSequence randomSequence = randomSequence(NucleotideSequence.ALPHABET, rdi, target.size() - 1, target.size());
                 for (KAlignmentHit hit : aligner.align(randomSequence).hits) {
-                    hit.calculateAlignmnet();
+                    hit.calculateAlignment();
                     if (hit.getAlignment().getScore() >= 100.0)
                         ++random;
                 }
@@ -290,8 +292,11 @@ public class KAlignerTest extends AlignmentTest {
 
     @Test
     public void testRandomCorrectnessConcurrent() throws Exception {
-        KAlignerParameters p = gParams.clone().setMapperKValue(6).setAlignmentStopPenalty(Integer.MIN_VALUE).setMapperAbsoluteMinScore(2.1f).setMapperMinSeedsDistance(4);
-        p.setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET, ScoringUtils.getSymmetricMatrix(4, -4, 4), -5)).setMaxAdjacentIndels(2);
+        KAlignerParameters p = gParams.clone().setMapperKValue(6)
+                .setAlignmentStopPenalty(Integer.MIN_VALUE)
+                .setMapperAbsoluteMinScore(2.1f).setMapperMinSeedsDistance(4);
+        p.setScoring(new LinearGapAlignmentScoring(NucleotideSequence.ALPHABET,
+                ScoringUtils.getSymmetricMatrix(4, -4, NucleotideSequence.ALPHABET), -5)).setMaxAdjacentIndels(2);
 
         KAlignerParameters[] params = new KAlignerParameters[]{p.clone(),
                 p.clone().setFloatingLeftBound(true), p.clone().setFloatingRightBound(true),
@@ -307,7 +312,7 @@ public class KAlignerTest extends AlignmentTest {
         mutationModel.reseed(12343L);
 
         for (final KAlignerParameters parameters : params) {
-            final KAligner aligner = new KAligner(parameters);
+            final KAligner<?> aligner = new KAligner(parameters);
 
             final AtomicInteger correct = new AtomicInteger(0), incorrect = new AtomicInteger(0),
                     miss = new AtomicInteger(0), scoreError = new AtomicInteger(0), random = new AtomicInteger(0);
@@ -385,7 +390,7 @@ public class KAlignerTest extends AlignmentTest {
                             NucleotideSequence target = left.concatenate(mutate(subSeq, subSeqMutations)).concatenate(right);
 
                             timestamp = System.nanoTime();
-                            KAlignmentResult result = aligner.align(target);
+                            KAlignmentResult<?> result = aligner.align(target);
                             time.addAndGet(System.nanoTime() - timestamp);
 
                             boolean found = false;
@@ -431,7 +436,7 @@ public class KAlignerTest extends AlignmentTest {
 
                             NucleotideSequence randomSequence = randomSequence(NucleotideSequence.ALPHABET, rdi, target.size() - 1, target.size());
                             for (KAlignmentHit hit : aligner.align(randomSequence).hits) {
-                                hit.calculateAlignmnet();
+                                hit.calculateAlignment();
                                 if (hit.getAlignment().getScore() >= 110.0)
                                     random.incrementAndGet();
                             }
@@ -459,7 +464,7 @@ public class KAlignerTest extends AlignmentTest {
     public void testRandom() {
         int its = its(100, 200);
         RandomDataGenerator rdi = new RandomDataGenerator(new Well19937c(12736861L));
-        KAligner aligner = new KAligner(gParams.clone().setMapperKValue(3));
+        KAligner<?> aligner = new KAligner(gParams.clone().setMapperKValue(3));
 
         for (int i = 0; i < its; ++i)
             aligner.addReference(randomSequence(NucleotideSequence.ALPHABET, rdi, 50, 70));
@@ -467,7 +472,7 @@ public class KAlignerTest extends AlignmentTest {
         int numberOfTargetSequences = its(10000, 100000);
         for (int i = 0; i < numberOfTargetSequences; ++i) {
             NucleotideSequence sequence = randomSequence(NucleotideSequence.ALPHABET, rdi, 20, 30);
-            KAlignmentResult result = aligner.align(sequence);
+            KAlignmentResult<?> result = aligner.align(sequence);
             result.calculateAllAlignments();
             for (KAlignmentHit hit : result.hits) {
                 Alignment<NucleotideSequence> la = hit.getAlignment();
@@ -489,7 +494,7 @@ public class KAlignerTest extends AlignmentTest {
         for (int i = 0; i < baseSize; ++i)
             ncs.add(randomSequence(NucleotideSequence.ALPHABET, rdi, 40, 300));
 
-        KAligner aligner = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).setMapperAbsoluteMinScore(3.5f).setMapperMismatchPenalty(-0.5f).setMaxAdjacentIndels(3));
+        KAligner<?> aligner = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).setMapperAbsoluteMinScore(3.5f).setMapperMismatchPenalty(-0.5f).setMaxAdjacentIndels(3));
         for (NucleotideSequence seq : ncs)
             aligner.addReference(seq);
 
@@ -517,7 +522,7 @@ public class KAlignerTest extends AlignmentTest {
             target = mutate(target, muts);
 
             timestamp = System.nanoTime();
-            KAlignmentResult result = aligner.align(target);
+            KAlignmentResult<?> result = aligner.align(target);
             result.calculateAllAlignments();
             for (KAlignmentHit res : result.hits) {
                 res.getAlignment();
@@ -562,11 +567,11 @@ public class KAlignerTest extends AlignmentTest {
         for (int i = 0; i < baseSize; ++i)
             ncs.add(randomSequence(NucleotideSequence.ALPHABET, rdi, 70, 100));
 
-        KAligner alignerLeft = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).
+        KAligner<?> alignerLeft = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).
                 setMapperAbsoluteMinScore(3.5f).setMapperMismatchPenalty(-0.5f).setMaxAdjacentIndels(3).setFloatingLeftBound(true).
                 setAlignmentStopPenalty(-1000));
 
-        KAligner alignerRight = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).
+        KAligner<?> alignerRight = new KAligner(gParams.clone().setMapperKValue(6).setMapperMaxSeedsDistance(2).setMapperMinSeedsDistance(1).
                 setMapperAbsoluteMinScore(3.5f).setMapperMismatchPenalty(-0.5f).setMaxAdjacentIndels(3).setFloatingRightBound(true).
                 setAlignmentStopPenalty(-1000));
 
@@ -606,7 +611,7 @@ public class KAlignerTest extends AlignmentTest {
                 target = randomSequence(NucleotideSequence.ALPHABET, rdi, 40, 70).concatenate(orig);
 
 
-            KAlignmentResult result;
+            KAlignmentResult<?> result;
             if (left)
                 result = alignerLeft.align(target);
             else

@@ -21,7 +21,7 @@ import org.junit.Assert;
 import java.io.*;
 import java.util.ArrayList;
 
-public class TestUtil {
+public class IOTestUtil {
 
     public static void assertJavaSerialization(Object se) throws IOException, ClassNotFoundException {
         ByteArrayOutputStream out = new ByteArrayOutputStream(128);

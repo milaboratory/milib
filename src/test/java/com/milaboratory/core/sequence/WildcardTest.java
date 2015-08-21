@@ -22,11 +22,11 @@ import org.junit.Test;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public class WildcardSymbolTest {
+public class WildcardTest {
     @Test
     public void testRandomSymbol() throws Exception {
         byte[] codes;
-        WildcardSymbol symbol;
+        Wildcard symbol;
         int[] unif;
         int tries = 2000;
         double precision = 0.15, expected;
@@ -34,13 +34,20 @@ public class WildcardSymbolTest {
             codes = new byte[count];
             for (int i = 1; i < count; ++i)
                 codes[i] = (byte) i;
-            symbol = new WildcardSymbol('a', codes);
+            symbol = new Wildcard('A', (byte) 0, codes);
             unif = new int[count];
             for (int i = 0; i < tries; ++i)
-                unif[symbol.getUniformlyDistributedSymbol(i)]++;
+                unif[symbol.getUniformlyDistributedBasicCode(i)]++;
             expected = (1. * tries) / count;
             for (int actual : unif)
                 Assert.assertTrue(actual < (1. + precision) * expected && actual > (1. - precision) * expected);
         }
+    }
+
+    @Test
+    public void testIntersection() throws Exception {
+        Assert.assertTrue(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.Y_WILDCARD));
+        Assert.assertFalse(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.W_WILDCARD));
+        Assert.assertTrue(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.C_WILDCARD));
     }
 }

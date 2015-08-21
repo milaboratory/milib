@@ -15,6 +15,9 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.milaboratory.util.Bit2Array;
+import com.milaboratory.util.HashFunctions;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -35,7 +38,7 @@ public final class SequencesUtils {
      */
     public static boolean belongsToAlphabet(Alphabet<?> alphabet, String string) {
         for (int i = 0; i < string.length(); ++i)
-            if (alphabet.codeFromSymbol(string.charAt(i)) == -1)
+            if (alphabet.symbolToCode(string.charAt(i)) == -1)
                 return false;
         return true;
     }
@@ -105,5 +108,57 @@ public final class SequencesUtils {
             builder.append(s);
 
         return builder.createAndDestroy();
+    }
+
+    /**
+     * Converts sequence with wildcards to a sequence without wildcards by converting wildcard letters to uniformly
+     * distributed letters from the set of letters allowed by the wildcard. (see {@link
+     * Wildcard#getUniformlyDistributedBasicCode(long)}.
+     *
+     * <p>Returns same result for the same combination of sequence and seed.</p>
+     *
+     * @param sequence sequence to convert
+     * @param seed     seed for random generator
+     * @param <S>      type of sequence
+     * @return sequence with wildcards replaced by uniformly distributed random basic letters
+     */
+    public static <S extends Sequence<S>> S wildcardsToRandomBasic(S sequence, long seed) {
+        Alphabet<S> alphabet = sequence.getAlphabet();
+        SequenceBuilder<S> sequenceBuilder = alphabet.getBuilder().ensureCapacity(sequence.size());
+        for (int i = 0; i < sequence.size(); ++i) {
+            byte code = sequence.codeAt(i);
+            if (alphabet.isWildcard(code)) {
+                seed = HashFunctions.JenkinWang64shift(seed + i);
+                sequenceBuilder.append(alphabet.codeToWildcard(code).getUniformlyDistributedBasicCode(seed));
+            } else
+                sequenceBuilder.append(code);
+        }
+        return sequenceBuilder.createAndDestroy();
+    }
+
+    /**
+     * Used to write legacy file formats.
+     *
+     * @return Bit2Array representation of nucleotide sequence
+     */
+    public static Bit2Array convertNSequenceToBit2Array(NucleotideSequence seq) {
+        if (seq.containWildcards())
+            throw new IllegalArgumentException("Sequences with wildcards are not supported.");
+        Bit2Array bar = new Bit2Array(seq.size());
+        for (int i = 0; i < seq.size(); i++)
+            bar.set(i, seq.codeAt(i));
+        return bar;
+    }
+
+    /**
+     * Used to read legacy file formats.
+     *
+     * @return NucleotideSequence constructed from Bit2Array
+     */
+    public static NucleotideSequence convertBit2ArrayToNSequence(Bit2Array bar) {
+        SequenceBuilder<NucleotideSequence> seq = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(bar.size());
+        for (int i = 0; i < bar.size(); i++)
+            seq.append((byte) bar.get(i));
+        return seq.createAndDestroy();
     }
 }

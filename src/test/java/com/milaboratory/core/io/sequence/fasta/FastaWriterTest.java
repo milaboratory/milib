@@ -15,18 +15,15 @@
  */
 package com.milaboratory.core.io.sequence.fasta;
 
-import com.milaboratory.core.io.sequence.SingleRead;
-import com.milaboratory.core.io.sequence.SingleReadImpl;
-import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.Alphabet;
+import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
-import com.milaboratory.core.sequence.SequenceQuality;
-import com.milaboratory.util.Bit2Array;
+import com.milaboratory.core.sequence.Sequence;
 import org.apache.commons.math3.random.Well1024a;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
-import java.util.Arrays;
 
 /**
  * @author Dmitry Bolotin
@@ -35,35 +32,33 @@ import java.util.Arrays;
 public class FastaWriterTest {
     @Test
     public void test1() throws Exception {
-        int count = 100;
-        SingleRead[] reads = new SingleRead[count];
-        File temp = File.createTempFile("temp", ".fasta");
-        temp.deleteOnExit();
-        FastaWriter writer = new FastaWriter(temp, 50);
-        for (int i = 0; i < count; ++i) {
-            reads[i] = randomRead(i);
-            writer.write(reads[i]);
+        for (Alphabet alphabet : new Alphabet[]{NucleotideSequence.ALPHABET, AminoAcidSequence.ALPHABET}) {
+            int count = 1000;
+            FastaRecord[] reads = new FastaRecord[count];
+            File temp = File.createTempFile("temp", ".fasta");
+            temp.deleteOnExit();
+            try (FastaWriter writer = new FastaWriter(temp, 50)) {
+                for (int i = 0; i < count; ++i) {
+                    reads[i] = randomRecord(alphabet, i);
+                    writer.write(reads[i]);
+                }
+            }
+            try (FastaReader reader = new FastaReader(temp, alphabet)) {
+                for (int i = 0; i < count; ++i) {
+                    FastaRecord actual = reader.take();
+                    Assert.assertEquals(reads[i], actual);
+                }
+                Assert.assertTrue(reader.take() == null);
+            }
+            temp.delete();
         }
-        writer.close();
-        FastaReader reader = new FastaReader(temp, false);
-        for (int i = 0; i < count; ++i) {
-            SingleRead actual = reader.take();
-            Assert.assertEquals(reads[i].getDescription(), actual.getDescription());
-            Assert.assertEquals(reads[i].getData(), actual.getData());
-        }
-        Assert.assertTrue(reader.take() == null);
-        reader.close();
-        temp.delete();
     }
 
-    private static SingleRead randomRead(long id) {
+    private static <S extends Sequence<S>> FastaRecord<S> randomRecord(Alphabet<S> alphabet, long id) {
         Well1024a random = new Well1024a(id);
-        Bit2Array seq = new Bit2Array(50 + random.nextInt(150));
-        for (int i = 0; i < seq.size(); ++i)
-            seq.set(i, (byte) random.nextInt(NucleotideSequence.ALPHABET.size()));
-        byte[] quality = new byte[seq.size()];
-        Arrays.fill(quality, SequenceQuality.GOOD_QUALITY_VALUE);
-        return new SingleReadImpl(id,
-                new NSequenceWithQuality(new NucleotideSequence(seq), new SequenceQuality(quality)), "id" + id);
+        byte[] seq = new byte[50 + random.nextInt(150)];
+        for (int i = 0; i < seq.length; ++i)
+            seq[i] = (byte) random.nextInt(alphabet.size());
+        return new FastaRecord<>(id, "id" + id, alphabet.getBuilder().append(seq).createAndDestroy());
     }
 }

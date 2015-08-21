@@ -17,16 +17,21 @@ package com.milaboratory.core.motif;
 
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
-import com.milaboratory.core.sequence.WildcardSymbol;
-import com.milaboratory.core.sequence.WithWildcards;
+import com.milaboratory.core.sequence.Wildcard;
 import com.milaboratory.util.BitArray;
 
 import java.util.Arrays;
 
+/**
+ * Data structure for efficient exact and fuzzy matching/searching of sequences (wildcard-aware).
+ *
+ * @param <S> base sequence type
+ */
 public final class Motif<S extends Sequence<S>> implements java.io.Serializable {
     private final Alphabet<S> alphabet;
     private final int size;
     final BitArray data;
+    final BitapPattern bitapPattern;
 
     Motif(Alphabet<S> alphabet, int size, BitArray data) {
         if (!dataConsistent(data, size))
@@ -34,45 +39,55 @@ public final class Motif<S extends Sequence<S>> implements java.io.Serializable 
         this.alphabet = alphabet;
         this.size = size;
         this.data = data;
+        this.bitapPattern = toBitapPattern();
     }
 
+    /**
+     * Creates motif from sequence.
+     *
+     * @param sequence sequence
+     */
     public Motif(S sequence) {
         this.alphabet = sequence.getAlphabet();
         this.size = sequence.size();
-        int alphabetSize = alphabet.size();
+        int alphabetSize = alphabet.basicSize();
         this.data = new BitArray(alphabetSize * size);
-        for (int i = 0; i < size; ++i)
-            data.set(sequence.codeAt(i) * size + i);
-    }
-
-    public Motif(Alphabet<S> alphabet, String motif) {
-        this.alphabet = alphabet;
-        this.size = motif.length();
-        int alphabetSize = alphabet.size();
-        this.data = new BitArray(alphabetSize * size);
-        if (alphabet instanceof WithWildcards) {
-            WithWildcards wildcardAlphabet = (WithWildcards) alphabet;
-            for (int i = 0; i < size; ++i) {
-                final WildcardSymbol wildcard = wildcardAlphabet.getWildcardFor(motif.charAt(i));
-                if (wildcard == null)
-                    throw new IllegalArgumentException("Unknown wildcard " + motif.charAt(i));
-                for (int j = 0; j < wildcard.size(); ++j)
-                    data.set(wildcard.getCode(j) * size + i);
-            }
-        } else {
-            for (int i = 0; i < size; ++i) {
-                byte code = alphabet.codeFromSymbol(motif.charAt(i));
-                if (code == -1)
-                    throw new IllegalArgumentException("Unknown symbol " + motif.charAt(i));
-                data.set(code * size + i);
-            }
+        for (int i = 0; i < size; ++i) {
+            Wildcard wildcard = this.alphabet.codeToWildcard(sequence.codeAt(i));
+            for (int j = 0; j < wildcard.count(); j++)
+                data.set(wildcard.getMatchingCode(j) * size + i);
         }
+        this.bitapPattern = toBitapPattern();
     }
 
-    public BitapPattern toBitapPattern() {
+    /**
+     * Returns per-position or of two motifs.
+     *
+     * <p>e.g. ATGC or TTCC = WTSC</p>
+     *
+     * @param other
+     * @return
+     */
+    public Motif<S> or(Motif<S> other) {
+        if (other.size != size)
+            throw new IllegalArgumentException("Supports only motifs with the same size as this.");
+
+        BitArray result = data.clone();
+        result.or(other.data);
+
+        return new Motif<>(alphabet, size, result);
+    }
+
+    public BitapPattern getBitapPattern() {
         if (size >= 64)
             throw new RuntimeException("Supports motifs with length less then 64.");
-        int aSize = alphabet.size();
+        return bitapPattern;
+    }
+
+    private BitapPattern toBitapPattern() {
+        if (size >= 64)
+            return null;
+        int aSize = alphabet.basicSize();
         long[] patternMask = new long[aSize],
                 reversePatternMask = new long[aSize];
         Arrays.fill(patternMask, ~0);

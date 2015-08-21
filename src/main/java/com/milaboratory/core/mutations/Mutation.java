@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.mutations;
 
+import com.milaboratory.core.alignment.AlignmentScoring;
 import com.milaboratory.core.sequence.Alphabet;
 
 public final class Mutation {
@@ -81,7 +82,7 @@ public final class Mutation {
     /**
      * Returns: 0x20 for substitution, 0x40 for Deletion, 0x60 for insertion.
      *
-     * @param code mutation code form mutations array returned by {@link com.milaboratory.core.alignment.Aligner#alignGlobal(com.milaboratory.core.alignment.AlignmentScoring,
+     * @param code mutation code form mutations array returned by {@link com.milaboratory.core.alignment.Aligner#alignGlobal(AlignmentScoring,
      *             com.milaboratory.core.sequence.Sequence, com.milaboratory.core.sequence.Sequence)} method.
      * @return 0x20 for substitution, 0x40 for Deletion, 0x60 for insertion
      */
@@ -127,13 +128,13 @@ public final class Mutation {
         switch (mutation & MUTATION_TYPE_MASK) {
             case RAW_MUTATION_TYPE_SUBSTITUTION:
                 return "S" + (mutation >>> POSITION_OFFSET) + ":" +
-                        alphabet.symbolFromCode((byte) ((mutation >> FROM_OFFSET) & LETTER_MASK)) +
-                        "->" + alphabet.symbolFromCode((byte) (mutation & LETTER_MASK));
+                        alphabet.codeToSymbol((byte) ((mutation >> FROM_OFFSET) & LETTER_MASK)) +
+                        "->" + alphabet.codeToSymbol((byte) (mutation & LETTER_MASK));
             case RAW_MUTATION_TYPE_DELETION:
                 return "D" + (mutation >>> POSITION_OFFSET) + ":" +
-                        alphabet.symbolFromCode((byte) ((mutation >> FROM_OFFSET) & LETTER_MASK));
+                        alphabet.codeToSymbol((byte) ((mutation >> FROM_OFFSET) & LETTER_MASK));
             case RAW_MUTATION_TYPE_INSERTION:
-                return "I" + (mutation >>> POSITION_OFFSET) + ":" + alphabet.symbolFromCode((byte) (mutation & LETTER_MASK));
+                return "I" + (mutation >>> POSITION_OFFSET) + ":" + alphabet.codeToSymbol((byte) (mutation & LETTER_MASK));
         }
         return null;
     }
@@ -162,11 +163,11 @@ public final class Mutation {
     public static String encode(int mutation, Alphabet alphabet) {
         switch (mutation & MUTATION_TYPE_MASK) {
             case RAW_MUTATION_TYPE_SUBSTITUTION:
-                return "S" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+                return "S" + alphabet.codeToSymbol((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + alphabet.codeToSymbol((byte) getTo(mutation));
             case RAW_MUTATION_TYPE_DELETION:
-                return "D" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation));
+                return "D" + alphabet.codeToSymbol((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation));
             case RAW_MUTATION_TYPE_INSERTION:
-                return "I" + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+                return "I" + Integer.toString(getPosition(mutation)) + alphabet.codeToSymbol((byte) getTo(mutation));
         }
         throw new IllegalArgumentException("Illegal mutation code.");
     }
@@ -174,11 +175,11 @@ public final class Mutation {
     public static String encodeFixed(int mutation, Alphabet alphabet) {
         switch (mutation & MUTATION_TYPE_MASK) {
             case RAW_MUTATION_TYPE_SUBSTITUTION:
-                return "S" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+                return "S" + alphabet.codeToSymbol((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + alphabet.codeToSymbol((byte) getTo(mutation));
             case RAW_MUTATION_TYPE_DELETION:
-                return "D" + alphabet.symbolFromCode((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + ".";
+                return "D" + alphabet.codeToSymbol((byte) getFrom(mutation)) + Integer.toString(getPosition(mutation)) + ".";
             case RAW_MUTATION_TYPE_INSERTION:
-                return "I" + "." + Integer.toString(getPosition(mutation)) + alphabet.symbolFromCode((byte) getTo(mutation));
+                return "I" + "." + Integer.toString(getPosition(mutation)) + alphabet.codeToSymbol((byte) getTo(mutation));
         }
         throw new IllegalArgumentException("Illegal mutation code.");
     }

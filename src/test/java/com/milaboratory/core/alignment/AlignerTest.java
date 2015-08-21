@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.MutationsUtil;
@@ -459,7 +460,7 @@ public class AlignerTest {
                 seq2 = new NucleotideSequence("ACAGATAC");
 
         Alignment se = Aligner.alignOnlySubstitutions(seq1, seq2);
-        com.milaboratory.core.io.util.TestUtil.assertJavaSerialization(se);
+        IOTestUtil.assertJavaSerialization(se);
     }
 
 //    if (alphabet.getAlphabetName().equals("nucleotide")) {

@@ -83,7 +83,7 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     public AffineGapAlignmentScoring(Alphabet<S> alphabet, int match, int mismatch,
                                      int gapOpen, int gapExtension) {
-        this(alphabet, getSymmetricMatrix(match, mismatch, alphabet.size()), gapOpen, gapExtension);
+        this(alphabet, getSymmetricMatrix(match, mismatch, alphabet), gapOpen, gapExtension);
     }
 
     /**
@@ -178,7 +178,7 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     public static AffineGapAlignmentScoring<AminoAcidSequence> getAminoAcidBLASTScoring(BLASTMatrix matrix, int gapOpenPenalty, int gapExtensionPenalty) {
         return new AffineGapAlignmentScoring<>(AminoAcidSequence.ALPHABET,
-                matrix.getMatrix(AminoAcidSequence.ALPHABET),
+                matrix.getMatrix(),
                 gapOpenPenalty, gapExtensionPenalty);
     }
 }

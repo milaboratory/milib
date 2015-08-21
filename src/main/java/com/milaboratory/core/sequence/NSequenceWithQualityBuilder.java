@@ -19,14 +19,14 @@ package com.milaboratory.core.sequence;
  * Created by poslavsky on 10/07/14.
  */
 public class NSequenceWithQualityBuilder implements SeqBuilder<NSequenceWithQuality> {
-    final NucleotideSequenceBuilder sBuilder;
+    final SequenceBuilder<NucleotideSequence> sBuilder;
     final SequenceQualityBuilder qBuilder;
 
     public NSequenceWithQualityBuilder() {
-        this(new NucleotideSequenceBuilder(), new SequenceQualityBuilder());
+        this(NucleotideSequence.ALPHABET.getBuilder(), new SequenceQualityBuilder());
     }
 
-    NSequenceWithQualityBuilder(NucleotideSequenceBuilder sBuilder, SequenceQualityBuilder qBuilder) {
+    NSequenceWithQualityBuilder(SequenceBuilder<NucleotideSequence> sBuilder, SequenceQualityBuilder qBuilder) {
         this.sBuilder = sBuilder;
         this.qBuilder = qBuilder;
     }

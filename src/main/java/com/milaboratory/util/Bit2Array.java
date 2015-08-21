@@ -61,6 +61,13 @@ public final class Bit2Array implements java.io.Serializable {
         return new Bit2Array(size, Arrays.copyOf(data, (size + 3) >> 2));
     }
 
+    public byte[] toByteArray() {
+        byte[] data = new byte[size];
+        for (int i = 0; i < size; ++i)
+            data[i] = (byte) get(i);
+        return data;
+    }
+
     public void copyFrom(Bit2Array other, int otherOffset, int thisOffset, int length) {
         if (thisOffset < 0 || thisOffset + length > size ||
                 otherOffset < 0 || otherOffset + length > other.size)

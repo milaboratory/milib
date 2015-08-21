@@ -36,7 +36,7 @@ public enum QualityFormat {
     private byte offset, minValue, maxValue;
     private String name;
 
-    private QualityFormat(byte offset, byte minValue, byte maxVaule, String name) {
+    QualityFormat(byte offset, byte minValue, byte maxVaule, String name) {
         this.offset = offset;
         this.minValue = minValue;
         this.maxValue = maxVaule;
