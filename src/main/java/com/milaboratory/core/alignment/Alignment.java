@@ -132,7 +132,8 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
      * returns {@code -2 - p}, where {@code p} is a position of previous letter in sequence2.
      *
      * @param position position in sequence1
-     * @return position in coordinates of sequence2, or -1 if specified position is out of aligned range of sequence1, or if
+     * @return position in coordinates of sequence2, or -1 if specified position is out of aligned range of sequence1,
+     * or if
      * letter at specified position in sequence1 is removed in sequence2  --- {@code -2 - p} where {@code p} is a
      * position of previous letter in sequence2
      */
@@ -147,6 +148,11 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
 
     public float getScore() {
         return score;
+    }
+
+    public Alignment<S> invert(S sequence2) {
+        return new Alignment<S>(sequence2, getRelativeMutations().invert().move(sequence2Range.getFrom()),
+                sequence2Range, sequence1Range, score);
     }
 
     /**
@@ -216,13 +222,13 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                     case RAW_MUTATION_TYPE_SUBSTITUTION:
                         pos1.add(pointer1);
                         pos2.add(pointer2++);
-                        sb1.append(sequence1.charFromCodeAt(pointer1++));
+                        sb1.append(sequence1.symbolAt(pointer1++));
                         sb2.append(mutations.getToAsSymbolByIndex(mutPointer));
                         break;
                     case RAW_MUTATION_TYPE_DELETION:
                         pos1.add(pointer1);
                         pos2.add(-1 - pointer2);
-                        sb1.append(sequence1.charFromCodeAt(pointer1++));
+                        sb1.append(sequence1.symbolAt(pointer1++));
                         sb2.append("-");
                         break;
                     case RAW_MUTATION_TYPE_INSERTION:
@@ -238,8 +244,8 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                 // If current position is not affected by mutations
                 pos1.add(pointer1);
                 pos2.add(pointer2++);
-                sb1.append(sequence1.charFromCodeAt(pointer1));
-                sb2.append(sequence1.charFromCodeAt(pointer1++));
+                sb1.append(sequence1.symbolAt(pointer1));
+                sb2.append(sequence1.symbolAt(pointer1++));
                 matches.add(true);
             }
         }

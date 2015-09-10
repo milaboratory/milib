@@ -165,7 +165,7 @@ public final class AlignmentHelper implements java.io.Serializable {
     private String toCompact(String seqString) {
         char[] chars = seqString.toCharArray();
         for (int i = 0; i < match.size(); ++i)
-            if (!match.get(i))
+            if (match.get(i))
                 chars[i] = Character.toLowerCase(chars[i]);
         return new String(chars);
     }

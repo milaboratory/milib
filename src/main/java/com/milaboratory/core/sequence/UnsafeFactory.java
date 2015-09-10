@@ -15,7 +15,6 @@
  */
 package com.milaboratory.core.sequence;
 
-import com.milaboratory.util.Bit2Array;
 import com.milaboratory.util.HashFunctions;
 
 /**
@@ -52,8 +51,12 @@ public final class UnsafeFactory {
 
             code = NucleotideAlphabet.byteSymbolToCode(buffer[pointerSeq++]);
 
-            if (code == -1)
-                throw new IllegalArgumentException("Unknown letter \"" + buffer[pointerSeq - 1] + "\"");
+            if (code == -1) {
+                if (buffer[pointerSeq - 1] == '.')
+                    code = NucleotideAlphabet.N;
+                else
+                    throw new IllegalArgumentException("Unknown letter \"" + buffer[pointerSeq - 1] + "\"");
+            }
 
             if (replaceWildcards && NucleotideSequence.ALPHABET.isWildcard(code)) {
                 seed = HashFunctions.JenkinWang64shift(seed + i);

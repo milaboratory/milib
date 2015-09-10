@@ -123,7 +123,7 @@ public final class Mutations<S extends Sequence<S>>
                     case RAW_MUTATION_TYPE_SUBSTITUTION:
                         if (((mut >> FROM_OFFSET) & LETTER_MASK) != sequence.codeAt(pointer))
                             throw new IllegalArgumentException("Mutation = " + Mutation.toString(sequence.getAlphabet(), mut) +
-                                    " but seq[" + pointer + "]=" + sequence.charFromCodeAt(pointer));
+                                    " but seq[" + pointer + "]=" + sequence.symbolAt(pointer));
 
                         ++pointer;
                         builder.append((byte) (mut & LETTER_MASK));
@@ -132,7 +132,7 @@ public final class Mutations<S extends Sequence<S>>
                     case RAW_MUTATION_TYPE_DELETION:
                         if (((mut >> FROM_OFFSET) & LETTER_MASK) != sequence.codeAt(pointer))
                             throw new IllegalArgumentException("Mutation = " + Mutation.toString(sequence.getAlphabet(), mut) +
-                                    " but seq[" + pointer + "]=" + sequence.charFromCodeAt(pointer));
+                                    " but seq[" + pointer + "]=" + sequence.symbolAt(pointer));
 
                         ++pointer;
                         ++mutPointer;

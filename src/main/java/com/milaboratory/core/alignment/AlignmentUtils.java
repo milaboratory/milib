@@ -73,16 +73,16 @@ public final class AlignmentUtils {
                     case RAW_MUTATION_TYPE_SUBSTITUTION:
                         if (((mut >> FROM_OFFSET) & LETTER_MASK) != initialSequence.codeAt(pointer))
                             throw new IllegalArgumentException("Mutation = " + Mutation.toString(initialSequence.getAlphabet(), mut) +
-                                    " but seq[" + pointer + "]=" + initialSequence.charFromCodeAt(pointer));
-                        sb1.append(Character.toLowerCase(initialSequence.charFromCodeAt(pointer++)));
+                                    " but seq[" + pointer + "]=" + initialSequence.symbolAt(pointer));
+                        sb1.append(Character.toLowerCase(initialSequence.symbolAt(pointer++)));
                         sb2.append(Character.toLowerCase(alphabet.codeToSymbol((byte) (mut & LETTER_MASK))));
                         ++mutPointer;
                         break;
                     case RAW_MUTATION_TYPE_DELETION:
                         if (((mut >> FROM_OFFSET) & LETTER_MASK) != initialSequence.codeAt(pointer))
                             throw new IllegalArgumentException("Mutation = " + Mutation.toString(initialSequence.getAlphabet(), mut) +
-                                    " but seq[" + pointer + "]=" + initialSequence.charFromCodeAt(pointer));
-                        sb1.append(initialSequence.charFromCodeAt(pointer++));
+                                    " but seq[" + pointer + "]=" + initialSequence.symbolAt(pointer));
+                        sb1.append(initialSequence.symbolAt(pointer++));
                         sb2.append("-");
                         ++mutPointer;
                         break;
@@ -93,8 +93,8 @@ public final class AlignmentUtils {
                         break;
                 }
             else {
-                sb1.append(initialSequence.charFromCodeAt(pointer));
-                sb2.append(initialSequence.charFromCodeAt(pointer++));
+                sb1.append(initialSequence.symbolAt(pointer));
+                sb2.append(initialSequence.symbolAt(pointer++));
             }
         }
 

@@ -41,7 +41,21 @@ public class BlastAlignerTest extends BlastTest {
     }
 
     @Test
-    public void simpleRandomTest() {
+    public void simpleRandomTestT1() throws Exception {
+        simpleRandomTest(1);
+    }
+
+    @Test
+    public void simpleRandomTestT2() throws Exception {
+        simpleRandomTest(2);
+    }
+
+    @Test
+    public void simpleRandomTestT3() throws Exception {
+        simpleRandomTest(3);
+    }
+
+    public void simpleRandomTest(int threads) {
         int recordsInBase = 1000;
 
         int baseLengtFrom = 100;
@@ -58,6 +72,7 @@ public class BlastAlignerTest extends BlastTest {
         List<NucleotideSequence> base = new ArrayList<>();
 
         NBlastAligner<Integer> ba = new NBlastAligner<>();
+        ba.setConcurrentBlastProcessCount(threads);
 
         for (int i = 0; i < recordsInBase; i++) {
             NucleotideSequence seq = TestUtil.randomSequence(NucleotideSequence.ALPHABET, baseLengtFrom, baseLengtTo);

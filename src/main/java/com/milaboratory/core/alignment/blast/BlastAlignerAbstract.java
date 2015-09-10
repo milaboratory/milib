@@ -24,6 +24,7 @@ public abstract class BlastAlignerAbstract<S extends Sequence<S>, P, H extends B
     // Not initialized -> null
     private volatile BlastDB db = null;
     private volatile BlastAlignerExt<S> aligner = null;
+    private volatile int processCount = 1;
 
     public BlastAlignerAbstract() {
         this(null);
@@ -33,10 +34,21 @@ public abstract class BlastAlignerAbstract<S extends Sequence<S>, P, H extends B
         this.parameters = parameters;
     }
 
+    /**
+     * Sets the number of concurrent BLAST processes to serve a single alignment session (single {@link
+     * #align(OutputPort)} or {@link #align(OutputPort, SequenceExtractor method invocation)}.
+     *
+     * @param processCount number of concurrent processes
+     */
+    public void setConcurrentBlastProcessCount(int processCount) {
+        this.processCount = processCount;
+    }
+
     @Override
     public <Q> OutputPort<? extends PipedAlignmentResult<H, Q>> align(OutputPort<Q> input, SequenceExtractor<Q, S> extractor) {
         ensureInit();
-        return null;
+        OutputPort<PipedAlignmentResult<BlastHitExt<S>, Q>> iResults = aligner.align(input, extractor);
+        return CUtils.wrap(iResults, new ResultsConverter<Q>());
     }
 
     @Override
@@ -52,6 +64,7 @@ public abstract class BlastAlignerAbstract<S extends Sequence<S>, P, H extends B
 
         db = BlastDBBuilder.build(new ArrayList<>(sequenceList));
         aligner = new BlastAlignerExt<>(db, parameters);
+        aligner.setConcurrentBlastProcessCount(processCount);
     }
 
     @Override

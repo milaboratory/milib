@@ -68,7 +68,7 @@ public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> imp
      * @param position position in this sequence
      * @return character representation of element at specified position
      */
-    public char charFromCodeAt(int position) {
+    public char symbolAt(int position) {
         return getAlphabet().codeToSymbol(codeAt(position));
     }
 

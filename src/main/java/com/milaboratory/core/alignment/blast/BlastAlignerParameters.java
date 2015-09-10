@@ -12,8 +12,25 @@ public class BlastAlignerParameters {
     private BlastTask blastTask = null;
     private double eValue = Double.NaN;
     private int wordSize = MIN_VALUE, gapOpen = MIN_VALUE, gapExtend = MIN_VALUE;
-    private int penalty = MIN_VALUE, reward = MIN_VALUE;
+    private int penalty = MIN_VALUE, reward = MIN_VALUE, numAlignments = MIN_VALUE;
+    private int numThreads = MIN_VALUE;
     private String matrix = null;
+
+    public int getNumThreads() {
+        return numThreads;
+    }
+
+    public void setNumThreads(int numThreads) {
+        this.numThreads = numThreads;
+    }
+
+    public int getNumAlignments() {
+        return numAlignments;
+    }
+
+    public void setNumAlignments(int numAlignments) {
+        this.numAlignments = numAlignments;
+    }
 
     public int getBatchSize() {
         return batchSize;
@@ -31,11 +48,11 @@ public class BlastAlignerParameters {
         this.blastTask = blastTask;
     }
 
-    public double geteValue() {
+    public double getEValue() {
         return eValue;
     }
 
-    public void seteValue(double eValue) {
+    public void setEValue(double eValue) {
         this.eValue = eValue;
     }
 
@@ -112,6 +129,10 @@ public class BlastAlignerParameters {
             cmd.addAll(asList("-penalty", Integer.toString(penalty)));
         if (reward != MIN_VALUE)
             cmd.addAll(asList("-reward", Integer.toString(reward)));
+        if (numAlignments != MIN_VALUE)
+            cmd.addAll(asList("-num_alignments", Integer.toString(numAlignments)));
+        if (numThreads != MIN_VALUE)
+            cmd.addAll(asList("-num_threads", Integer.toString(numThreads)));
         if (matrix != null)
             cmd.addAll(asList("-matrix", matrix));
     }

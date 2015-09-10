@@ -73,6 +73,32 @@ public class AlignmentTest {
     }
 
     @Test
+    public void testInvert() throws Exception {
+        NucleotideSequence seq0 = new NucleotideSequence("GATACATTAGACACAGATACA");
+        NucleotideSequence seq1 = new NucleotideSequence("AGACACATATACACAG");
+        NucleotideSequence seq2 = new NucleotideSequence("GATACGATACATTAGAGACCACAGATACA");
+
+        Alignment<NucleotideSequence>[] alignments = new Alignment[]{
+                Aligner.alignLocalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(), seq0, seq1),
+                Aligner.alignGlobalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(), seq0, seq1),
+                Aligner.alignLocalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(), seq0, seq2),
+                Aligner.alignGlobalAffine(AffineGapAlignmentScoring.getNucleotideBLASTScoring(), seq0, seq2),
+        };
+
+        NucleotideSequence[] originalSeq = new NucleotideSequence[]{seq1, seq1, seq2, seq2};
+
+        for (int i = 0; i < 4; i++) {
+            System.out.println(alignments[i].getAlignmentHelper());
+            System.out.println(alignments[i].invert(originalSeq[i]).getAlignmentHelper());
+            Assert.assertEquals(
+                    alignments[i].getAlignmentHelper().toString(),
+                    alignments[i].invert(originalSeq[i]).invert(seq0).getAlignmentHelper().toString()
+            );
+            System.out.println();
+        }
+    }
+
+    @Test
     public void testSerialization1() throws Exception {
         NucleotideSequence sequence1 = new NucleotideSequence("TACCGCCATGACCA");
         NucleotideSequence sequence2 = new NucleotideSequence("CCTCATCTCTT");

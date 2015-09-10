@@ -32,6 +32,7 @@ public abstract class BlastAlignerExtAbstract<S extends Sequence<S>, H extends B
     final BlastDB database;
     final Alphabet<S> alphabet;
     final BlastAlignerParameters parameters;
+    volatile int processCount = 1;
 
     public BlastAlignerExtAbstract(BlastDB database) {
         this(database, null);
@@ -42,6 +43,16 @@ public abstract class BlastAlignerExtAbstract<S extends Sequence<S>, H extends B
         this.alphabet = (Alphabet<S>) database.getAlphabet();
         this.parameters = parameters == null ? new BlastAlignerParameters() : parameters;
         this.parameters.chechAlphabet(alphabet);
+    }
+
+    /**
+     * Sets the number of concurrent BLAST processes to serve a single alignment session (single {@link
+     * #align(OutputPort)} or {@link #align(OutputPort, SequenceExtractor method invocation)}.
+     *
+     * @param processCount number of concurrent processes
+     */
+    public void setConcurrentBlastProcessCount(int processCount) {
+        this.processCount = processCount;
     }
 
     @Override
@@ -57,20 +68,42 @@ public abstract class BlastAlignerExtAbstract<S extends Sequence<S>, H extends B
     protected abstract H createHit(Alignment<S> alignment, double score, double bitScore, double eValue,
                                    Range subjectRange, String subjectId, String subjectTitle);
 
+    private class BlastWorker<Q> implements OutputPortCloseable<PipedAlignmentResult<H, Q>> {
+        final Buffer<PipedAlignmentResult<H, Q>> resultsBuffer;
+        final BlastWorkerSingle<Q>[] workers;
+
+        public BlastWorker(OutputPort<Q> source, SequenceExtractor<Q, S> sequenceExtractor) {
+            int pc = BlastAlignerExtAbstract.this.processCount;
+            this.resultsBuffer = new Buffer<>(64 * pc);
+            this.workers = new BlastWorkerSingle[pc];
+            for (int i = 0; i < pc; i++)
+                this.workers[i] = new BlastWorkerSingle<>(source, sequenceExtractor, resultsBuffer.createInputPort());
+        }
+
+        @Override
+        public void close() {
+            for (BlastWorkerSingle<Q> worker : workers)
+                worker.close();
+        }
+
+        @Override
+        public PipedAlignmentResult<H, Q> take() {
+            return resultsBuffer.take();
+        }
+    }
+
     /**
      * Supervisor of a single blast process. Spins up two separate threads for pushing input sequences to blast and
      * fetching alignment results and blast process by itself.
      */
-    private class BlastWorker<Q> implements
-            OutputPortCloseable<PipedAlignmentResult<H, Q>> {
+    private class BlastWorkerSingle<Q> {
         final ConcurrentMap<String, Q> queryMapping = new ConcurrentHashMap<>();
-        final Buffer<PipedAlignmentResult<H, Q>> resultsBuffer;
         final Process process;
         final BlastSequencePusher<Q> pusher;
         final BlastResultsFetcher<Q> fetcher;
 
-        public BlastWorker(OutputPort<Q> source, SequenceExtractor<Q, S> sequenceExtractor) {
-            this.resultsBuffer = new Buffer<>(32);
+        public BlastWorkerSingle(OutputPort<Q> source, SequenceExtractor<Q, S> sequenceExtractor,
+                                 InputPort<PipedAlignmentResult<H, Q>> resultsPort) {
             try {
                 List<String> cmd = new ArrayList<>();
 
@@ -87,7 +120,7 @@ public abstract class BlastAlignerExtAbstract<S extends Sequence<S>, H extends B
                 this.process = processBuilder.start();
                 this.pusher = new BlastSequencePusher<>(source, sequenceExtractor,
                         queryMapping, this.process.getOutputStream());
-                this.fetcher = new BlastResultsFetcher<>(this.resultsBuffer.createInputPort(),
+                this.fetcher = new BlastResultsFetcher<>(resultsPort,
                         queryMapping, this.process.getInputStream());
 
                 this.pusher.start();
@@ -97,12 +130,6 @@ public abstract class BlastAlignerExtAbstract<S extends Sequence<S>, H extends B
             }
         }
 
-        @Override
-        public PipedAlignmentResult<H, Q> take() {
-            return resultsBuffer.take();
-        }
-
-        @Override
         public void close() {
             if (pusher.source instanceof OutputPortCloseable)
                 ((OutputPortCloseable) pusher.source).close();

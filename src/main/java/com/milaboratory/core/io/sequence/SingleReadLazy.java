@@ -75,8 +75,13 @@ public abstract class SingleReadLazy implements SingleRead {
     }
 
     private NSequenceWithQuality createNSequenceWithQuality() {
-        return UnsafeFactory.fastqParse(buffer, descriptionFrom + sequenceOffset,
-                descriptionFrom + qualityOffset, dataLength, getQualityOffset(), id, replaceWildcards);
+        try {
+            return UnsafeFactory.fastqParse(buffer, descriptionFrom + sequenceOffset,
+                    descriptionFrom + qualityOffset, dataLength, getQualityOffset(), id, replaceWildcards);
+        } catch (Exception e) {
+            throw new RuntimeException("Error while parsing read:\n" +
+                    new String(buffer, descriptionFrom - 1, qualityOffset + dataLength), e);
+        }
     }
 
     @Override

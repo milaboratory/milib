@@ -22,7 +22,7 @@ public final class SubstitutionModelBuilder {
     final double[] probabilities;
 
     public SubstitutionModelBuilder(Alphabet alphabet) {
-        this(alphabet.size());
+        this(alphabet.basicSize());
     }
 
     public SubstitutionModelBuilder(int letters) {
