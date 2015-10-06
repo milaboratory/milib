@@ -49,6 +49,10 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         this.manager = manager;
     }
 
+    public SerializersManager getSerializersManager() {
+        return manager;
+    }
+
     private void ensureCurrentReferencesInitialized() {
         if (currentReferences == null)
             currentReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE, knownReferences);

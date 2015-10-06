@@ -46,7 +46,7 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         if (type == UUID.class)
             return new UUIDSerializer();
 
-        if(type == String.class)
+        if (type == String.class)
             return new StringSerializer();
 
         return null;
@@ -189,6 +189,39 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         public void write(PrimitivO output, Object object) {
             Enum e = (Enum) object;
             output.writeVarInt(e.ordinal());
+        }
+
+        @Override
+        public Object read(PrimitivI input) {
+            return array[input.readVarInt()];
+        }
+
+        @Override
+        public boolean isReference() {
+            return false;
+        }
+
+        @Override
+        public boolean handlesReference() {
+            return false;
+        }
+    }
+
+    /**
+     * For Compatibility with previous format
+     */
+    public static final class CustomEnumSerializer<E extends Enum<E>> implements Serializer {
+        final Class<E> enumType;
+        final E[] array;
+
+        public CustomEnumSerializer(Class<E> enumType, E... valuesByOrdinal) {
+            this.enumType = enumType;
+            this.array = valuesByOrdinal;
+        }
+
+        @Override
+        public void write(PrimitivO output, Object object) {
+            throw new IllegalStateException("Not implemented.");
         }
 
         @Override

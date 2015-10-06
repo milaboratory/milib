@@ -47,6 +47,10 @@ public final class SerializersManager {
         return createAndRegisterSerializer(type);
     }
 
+    public void registerCustomSerializer(Class<?> type, Serializer<?> customSerializer) {
+        registeredHelpers.put(type, customSerializer);
+    }
+
     private Serializer createAndRegisterSerializer(Class<?> type) {
         Class<?> root = findRoot(type);
 
