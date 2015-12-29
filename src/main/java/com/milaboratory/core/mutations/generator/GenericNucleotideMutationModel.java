@@ -23,7 +23,7 @@ import java.util.Arrays;
 
 import static java.lang.System.currentTimeMillis;
 
-public final class GenericNucleotideMutationModel implements NucleotideMutationModel, java.io.Serializable{
+public final class GenericNucleotideMutationModel implements NucleotideMutationModel, java.io.Serializable {
     private final RandomGenerator generator;
     private final double[] events;
     private final double insertionProbability;

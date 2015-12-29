@@ -95,6 +95,11 @@ public final class IntArrayList implements java.io.Serializable {
         data[position] = num;
     }
 
+    public void copyFrom(IntArrayList other){
+        clear();
+        addAll(other);
+    }
+
     public void sort() {
         Arrays.sort(data, 0, size);
     }
@@ -132,12 +137,12 @@ public final class IntArrayList implements java.io.Serializable {
      *
      * @param src       - the source array.
      * @param fromIndex - starting position in the source array.
-     * @param lenght    - the number of array elements to be copied.
+     * @param length    - the number of array elements to be copied.
      */
-    public void add(int[] src, int fromIndex, int lenght) {
-        ensureCapacity(size + lenght);
-        System.arraycopy(src, fromIndex, data, size, lenght);
-        size = size + lenght;
+    public void add(int[] src, int fromIndex, int length) {
+        ensureCapacity(size + length);
+        System.arraycopy(src, fromIndex, data, size, length);
+        size = size + length;
     }
 
     public void reverse() {
@@ -155,7 +160,7 @@ public final class IntArrayList implements java.io.Serializable {
 
     public int get(int i) {
         if (i < 0 || i >= size)
-            throw new IndexOutOfBoundsException();
+            throw new IndexOutOfBoundsException("Size: " + size + " index: " + i);
         return data[i];
     }
 
@@ -176,6 +181,10 @@ public final class IntArrayList implements java.io.Serializable {
                 replaced = true;
             }
         return replaced;
+    }
+
+    public int last() {
+        return data[size - 1];
     }
 
     public int[] toArray() {
@@ -242,5 +251,9 @@ public final class IntArrayList implements java.io.Serializable {
                 return b.append(']').toString();
             b.append(", ");
         }
+    }
+
+    public static int[] getArrayReference(IntArrayList list) {
+        return list.data;
     }
 }

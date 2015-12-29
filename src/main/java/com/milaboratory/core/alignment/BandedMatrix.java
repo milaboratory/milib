@@ -15,8 +15,10 @@
  */
 package com.milaboratory.core.alignment;
 
+import java.util.Arrays;
+
 /**
- * BandedMatrix - class which used to store alignment matrix for {@link BandedAligner}.
+ * BandedMatrix - class which used to store alignment matrix for {@link BandedLinearAligner}.
  * <p>It stores only main diagonal values as well as values of diagonal which are closed to main one (it's defined by
  * #rowFactor and #columnDelta)</p>
  */
@@ -64,8 +66,14 @@ public final class BandedMatrix implements java.io.Serializable {
     }
 
     public void set(int i, int j, int value) {
-        assert !(j - i < -columnDelta || j - i > rowFactor - columnDelta);
+        assert !(j - i < -columnDelta || j - i > rowFactor - columnDelta)
+                : String.format("i: %s, j: %s, columnDelta: %s, rowFactor: %s", i, j, columnDelta, rowFactor);
 
         matrix[i * rowFactor + j + columnDelta] = value;
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(matrix);
     }
 }

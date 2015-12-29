@@ -92,7 +92,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
                         reset();
                 }
             } else {
-                return (T) references.get(id - PrimitivO.ID_OFFSET);
+                Object obj = references.get(id - PrimitivO.ID_OFFSET);
+                if (!type.isInstance(obj))
+                    throw new RuntimeException("Wrong file format.");
+                return (T) obj;
             }
         } else {
             ++depth;

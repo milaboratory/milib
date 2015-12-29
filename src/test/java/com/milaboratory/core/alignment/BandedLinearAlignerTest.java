@@ -27,7 +27,7 @@ import static com.milaboratory.test.TestUtil.randomSequence;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class BandedAlignerTest {
+public class BandedLinearAlignerTest {
     static <T extends Sequence<T>> void assertAlignment(Alignment<T> alignment, T s2) {
         Assert.assertEquals(
                 alignment.getRelativeMutations().mutate(alignment.sequence1.getRange(
@@ -38,31 +38,31 @@ public class BandedAlignerTest {
     public void testGlobal() throws Exception {
         NucleotideSequence sequence1 = new NucleotideSequence("ATTAGACA");
         NucleotideSequence sequence2 = new NucleotideSequence("ATTGACA");
-        Alignment<NucleotideSequence> alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
+        Alignment<NucleotideSequence> alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
         assertAlignment(alignment, sequence2);
         //Mutations.printAlignment(sequence1, mut);
 
         sequence1 = new NucleotideSequence("ATTGACA");
         sequence2 = new NucleotideSequence("ATTAGACA");
-        alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
+        alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
         assertAlignment(alignment, sequence2);
         //Mutations.printAlignment(sequence1, mut);
 
         sequence1 = new NucleotideSequence("ATTGACA");
         sequence2 = new NucleotideSequence("AGTAGCCA");
-        alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
+        alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
         assertAlignment(alignment, sequence2);
         //Mutations.printAlignment(sequence1, mut);
 
         sequence1 = new NucleotideSequence("ATTGACAATTGACA");
         sequence2 = new NucleotideSequence("ATTGACATTGAA");
-        alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
+        alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 0);
         assertAlignment(alignment, sequence2);
         //Mutations.printAlignment(sequence1, mut);
 
         sequence1 = new NucleotideSequence("ATTGACAATTGACA");
         sequence2 = new NucleotideSequence("ATGAAATTGCACA");
-        alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 1);
+        alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), sequence1, sequence2, 1);
         assertAlignment(alignment, sequence2);
         //Mutations.printAlignment(sequence1, mut);
     }
@@ -75,7 +75,7 @@ public class BandedAlignerTest {
             NucleotideSequence seq1, seq2;
             seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 10, 100);
             seq2 = randomSequence(NucleotideSequence.ALPHABET, random, 10, 100);
-            Alignment<NucleotideSequence> alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+            Alignment<NucleotideSequence> alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                     seq1, seq2,
                     random.nextInt(0, Math.min(seq1.size(), seq2.size()) - 1));
             assertAlignment(alignment, seq2);
@@ -85,7 +85,7 @@ public class BandedAlignerTest {
     @Test
     public void test5() {
         NucleotideSequence seq1 = new NucleotideSequence("A"), seq2 = new NucleotideSequence("ATTA");
-        Alignment<NucleotideSequence> alignment = BandedAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1);
+        Alignment<NucleotideSequence> alignment = BandedLinearAligner.align(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1);
         assertAlignment(alignment, seq2);
     }
 
@@ -98,7 +98,7 @@ public class BandedAlignerTest {
             NucleotideSequence seq1, seq2;
             seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 80, 84);
             seq2 = randomSequence(NucleotideSequence.ALPHABET, random, 80, 84);
-            Alignment<NucleotideSequence> r = BandedAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+            Alignment<NucleotideSequence> r = BandedLinearAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                     seq1, seq2,
                     random.nextInt(0, Math.min(seq1.size(), seq2.size()) - 1),
                     -10);
@@ -115,7 +115,7 @@ public class BandedAlignerTest {
             seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 80, 84);
             seq2 = randomSequence(NucleotideSequence.ALPHABET, random, 80, 84);
             Alignment<NucleotideSequence> r =
-                    BandedAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+                    BandedLinearAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                             seq1, seq2,
                             random.nextInt(0, Math.min(seq1.size(), seq2.size()) - 1),
                             -10);
@@ -127,14 +127,14 @@ public class BandedAlignerTest {
     public void testLocalLeft() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA");
         NucleotideSequence seq2 = new NucleotideSequence("ATTACGC");
-        Alignment<NucleotideSequence> r = BandedAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
+        Alignment<NucleotideSequence> r = BandedLinearAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
         assertAlignment(r, seq2);
         assertEquals(4, r.getSequence1Range().getTo());
         assertEquals(4, r.getSequence2Range().getTo());
 
         seq1 = new NucleotideSequence("ATTAGACA");
         seq2 = new NucleotideSequence("ATTGACGC");
-        r = BandedAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1, -10);
+        r = BandedLinearAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1, -10);
         //Mutations.printAlignment(seq1.getSubSequence(0, r.sequence1Stop + 1), r.mutations);
         assertAlignment(r, seq2);
         assertEquals(7, r.getSequence1Range().getTo());
@@ -142,7 +142,7 @@ public class BandedAlignerTest {
 
         seq1 = new NucleotideSequence("ATAGACAGGGAGACA");
         seq2 = new NucleotideSequence("ATTAGACATTAGACA");
-        r = BandedAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1, -10);
+        r = BandedLinearAligner.alignSemiLocalLeft(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 1, -10);
         //Mutations.printAlignment(seq1.getSubSequence(0, r.sequence1Stop + 1), r.mutations);
         assertAlignment(r, seq2);
         assertEquals(7, r.getSequence1Range().getTo());
@@ -153,7 +153,7 @@ public class BandedAlignerTest {
     public void testLocalRight() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA");
         NucleotideSequence seq2 = new NucleotideSequence("GACA");
-        Alignment<NucleotideSequence> r = BandedAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
+        Alignment<NucleotideSequence> r = BandedLinearAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
         //Mutations.printAlignment(seq1.getSubSequence(r.sequence1Stop, seq1.size()), r.mutations);
         assertAlignment(r, seq2);
         assertEquals(4, r.getSequence1Range().getFrom());
@@ -161,7 +161,7 @@ public class BandedAlignerTest {
 
         seq1 = new NucleotideSequence("ATTAGACAATTAGACA");
         seq2 = new NucleotideSequence("GCGAATAGACA");
-        r = BandedAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
+        r = BandedLinearAligner.alignSemiLocalRight(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2, 0, -10);
         //Mutations.printAlignment(seq1.getSubSequence(r.sequence1Stop, seq1.size()), Mutations.move(r.mutations, -r.sequence1Stop));
         assertAlignment(r, seq2);
         assertEquals(7, r.getSequence1Range().getFrom());
@@ -172,7 +172,7 @@ public class BandedAlignerTest {
     public void testAddedRight1() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
                 seq2 = new NucleotideSequence("ATTTAGACA");
-        Alignment<NucleotideSequence> la = BandedAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 0, 1);
         assertEquals(seq1.size(), la.getSequence1Range().getTo());
         assertEquals(seq2.size(), la.getSequence2Range().getTo());
@@ -183,7 +183,7 @@ public class BandedAlignerTest {
     public void testAddedRight2() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
                 seq2 = new NucleotideSequence("ATTTAGACAC");
-        Alignment<NucleotideSequence> la = BandedAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 1, 0, seq2.size(), 1, 1);
         assertEquals(seq1.size(), la.getSequence1Range().getTo());
         assertEquals(seq2.size() - 1, la.getSequence2Range().getTo());
@@ -194,7 +194,7 @@ public class BandedAlignerTest {
     public void testAddedRight3() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
                 seq2 = new NucleotideSequence("ATTTAGACAC");
-        Alignment<NucleotideSequence> la = BandedAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 1, 0, seq2.size(), 0, 1);
         assertEquals(seq1.size(), la.getSequence1Range().getTo());
         assertEquals(seq2.size(), la.getSequence2Range().getTo());
@@ -217,7 +217,7 @@ public class BandedAlignerTest {
             length2 = random.nextInt(1, seq2.size() - offset2);
             added1 = random.nextInt(0, length1);
             added2 = random.nextInt(0, length2);
-            la = BandedAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+            la = BandedLinearAligner.alignRightAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                     seq1, seq2, offset1, length1, added1, offset2, length2, added2, 1);
 
             assertTrue(la.getSequence1Range().getTo() == offset1 + length1 ||
@@ -234,7 +234,7 @@ public class BandedAlignerTest {
     public void testAddedLeft1() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
                 seq2 = new NucleotideSequence("ATTTAGACA");
-        Alignment<NucleotideSequence> la = BandedAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 0, 1);
         assertEquals(0, la.getSequence1Range().getFrom());
         assertEquals(0, la.getSequence2Range().getFrom());
@@ -245,7 +245,7 @@ public class BandedAlignerTest {
     public void testAddedLeft2() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("CTTAGACA"),
                 seq2 = new NucleotideSequence("CATTTAGACA");
-        Alignment<NucleotideSequence> la = BandedAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 1, 1);
         assertEquals(0, la.getSequence1Range().getFrom());
         assertEquals(0, la.getSequence2Range().getFrom());
@@ -256,7 +256,7 @@ public class BandedAlignerTest {
     public void testAddedLeft3() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("CTTAGACA"),
                 seq2 = new NucleotideSequence("CATTTAGACA");
-        Alignment<NucleotideSequence> la = BandedAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 3, 1);
         assertEquals(0, la.getSequence1Range().getFrom());
         assertEquals(2, la.getSequence2Range().getFrom());
@@ -279,7 +279,7 @@ public class BandedAlignerTest {
             length2 = random.nextInt(1, seq2.size() - offset2);
             added1 = random.nextInt(0, length1);
             added2 = random.nextInt(0, length2);
-            la = BandedAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+            la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                     seq1, seq2, offset1, length1, added1, offset2, length2, added2, 1);
 
             assertTrue(la.getSequence1Range().getFrom() == offset1 ||

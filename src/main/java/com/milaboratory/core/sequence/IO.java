@@ -15,10 +15,16 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.Serializer;
-import com.milaboratory.util.Bit2Array;
 
 import java.io.IOException;
 
@@ -146,6 +152,85 @@ final class IO {
         @Override
         public boolean handlesReference() {
             return false;
+        }
+    }
+
+    public static final class NSeqSerializer extends JsonSerializer<NucleotideSequence> {
+        @Override
+        public void serialize(NucleotideSequence value,
+                              JsonGenerator jgen,
+                              SerializerProvider provider) throws IOException, JsonProcessingException {
+            jgen.writeString(value.toString());
+        }
+    }
+
+    public static final class NSeqDeserializer extends JsonDeserializer<NucleotideSequence> {
+        @Override
+        public NucleotideSequence deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            return new NucleotideSequence(jp.readValueAs(String.class));
+        }
+
+        @Override
+        public NucleotideSequence getEmptyValue() {
+            return null;
+        }
+
+        @Override
+        public NucleotideSequence getNullValue() {
+            return null;
+        }
+    }
+
+    public static final class AASeqSerializer extends JsonSerializer<AminoAcidSequence> {
+        @Override
+        public void serialize(AminoAcidSequence value,
+                              JsonGenerator jgen,
+                              SerializerProvider provider) throws IOException, JsonProcessingException {
+            jgen.writeString(value.toString());
+        }
+    }
+
+    public static final class AASeqDeserializer extends JsonDeserializer<AminoAcidSequence> {
+        @Override
+        public AminoAcidSequence deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            return new AminoAcidSequence(jp.readValueAs(String.class));
+        }
+
+        @Override
+        public AminoAcidSequence getEmptyValue() {
+            return null;
+        }
+
+        @Override
+        public AminoAcidSequence getNullValue() {
+            return null;
+        }
+    }
+
+
+    public static final class SQSeqSerializer extends JsonSerializer<SequenceQuality> {
+        @Override
+        public void serialize(SequenceQuality value,
+                              JsonGenerator jgen,
+                              SerializerProvider provider) throws IOException, JsonProcessingException {
+            jgen.writeString(value.toString());
+        }
+    }
+
+    public static final class SQSeqDeserializer extends JsonDeserializer<SequenceQuality> {
+        @Override
+        public SequenceQuality deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+            return new SequenceQuality(jp.readValueAs(String.class));
+        }
+
+        @Override
+        public SequenceQuality getEmptyValue() {
+            return null;
+        }
+
+        @Override
+        public SequenceQuality getNullValue() {
+            return null;
         }
     }
 }

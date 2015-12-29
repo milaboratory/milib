@@ -23,6 +23,32 @@ public final class Aligner {
     private Aligner() {
     }
 
+    public static <S extends Sequence<S>> int alignOnlySubstitutions0(S seq1, S seq2, int seq1From, int seq1Length,
+                                                                      int seq2From, int seq2Length,
+                                                                      AlignmentScoring<S> scoring,
+                                                                      MutationsBuilder<S> builder) {
+        if (seq1Length != seq2Length)
+            throw new IllegalArgumentException("Size of 'seq1' and 'seq2' sequences must be the same.");
+        int score = 0;
+        byte c1, c2;
+        for (int i = 0; i < seq1Length; ++i) {
+            if ((c1 = seq1.codeAt(seq1From + i)) != (c2 = seq2.codeAt(seq2From + i)))
+                builder.appendSubstitution(seq1From + i, c1, c2);
+            score += scoring.getScore(c1, c2);
+        }
+        return score;
+    }
+
+    public static <S extends Sequence<S>> Alignment<S> alignOnlySubstitutions(S seq1, S seq2,
+                                                                              int seq1From, int seq1Length,
+                                                                              int seq2From, int seq2Length,
+                                                                              AlignmentScoring<S> scoring) {
+        MutationsBuilder<S> builder = new MutationsBuilder<>(seq1.getAlphabet());
+        int score = alignOnlySubstitutions0(seq1, seq2, seq1From, seq1Length, seq2From, seq2Length, scoring, builder);
+        return new Alignment<>(seq1, builder.createAndDestroy(), new Range(seq1From, seq1From + seq1Length),
+                new Range(seq2From, seq2From + seq2Length), score);
+    }
+
     public static <S extends Sequence<S>> Alignment<S> alignOnlySubstitutions(S from, S to) {
         if (from.getAlphabet() != to.getAlphabet())
             throw new IllegalArgumentException();

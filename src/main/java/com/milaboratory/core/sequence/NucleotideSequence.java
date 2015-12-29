@@ -15,6 +15,8 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.core.Range;
 
 /**
@@ -25,6 +27,8 @@ import com.milaboratory.core.Range;
  * @see com.milaboratory.core.sequence.Sequence
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
  */
+@JsonSerialize(using = IO.NSeqSerializer.class)
+@JsonDeserialize(using = IO.NSeqDeserializer.class)
 public final class NucleotideSequence extends AbstractArraySequence<NucleotideSequence>
         implements NSeq<NucleotideSequence>, java.io.Serializable {
     private static final long serialVersionUID = 2L;
@@ -98,6 +102,27 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
         return new NucleotideSequence(transformToRC(data, 0, data.length), true);
     }
 
+    /**
+     * Returns {@literal true} if sequence contains wildcards in specified region.
+     *
+     * @return {@literal true} if sequence contains wildcards in specified region
+     */
+    public boolean containsWildcards(int from, int to) {
+        for (int i = from; i < to; i++)
+            if (isWildcard(codeAt(i)))
+                return true;
+        return false;
+    }
+
+    /**
+     * Returns {@literal true} if sequence contains wildcards.
+     *
+     * @return {@literal true} if sequence contains wildcards
+     */
+    public boolean containsWildcards() {
+        return containsWildcards(0, size());
+    }
+
     @Override
     public NucleotideAlphabet getAlphabet() {
         return ALPHABET;
@@ -121,10 +146,14 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
     private static byte[] transformToRC(byte[] data, int from, int to) {
         byte[] newData = new byte[to - from];
         int reverseCord;
-        for (int cord = 0, s = to - from; cord < s; ++cord) {
-            reverseCord = to - 1 - cord;
-            newData[cord] = NucleotideAlphabet.getComplement(data[reverseCord]);
+        for (int coord = 0, s = to - from; coord < s; ++coord) {
+            reverseCord = to - 1 - coord;
+            newData[coord] = NucleotideAlphabet.getComplement(data[reverseCord]);
         }
         return newData;
+    }
+
+    private static boolean isWildcard(byte nucleotide) {
+        return nucleotide >= 4;
     }
 }

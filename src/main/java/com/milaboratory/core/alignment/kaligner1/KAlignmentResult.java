@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
 import com.milaboratory.core.alignment.batch.AlignmentResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -21,18 +21,18 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 import java.util.*;
 
 /**
- * KAlignmentResult - class which is result of {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence)},
- * {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
- * int, int)}, {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+ * KAlignmentResult - class which is result of {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence)},
+ * {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+ * int, int)}, {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
  * int, int, boolean)} methods.
  *
- * <p> It contains link to according {@link com.milaboratory.core.alignment.KMappingResult}, list of hits found
+ * <p> It contains link to according {@link KMappingResult}, list of hits found
  * in target sequence as well as range of target sequence to be aligned. </p>
  */
 public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
         Iterable<KAlignmentHit<P>>, java.io.Serializable {
     /**
-     * Custom comparator which sorts hits according to {@link com.milaboratory.core.alignment.KAlignmentHit}
+     * Custom comparator which sorts hits according to {@link KAlignmentHit}
      * alignment scores
      */
     private final static Comparator<KAlignmentHit> HIT_COMPARATOR = new Comparator<KAlignmentHit>() {
@@ -44,7 +44,7 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
     };
 
     /**
-     * Custom comparator which sorts hits according to {@link com.milaboratory.core.alignment.KMappingHit}
+     * Custom comparator which sorts hits according to {@link KMappingHit}
      * alignment scores
      */
     private final static Comparator<KAlignmentHit> HIT_COMPARATOR_MAPPER = new Comparator<KAlignmentHit>() {
@@ -55,11 +55,11 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
         }
     };
     /**
-     * Link to {@link com.milaboratory.core.alignment.KAligner}
+     * Link to {@link KAligner}
      */
     final KAligner<P> aligner;
     /**
-     * Link to according {@link com.milaboratory.core.alignment.KMappingResult}
+     * Link to according {@link KMappingResult}
      */
     final KMappingResult mappingResult;
     /**
@@ -80,7 +80,7 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
      *
      * @param aligner       link to aligner
      * @param mappingResult link to according mapping result (which is result of {@link com.milaboratory.core.sequence.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)},
-     *                      {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence,
+     *                      {@link KMapper#align(com.milaboratory.core.sequence.NucleotideSequence,
      *                      int, int)} methods)
      * @param target        target sequence to be aligned
      * @param targetFrom    position of first nucleotide of target sequence to be aligned
@@ -132,6 +132,7 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
      * @return best hit (hit with highest alignment or mapper (if lazy alignment is used) score) or null if there is no
      * hits in this result
      */
+    @Override
     public KAlignmentHit getBestHit() {
         if (hits.isEmpty())
             return null;
@@ -184,7 +185,7 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
     }
 
     /**
-     * Sorts hits according to {@link com.milaboratory.core.alignment.KMappingHit} alignment score
+     * Sorts hits according to {@link KMappingHit} alignment score
      */
     public void sortAccordingToMapperScores() {
         Collections.sort(hits, HIT_COMPARATOR_MAPPER);

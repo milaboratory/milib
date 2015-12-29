@@ -16,6 +16,7 @@
 package com.milaboratory.core.mutations;
 
 import com.milaboratory.core.sequence.*;
+import com.milaboratory.core.sequence.AminoAcidSequence.AminoAcidSequencePosition;
 import com.milaboratory.util.IntArrayList;
 
 import java.util.Collections;
@@ -282,5 +283,69 @@ public final class MutationsUtil {
                 return false;
         }
         return true;
+    }
+
+    public static Mutations<AminoAcidSequence> nt2aa(NucleotideSequence seq1, Mutations<NucleotideSequence> mutations,
+                                                     TranslationParameters translationParameters) {
+        return nt2aa(seq1, mutations, translationParameters, Integer.MAX_VALUE);
+    }
+
+    public static Mutations<AminoAcidSequence> nt2aa(NucleotideSequence seq1, Mutations<NucleotideSequence> mutations,
+                                                     TranslationParameters translationParameters,
+                                                     int maxShiftedTriplets) {
+        AminoAcidSequence aaSeq1 = AminoAcidSequence.translate(seq1, translationParameters);
+        NucleotideSequence seq2 = mutations.mutate(seq1);
+        AminoAcidSequence aaSeq2 = AminoAcidSequence.translate(seq2, translationParameters);
+        MutationsBuilder<AminoAcidSequence> result = new MutationsBuilder<>(AminoAcidSequence.ALPHABET);
+
+        int aaP2, prevAAP2 = -1;
+        int ntP1, ntP2;
+        int shiftedTriplets = 0;
+        for (int aaP1 = 0; aaP1 <= aaSeq1.size(); aaP1++) {
+            if (aaP1 != aaSeq1.size()) {
+                ntP1 = AminoAcidSequence.convertAAPositionToNt(aaP1, seq1.size(), translationParameters);
+                ntP2 = mutations.convertPosition(ntP1);
+                if (ntP2 < 0)
+                    ntP2 = -ntP2 - 2;
+
+                if (ntP2 < 0)
+                    aaP2 = -1;
+                else {
+                    AminoAcidSequencePosition pos = AminoAcidSequence.convertNtPositionToAA(ntP2, seq2.size(), translationParameters);
+                    if (pos == null)
+                        continue;
+
+                    // Detecting shifted triplets
+                    if (pos.positionInTriplet != 0)
+                        if (shiftedTriplets++ > maxShiftedTriplets)
+                            return null;
+
+                    aaP2 = pos.aminoAcidPosition;
+                }
+            } else {
+                aaP2 = aaSeq2.size();
+            }
+
+            if (aaP2 == prevAAP2) { // Deletion
+                if (aaP1 < aaSeq1.size())
+                    result.appendDeletion(aaP1, aaSeq1.codeAt(aaP1));
+            } else {
+                if (aaP2 > prevAAP2 + 1) // Insertion
+                    for (int i = prevAAP2 + 1; i < aaP2; i++) {
+                        int m;
+                        // Special case
+                        if (result.size() > 0 && Mutation.isSubstitution(m = result.getLast()) && Mutation.getPosition(m) == aaP1 - 1 &&
+                                Mutation.getFrom(m) == aaSeq2.codeAt(i)) {
+                            result.removeLast();
+                            result.appendInsertion(aaP1 - 1, Mutation.getTo(m));
+                        } else
+                            result.appendInsertion(aaP1, aaSeq2.codeAt(i));
+                    }
+                if (aaP1 < aaSeq1.size() && aaSeq2.codeAt(aaP2) != aaSeq1.codeAt(aaP1)) // Substitution
+                    result.appendSubstitution(aaP1, aaSeq1.codeAt(aaP1), aaSeq2.codeAt(aaP2));
+                prevAAP2 = aaP2;
+            }
+        }
+        return result.createAndDestroy();
     }
 }

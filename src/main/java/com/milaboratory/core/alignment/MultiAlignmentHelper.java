@@ -32,6 +32,7 @@ import static com.milaboratory.core.mutations.Mutation.RAW_MUTATION_TYPE_DELETIO
 import static com.milaboratory.core.mutations.Mutation.RAW_MUTATION_TYPE_SUBSTITUTION;
 
 public class MultiAlignmentHelper {
+    int minimalPositionWidth = 0;
     final String subject;
     final String[] queries;
     final int[] subjectPositions;
@@ -52,10 +53,10 @@ public class MultiAlignmentHelper {
                 "", new String[queries.length]);
     }
 
-    public MultiAlignmentHelper(String subject, String[] queries, int[] subjectPositions,
-                                int[][] queryPositions, BitArray[] match,
-                                String subjectLeftTitle, String[] queryLeftTitles,
-                                String subjectRightTitle, String[] queryRightTitles) {
+    private MultiAlignmentHelper(String subject, String[] queries, int[] subjectPositions,
+                                 int[][] queryPositions, BitArray[] match,
+                                 String subjectLeftTitle, String[] queryLeftTitles,
+                                 String subjectRightTitle, String[] queryRightTitles) {
         this.subject = subject;
         this.queries = queries;
         this.subjectPositions = subjectPositions;
@@ -65,6 +66,33 @@ public class MultiAlignmentHelper {
         this.queryLeftTitles = queryLeftTitles;
         this.subjectRightTitle = subjectRightTitle;
         this.queryRightTitles = queryRightTitles;
+    }
+
+    public String getSubjectLeftTitle() {
+        return subjectLeftTitle;
+    }
+
+    public String getSubjectRightTitle() {
+        return subjectRightTitle;
+    }
+
+    public String getQueryLeftTitle(int i) {
+        return queryLeftTitles[i];
+    }
+
+    public String getQueryRightTitle(int i) {
+        return queryRightTitles[i];
+    }
+
+    public int getActualPositionWidth() {
+        int ret = ("" + getSubjectFrom()).length();
+        for (int i = 0; i < queries.length; i++)
+            ret = Math.max(ret, ("" + getQueryFrom(i)).length());
+        return ret;
+    }
+
+    public void setMinimalPositionWidth(int minimalPositionWidth) {
+        this.minimalPositionWidth = minimalPositionWidth;
     }
 
     public MultiAlignmentHelper setSubjectLeftTitle(String subjectLeftTitle) {
@@ -198,12 +226,18 @@ public class MultiAlignmentHelper {
     }
 
     public MultiAlignmentHelper[] split(int length) {
+        return split(length, false);
+    }
+
+    public MultiAlignmentHelper[] split(int length, boolean eqPositionWidth) {
         MultiAlignmentHelper[] ret = new MultiAlignmentHelper[(size() + length - 1) / length];
         for (int i = 0; i < ret.length; ++i) {
             int pointer = i * length;
             int l = Math.min(length, size() - pointer);
             ret[i] = getRange(pointer, pointer + l);
         }
+        if (eqPositionWidth)
+            alignPositions(ret);
         return ret;
     }
 
@@ -228,18 +262,28 @@ public class MultiAlignmentHelper {
     }
 
     private static int fixedWidthL(String[] strings) {
+        return fixedWidthL(strings, 0);
+    }
+
+    private static int fixedWidthL(String[] strings, int minWidth) {
         int length = 0;
         for (String string : strings)
             length = Math.max(length, string.length());
+        length = Math.max(length, minWidth);
         for (int i = 0; i < strings.length; i++)
             strings[i] = spaces(length - strings[i].length()) + strings[i];
         return length;
     }
 
     private static int fixedWidthR(String[] strings) {
+        return fixedWidthR(strings, 0);
+    }
+
+    private static int fixedWidthR(String[] strings, int minWidth) {
         int length = 0;
         for (String string : strings)
             length = Math.max(length, string.length());
+        length = Math.max(length, minWidth);
         for (int i = 0; i < strings.length; i++)
             strings[i] = strings[i] + spaces(length - strings[i].length());
         return length;
@@ -275,7 +319,7 @@ public class MultiAlignmentHelper {
         for (int i = 0; i < aCount; i++)
             lines[i + 1 + asSize] = "" + getQueryFrom(i);
 
-        int width = fixedWidthL(lines);
+        int width = fixedWidthL(lines, minimalPositionWidth);
 
         for (int i = 0; i < asSize; i++)
             lines[i] = annotationStringTitles.get(i) + spaces(width + 1);
@@ -317,7 +361,11 @@ public class MultiAlignmentHelper {
     public static <S extends Sequence<S>> MultiAlignmentHelper build(Settings settings, Range subjectRange,
                                                                      Alignment<S>... alignments) {
         S subject = alignments[0].getSequence1();
+        return build(settings, subjectRange, subject, alignments);
+    }
 
+    public static <S extends Sequence<S>> MultiAlignmentHelper build(Settings settings, Range subjectRange,
+                                                                     S subject, Alignment<S>... alignments) {
         for (Alignment<S> alignment : alignments)
             if (!alignment.getSequence1().equals(subject))
                 throw new IllegalArgumentException();
@@ -459,6 +507,14 @@ public class MultiAlignmentHelper {
 
         return new MultiAlignmentHelper(subjectString.toString(), queryStringsArray, subjectPositions.toArray(),
                 queryPositionsArrays, matchesBAs);
+    }
+
+    public static void alignPositions(MultiAlignmentHelper[] helpers) {
+        int maxPositionWidth = 0;
+        for (MultiAlignmentHelper helper : helpers)
+            maxPositionWidth = Math.max(maxPositionWidth, helper.getActualPositionWidth());
+        for (MultiAlignmentHelper helper : helpers)
+            helper.setMinimalPositionWidth(maxPositionWidth);
     }
 
     private static String spaces(int n) {

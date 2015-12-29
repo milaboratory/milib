@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.alignment.*;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
@@ -53,7 +54,7 @@ public class KAlignerTest extends AlignmentTest {
 
         for (int i = its(100000, 1000000); i >= 0; --i) {
             KAlignmentResult result = aligner.align(target);
-            for (int mut : result.getBestHit().getAlignment().getRelativeMutations().getAllMutations())
+            for (int mut : result.getBestHit().getAlignment().getRelativeMutations().getRAWMutations())
                 Assert.assertFalse(isInDel(mut));
         }
     }
@@ -213,7 +214,7 @@ public class KAlignerTest extends AlignmentTest {
                 NucleotideSequence right = addRight ? randomSequence(NucleotideSequence.ALPHABET, rdi, 10, 30) : EMPTY;
 
                 Mutations<NucleotideSequence> nucleotideSequenceMutations = generateMutations(subSeq, mutationModel);
-                int[] subSeqMutations = nucleotideSequenceMutations.getAllMutations();
+                int[] subSeqMutations = nucleotideSequenceMutations.getRAWMutations();
                 float actionScore = AlignmentUtils.calculateScore(parameters.getScoring(), subSeq.size(), nucleotideSequenceMutations);
 
                 int indels = 0;
@@ -378,7 +379,7 @@ public class KAlignerTest extends AlignmentTest {
                             Mutations<NucleotideSequence> mmutations;
                             synchronized (mutationModel) {
                                 mmutations = generateMutations(subSeq, mutationModel);
-                                subSeqMutations = mmutations.getAllMutations();
+                                subSeqMutations = mmutations.getRAWMutations();
                             }
                             float actionScore = AlignmentUtils.calculateScore(parameters.getScoring(), subSeq.size(), mmutations);
 
@@ -518,7 +519,7 @@ public class KAlignerTest extends AlignmentTest {
                 target = randomSequence(NucleotideSequence.ALPHABET, rdi, 40, 70).concatenate(seq.getRange(0, subSize));
 
             Mutations<NucleotideSequence> mmutations = generateMutations(target, model);
-            int[] muts = mmutations.getAllMutations();
+            int[] muts = mmutations.getRAWMutations();
             target = mutate(target, muts);
 
             timestamp = System.nanoTime();
@@ -600,7 +601,7 @@ public class KAlignerTest extends AlignmentTest {
                 target = ref.getRange(0, subSize);
 
             Mutations<NucleotideSequence> nucleotideSequenceMutations = generateMutations(target, model);
-            int[] muts = nucleotideSequenceMutations.getAllMutations();
+            int[] muts = nucleotideSequenceMutations.getRAWMutations();
             NucleotideSequence orig = mutate(target, muts);
 
             float actualScore = AlignmentUtils.calculateScore(alignerLeft.parameters.getScoring(), subSize, nucleotideSequenceMutations);

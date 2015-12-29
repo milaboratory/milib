@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
 import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
@@ -29,7 +29,7 @@ import java.util.List;
 /**
  * <p>KAligner is a comprehensive aligner for nucleotide sequences.
  *
- * <p>Complete alignment of sequence performed using {@link com.milaboratory.core.alignment.KMapper#addReference(com.milaboratory.core.sequence.NucleotideSequence,
+ * <p>Complete alignment of sequence performed using {@link KMapper#addReference(com.milaboratory.core.sequence.NucleotideSequence,
  * int, int)}
  * method from which preliminary hits are obtained and used by {@link #align(com.milaboratory.core.sequence.NucleotideSequence)},
  * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int)},
@@ -59,7 +59,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
     final TIntObjectHashMap<P> payloads = new TIntObjectHashMap<>();
     /**
      * Flag indicating how to load final alignments - at first request or immediately after obtaining {@link
-     * com.milaboratory.core.alignment.KAlignmentResult}
+     * KAlignmentResult}
      */
     final boolean lazyResults;
     /**
@@ -71,8 +71,8 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p>Creates new KAligner.</p>
      *
      * <p>Sets {@link #lazyResults} flag to {@code false}, which means that all alignments inside {@link
-     * com.milaboratory.core.alignment.KAlignmentResult}
-     * obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+     * KAlignmentResult}
+     * obtained by {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
      * int, int, boolean)} method
      * will be loaded immediately.
      * </p>
@@ -87,8 +87,8 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p>Creates new KAligner.</p>
      *
      * @param parameters  parameters from which new KAligner needs to be created
-     * @param lazyResults {@code true} if all alignments inside {@link com.milaboratory.core.alignment.KAlignmentResult}
-     *                    obtained by {@link com.milaboratory.core.alignment.KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
+     * @param lazyResults {@code true} if all alignments inside {@link KAlignmentResult}
+     *                    obtained by {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
      *                    int, int, boolean)} method
      *                    need to be loaded at first request
      */
@@ -122,12 +122,12 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
     /**
      * Adds new reference sequence to the base of this mapper and returns index assigned to it.
      * <p/>
-     * <p>User can specify a part of a sequence to be indexed by {@link com.milaboratory.core.alignment.KMapper},
-     * but {@link com.milaboratory.core.alignment.KAligner} stores whole adding sequences.</p>
+     * <p>User can specify a part of a sequence to be indexed by {@link KMapper},
+     * but {@link KAligner} stores whole adding sequences.</p>
      *
      * @param sequence sequence
-     * @param offset   offset of subsequence to be indexed by {@link com.milaboratory.core.alignment.KMapper}
-     * @param length   length of subsequence to be indexed by {@link com.milaboratory.core.alignment.KMapper}
+     * @param offset   offset of subsequence to be indexed by {@link KMapper}
+     * @param length   length of subsequence to be indexed by {@link KMapper}
      * @return index assigned to the sequence
      */
     public int addReference(NucleotideSequence sequence, int offset, int length) {
@@ -154,13 +154,13 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
-     * com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * <li>1. Obtaining {@link KMappingResult} from {@link
+     * KMapper}
+     * using {@link KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
      * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
-     * com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
+     * KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
@@ -179,13 +179,13 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
-     * com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * <li>1. Obtaining {@link KMappingResult} from {@link
+     * KMapper}
+     * using {@link KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
      * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
-     * com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
+     * KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
@@ -197,6 +197,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * @param to       last nucleotide to be aligned (exclusive)
      * @return a list of hits found in target sequence
      */
+    @Override
     public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to) {
         return align(sequence, from, to, true);
     }
@@ -206,13 +207,13 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p/>
      * <p>The procedure consists of 2 steps:</p>
      * <ul>
-     * <li>1. Obtaining {@link com.milaboratory.core.alignment.KMappingResult} from {@link
-     * com.milaboratory.core.alignment.KMapper}
-     * using {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+     * <li>1. Obtaining {@link KMappingResult} from {@link
+     * KMapper}
+     * using {@link KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
      * which contains preliminary hits
      * </li>
-     * <li>2. Using {@link com.milaboratory.core.alignment.KMappingResult} from step 1, obtaining {@link
-     * com.milaboratory.core.alignment.KAlignmentResult}
+     * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
+     * KAlignmentResult}
      * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
@@ -220,11 +221,11 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * </ul>
      *
      * @param sequence        sequence to be aligned
-     * @param from            first nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper}
+     * @param from            first nucleotide to be aligned by {@link KMapper}
      *                        (inclusive)
-     * @param to              last nucleotide to be aligned by {@link com.milaboratory.core.alignment.KMapper}
+     * @param to              last nucleotide to be aligned by {@link KMapper}
      *                        (exclusive)
-     * @param restrictToRange {@code} true if hits alignments from obtained {@link com.milaboratory.core.alignment.KAlignmentResult}
+     * @param restrictToRange {@code} true if hits alignments from obtained {@link KAlignmentResult}
      *                        should be
      *                        restricted by the same range ({@code from} - {@code to})
      * @return a list of hits found in target sequence

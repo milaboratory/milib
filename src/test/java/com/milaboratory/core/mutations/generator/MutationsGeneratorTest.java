@@ -46,7 +46,7 @@ public class MutationsGeneratorTest {
 
                 checkMutations(muts);
 
-                for (int m : muts.getAllMutations())
+                for (int m : muts.getRAWMutations())
                     switch (getRawTypeCode(m)) {
                         case RAW_MUTATION_TYPE_SUBSTITUTION:
                             ++sub;

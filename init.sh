@@ -18,6 +18,8 @@ case $os in
     ;;
 esac
 
+echo ${scriptDir}
+
 if type blastn > /dev/null ; then
     echo "Blast already installed."
 else

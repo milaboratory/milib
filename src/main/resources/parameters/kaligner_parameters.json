@@ -1,5 +1,6 @@
 {
     "default": {
+        "type" : "kaligner",
         "mapperKValue": 4,
         "floatingLeftBound": false,
         "floatingRightBound": false,
@@ -23,6 +24,7 @@
         }
     },
     "strict": {
+        "type" : "kaligner",
         "mapperKValue": 4,
         "floatingLeftBound": false,
         "floatingRightBound": false,
@@ -46,6 +48,7 @@
         }
     },
     "longRead": {
+        "type" : "kaligner",
         "mapperKValue": 8,
         "floatingLeftBound": false,
         "floatingRightBound": false,
@@ -69,6 +72,7 @@
         }
     },
     "longRead1": {
+        "type" : "kaligner",
         "mapperKValue": 8,
         "floatingLeftBound": false,
         "floatingRightBound": false,

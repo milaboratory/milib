@@ -18,7 +18,7 @@ package com.milaboratory.core.alignment;
 import java.util.Arrays;
 
 /**
- * AlignmentCache - class which is providing cached array for {@link com.milaboratory.core.sequence.alignment.BandedMatrix}.
+ * AlignmentCache - class which is providing cached array for {@link com.milaboratory.core.alignment.BandedLinearAligner}.
  *
  * <p>This cache helps to avoid creating new alignment array every time banded alignment is performed.</p>
  */

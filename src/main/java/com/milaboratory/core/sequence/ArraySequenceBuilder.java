@@ -76,4 +76,9 @@ final class ArraySequenceBuilder<S extends AbstractArraySequence<S>> extends Arr
         super.ensureCapacity(capacity);
         return this;
     }
+
+    @Override
+    public String toString() {
+        return clone().createAndDestroy().toString();
+    }
 }

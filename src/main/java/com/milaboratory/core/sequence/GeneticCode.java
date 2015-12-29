@@ -46,6 +46,8 @@ final class GeneticCode {
         if (seqLength % 3 != 0)
             throw new IllegalArgumentException("Only nucleotide sequences with size multiple " +
                     "of three are supported (in-frame).");
+        if (sequence.containsWildcards(offsetInSeq, offsetInSeq + seqLength))
+            throw new IllegalArgumentException("Nucleotide sequences with wildcards are not supported.");
 
         int size = seqLength / 3;
         int triplet;

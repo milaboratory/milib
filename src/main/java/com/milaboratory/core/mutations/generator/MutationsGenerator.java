@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.mutations.generator;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -27,6 +28,12 @@ import static com.milaboratory.core.mutations.Mutation.*;
  */
 public final class MutationsGenerator {
     private MutationsGenerator() {
+    }
+
+    public static Mutations<NucleotideSequence> generateMutations(NucleotideSequence sequence,
+                                                                  NucleotideMutationModel model,
+                                                                  Range range) {
+        return generateMutations(sequence, model, range.getFrom(), range.getTo());
     }
 
     public static Mutations<NucleotideSequence> generateMutations(NucleotideSequence sequence,

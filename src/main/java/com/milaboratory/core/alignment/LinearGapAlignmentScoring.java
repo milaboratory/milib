@@ -17,12 +17,9 @@ package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.milaboratory.core.sequence.Alphabet;
-import com.milaboratory.core.sequence.AminoAcidSequence;
-import com.milaboratory.core.sequence.NucleotideSequence;
-import com.milaboratory.core.sequence.Sequence;
+import com.milaboratory.core.sequence.*;
 
-import static com.milaboratory.core.alignment.ScoringUtils.getSymmetricMatrix;
+import java.io.ObjectStreamException;
 
 /**
  * LinearGapAlignmentScoring - scoring system which uses penalty for gap
@@ -39,8 +36,19 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     @SuppressWarnings("unchecked")
     private LinearGapAlignmentScoring() {
-        super((Alphabet) NucleotideSequence.ALPHABET);
-        gapPenalty = -5;
+        super((Alphabet) NucleotideSequence.ALPHABET, new SubstitutionMatrix(Integer.MIN_VALUE, Integer.MIN_VALUE));
+        gapPenalty = Integer.MIN_VALUE;
+    }
+
+    @JsonCreator
+    public LinearGapAlignmentScoring(
+            @JsonProperty("alphabet") Alphabet<S> alphabet,
+            @JsonProperty("subsMatrix") SubstitutionMatrix subsMatrix,
+            @JsonProperty("gapPenalty") int gapPenalty) {
+        super(alphabet, subsMatrix);
+        if (gapPenalty >= 0)
+            throw new IllegalArgumentException();
+        this.gapPenalty = gapPenalty;
     }
 
     /**
@@ -50,12 +58,11 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
      * @param subsMatrix substitution matrix to be used
      * @param gapPenalty penalty for gap, must be < 0
      */
-    @JsonCreator
     public LinearGapAlignmentScoring(
-            @JsonProperty("alphabet") Alphabet<S> alphabet,
-            @JsonProperty("subsMatrix") int[] subsMatrix,
-            @JsonProperty("gapPenalty") int gapPenalty) {
-        super(alphabet, subsMatrix);
+            Alphabet<S> alphabet,
+            int[] subsMatrix,
+            int gapPenalty) {
+        super(alphabet, new SubstitutionMatrix(subsMatrix));
         if (gapPenalty >= 0)
             throw new IllegalArgumentException();
         this.gapPenalty = gapPenalty;
@@ -73,9 +80,7 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
     public LinearGapAlignmentScoring(Alphabet<S> alphabet,
                                      int match, int mismatch,
                                      int gap) {
-        this(alphabet,
-                getSymmetricMatrix(match, mismatch, alphabet),
-                gap);
+        this(alphabet, new SubstitutionMatrix(match, mismatch), gap);
     }
 
     /**
@@ -149,5 +154,33 @@ public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends Abst
         return new LinearGapAlignmentScoring<>(AminoAcidSequence.ALPHABET,
                 matrix.getMatrix(),
                 gapPenalty);
+    }
+
+    /* Internal methods for Java Serialization */
+
+    protected Object writeReplace() throws ObjectStreamException {
+        return new SerializationObject(alphabet, subsMatrix, gapPenalty);
+    }
+
+    protected static class SerializationObject implements java.io.Serializable {
+        final Alphabet alphabet;
+        final SubstitutionMatrix matrix;
+        final int gapPenalty;
+
+        public SerializationObject() {
+            this(null, null, 0);
+        }
+
+        public SerializationObject(Alphabet alphabet, SubstitutionMatrix matrix, int gapPenalty) {
+            this.alphabet = alphabet;
+            this.matrix = matrix;
+            this.gapPenalty = gapPenalty;
+        }
+
+        @SuppressWarnings("unchecked")
+        private Object readResolve()
+                throws ObjectStreamException {
+            return new LinearGapAlignmentScoring(alphabet, matrix, gapPenalty);
+        }
     }
 }

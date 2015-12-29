@@ -4,19 +4,24 @@ import java.util.Collections;
 import java.util.List;
 
 public class AlignmentResultImpl<H extends AlignmentHit<?, ?>> implements AlignmentResult<H> {
-    final List<? extends H> hits;
+    final List<H> hits;
 
     public AlignmentResultImpl() {
         this.hits = Collections.emptyList();
     }
 
-    public AlignmentResultImpl(List<? extends H> hits) {
+    public AlignmentResultImpl(List<H> hits) {
         this.hits = hits;
     }
 
     @Override
-    public List<? extends H> getHits() {
+    public List<H> getHits() {
         return hits;
+    }
+
+    @Override
+    public final H getBestHit() {
+        return hits.isEmpty() ? null : hits.get(0);
     }
 
     @Override

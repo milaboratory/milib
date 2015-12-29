@@ -121,22 +121,56 @@ public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
      *
      * @return next FASTA record or {@literal null} if end of stream is reached
      */
-    public synchronized FastaRecord<S> take() {
-        Item item;
+    public FastaRecord<S> take() {
+        RawFastaRecord rawRecord = takeRawRecord();
+
+        // On EOF
+        if (rawRecord == null)
+            return null;
+
+        return new FastaRecord<>(id++, rawRecord.description,
+                alphabet.parse(rawRecord.sequence));
+    }
+
+    /**
+     * Return next raw FASTA record or {@literal null} if end of stream is reached.
+     *
+     * <p>This method is thread-safe.</p>
+     *
+     * @return next raw FASTA record or {@literal null} if end of stream is reached
+     */
+    public synchronized RawFastaRecord takeRawRecord() {
+        RawFastaRecord rawFastaRecord;
         try {
-            item = nextItem();
+            rawFastaRecord = nextRawRecord();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        if (item == null) {
+        if (rawFastaRecord == null)
             isFinished = true;
-            return null;
-        }
-
-        return new FastaRecord<>(id++, item.description, alphabet.parse(item.sequence));
+        return rawFastaRecord;
     }
 
-    private Item nextItem() throws IOException {
+    /**
+     * Returns output port of raw records.
+     *
+     * @return output port of raw records
+     */
+    public OutputPortCloseable<RawFastaRecord> asRawRecordsPort() {
+        return new OutputPortCloseable<RawFastaRecord>() {
+            @Override
+            public void close() {
+                FastaReader.this.close();
+            }
+
+            @Override
+            public RawFastaRecord take() {
+                return takeRawRecord();
+            }
+        };
+    }
+
+    private RawFastaRecord nextRawRecord() throws IOException {
         String description;
         if (bufferedLine != null)
             description = bufferedLine;
@@ -158,7 +192,7 @@ public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
             sequence.append(line);
         }
         bufferedLine = line;
-        return new Item(description.substring(1), sequence.toString());
+        return new RawFastaRecord(description.substring(1), sequence.toString());
     }
 
     /**
@@ -181,7 +215,8 @@ public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
     }
 
     /**
-     * For sequential readers returns the number of reads read till this moment, after reader is exhausted returns total
+     * For sequential readers returns the number of reads read till this moment, after reader is exhausted returns
+     * total
      * number of reads.
      *
      * <p>This method is thread-safe.</p>
@@ -195,11 +230,11 @@ public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
     /**
      * Used internally
      */
-    private static final class Item {
-        final String description;
-        final String sequence;
+    public static final class RawFastaRecord {
+        public final String description;
+        public final String sequence;
 
-        private Item(String description, String sequence) {
+        private RawFastaRecord(String description, String sequence) {
             this.description = description;
             this.sequence = sequence;
         }

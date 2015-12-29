@@ -13,20 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner2;
 
+import com.milaboratory.core.alignment.kaligner1.KMapper;
 import com.milaboratory.util.IntArrayList;
 
 import java.util.Collections;
 import java.util.List;
 
 /**
- * KMappingResult - class which is result of {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.nucleotide.NucleotideSequence,
- * int, int)}, {@link com.milaboratory.core.alignment.KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
- * methods. <p>It contains seeds used for aligning by {@link com.milaboratory.core.alignment.KMapper} and list
+ * KMappingResult - class which is result of {@link KMapper#align(com.milaboratory.core.sequence.nucleotide.NucleotideSequence,
+ * int, int)}, {@link KMapper#align(com.milaboratory.core.sequence.NucleotideSequence)}
+ * methods. <p>It contains seeds used for aligning by {@link KMapper} and list
  * of hits found in target sequence.</p>
  */
-public class KMappingResult implements java.io.Serializable {
+public final class KMappingResult2 implements java.io.Serializable {
     /**
      * Seeds used to align target sequence
      */
@@ -34,17 +35,19 @@ public class KMappingResult implements java.io.Serializable {
     /**
      * List of hits (potential candidates) for target sequence
      */
-    List<KMappingHit> hits;
+    List<KMappingHit2> hits;
 
     /**
      * Creates new KMappingResult
      *
      * @param seeds seeds used for alignment
-     * @param hits  hits obtained by {@link com.milaboratory.core.alignment.KMapper}
+     * @param hits  hits obtained by {@link KMapper}
      */
-    public KMappingResult(IntArrayList seeds, List<KMappingHit> hits) {
+    public KMappingResult2(IntArrayList seeds, List<KMappingHit2> hits) {
         this.seeds = seeds;
         this.hits = hits;
+        for (KMappingHit2 hit : hits)
+            hit.result = this;
     }
 
     public int getSeedsCount() {
@@ -55,7 +58,7 @@ public class KMappingResult implements java.io.Serializable {
         return seeds.get(i);
     }
 
-    public List<KMappingHit> getHits() {
+    public List<KMappingHit2> getHits() {
         return Collections.unmodifiableList(hits);
     }
 }

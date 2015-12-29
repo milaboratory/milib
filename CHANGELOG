@@ -1,4 +1,19 @@
 
+MiLib 1.2 (29 Dec 2015)
+========================
+
+-- KAligner2: new aligner for amplicon-like sequencing data processing (alignments with long gaps, 
+   performance ~20-100us per query).
+-- Common API for batch aligners.
+-- Full set of banded aligners with affine gap
+-- Nuc. Mutations -> AA. Mutations utility method
+-- `removeMutationsInRanges` method for Mutations class
+-- minor: Output jar file now contain version inforamtion accessible using 
+   `VersionInfo.getVersionInfo(...)`
+-- minor: FastqRecordsReader made public
+-- minor: Access to RawFastaRecord
+
+
 MiLib 1.1.2 ( 6 Oct 2015)
 ========================
 

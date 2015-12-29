@@ -18,16 +18,17 @@ package com.milaboratory.core.alignment;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.milaboratory.core.sequence.Sequence;
 
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
-public final class BandedAlignerParameters implements java.io.Serializable {
-    LinearGapAlignmentScoring scoring;
+public final class BandedAlignerParameters<S extends Sequence<S>> implements java.io.Serializable {
+    AlignmentScoring<S> scoring;
     int width;
     int stopPenalty;
 
     @JsonCreator
-    public BandedAlignerParameters(@JsonProperty("scoring") LinearGapAlignmentScoring scoring,
+    public BandedAlignerParameters(@JsonProperty("scoring") AlignmentScoring<S> scoring,
                                    @JsonProperty("width") int width,
                                    @JsonProperty("stopPenalty") int stopPenalty) {
         this.scoring = scoring;
@@ -38,14 +39,14 @@ public final class BandedAlignerParameters implements java.io.Serializable {
     /**
      * Returns scoring used for alignment.
      */
-    public LinearGapAlignmentScoring getScoring() {
+    public AlignmentScoring<S> getScoring() {
         return scoring;
     }
 
     /**
      * Sets scoring used for alignment.
      */
-    public BandedAlignerParameters setScoring(LinearGapAlignmentScoring scoring) {
+    public BandedAlignerParameters setScoring(AlignmentScoring<S> scoring) {
         this.scoring = scoring;
         return this;
     }
@@ -80,8 +81,8 @@ public final class BandedAlignerParameters implements java.io.Serializable {
         return this;
     }
 
-    public BandedAlignerParameters clone() {
-        return new BandedAlignerParameters(scoring, width, stopPenalty);
+    public BandedAlignerParameters<S> clone() {
+        return new BandedAlignerParameters<>(scoring, width, stopPenalty);
     }
 
     @Override

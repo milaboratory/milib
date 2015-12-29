@@ -7,7 +7,7 @@ public class PipedAlignmentResultImpl<H extends AlignmentHit<?, ?>, Q>
         implements PipedAlignmentResult<H, Q> {
     final Q query;
 
-    public PipedAlignmentResultImpl(List<? extends H> alignmentHits, Q query) {
+    public PipedAlignmentResultImpl(List<H> alignmentHits, Q query) {
         super(alignmentHits);
         this.query = query;
     }

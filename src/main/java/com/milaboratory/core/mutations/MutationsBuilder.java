@@ -45,8 +45,24 @@ public final class MutationsBuilder<S extends Sequence<S>> {
         this.reversed = reversed;
     }
 
+    public int get(int index) {
+        return mutations[index];
+    }
+
     public int size() {
         return size;
+    }
+
+    public void set(int index, int mutation) {
+        mutations[index] = mutation;
+    }
+
+    public int getLast() {
+        return mutations[size - 1];
+    }
+
+    public void removeLast() {
+        --size;
     }
 
     private void ensureInternalCapacity(int newSize) {
@@ -93,14 +109,24 @@ public final class MutationsBuilder<S extends Sequence<S>> {
         if (m.length > 1)
             for (int i = 1; i < m.length; ++i)
                 if (getPosition(m[i - 1]) > getPosition(m[i]))
-                    throw new IllegalArgumentException("Mutations must be appended in descending/ascending order (position)" +
-                            "depending on the value of reverse flag.");
+                    throw new IllegalArgumentException("Mutations must be appended in descending/ascending order (position) " +
+                            "depending on the value of reverse flag. Problem " + Mutation.encode(m[i - 1], alphabet) + ":"
+                            + Mutation.encode(m[i], alphabet) + " in " + MutationsUtil.encode(m, alphabet) + ".");
 
         return new Mutations<>(alphabet, m, true);
     }
 
     public MutationsBuilder<S> append(Mutations<S> other) {
         append(other, 0, other.size());
+        return this;
+    }
+
+    public MutationsBuilder<S> append(MutationsBuilder<S> other) {
+        if (other.size == 0)
+            return this;
+        ensureInternalCapacity(size + other.size);
+        System.arraycopy(other.mutations, 0, mutations, size, other.size);
+        size += other.size;
         return this;
     }
 
@@ -137,6 +163,20 @@ public final class MutationsBuilder<S extends Sequence<S>> {
         return append(createInsertion(position, to));
     }
 
+    public MutationsBuilder<S> appendInsertion(int position, S insert) {
+        ensureCapacity(size + insert.size());
+        for (int i = 0; i < insert.size(); i++)
+            append(createInsertion(position, insert.codeAt(i)));
+        return this;
+    }
+
+    public MutationsBuilder<S> appendDeletion(int position, int length, S originalSequence) {
+        ensureCapacity(size + length);
+        for (int i = 0; i < length; i++)
+            append(createDeletion(position + i, originalSequence.codeAt(position + i)));
+        return this;
+    }
+
     public MutationsBuilder<S> reverseRange(int from, int to) {
         ArraysUtils.reverse(mutations, from, to);
         return this;
@@ -147,5 +187,10 @@ public final class MutationsBuilder<S extends Sequence<S>> {
                 reversed,
                 mutations == null ? null : mutations.clone(),
                 size);
+    }
+
+    @Override
+    public String toString() {
+        return this.clone().createAndDestroy().toString();
     }
 }

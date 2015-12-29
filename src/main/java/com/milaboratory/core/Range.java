@@ -15,8 +15,13 @@
  */
 package com.milaboratory.core;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.io.binary.RangeSerializer;
 import com.milaboratory.primitivio.annotations.Serializable;
+
+import java.util.Comparator;
 
 /**
  * This class represents a range of positions in a sequence (e.g. sub-sequence). Range can be <b>reversed</b> ({@code
@@ -24,14 +29,19 @@ import com.milaboratory.primitivio.annotations.Serializable;
  *
  * <p><b>Main contract:</b> upper limit (with biggest value) is always exclusive, and lower is always inclusive.</p>
  */
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = RangeSerializer.class)
 public final class Range implements java.io.Serializable {
     static final long serialVersionUID = 1L;
 
     private final int lower, upper;
     private final boolean reversed;
-
-    public Range(int lower, int upper, boolean reversed) {
+    
+    @JsonCreator
+    public Range(@JsonProperty("lower") int lower,
+                 @JsonProperty("upper") int upper,
+                 @JsonProperty("reversed") boolean reversed) {
         if (lower > upper)
             throw new IllegalArgumentException();
 
@@ -319,4 +329,11 @@ public final class Range implements java.io.Serializable {
         result = 31 * result + (reversed ? 1 : 0);
         return result;
     }
+
+    public static final Comparator<Range> COMPARATOR_BY_FROM = new Comparator<Range>() {
+        @Override
+        public int compare(Range o1, Range o2) {
+            return Integer.compare(o1.getFrom(), o2.getTo());
+        }
+    };
 }

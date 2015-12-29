@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.util.IntArrayList;
@@ -166,7 +166,7 @@ public final class KMapper implements java.io.Serializable {
     }
 
     /**
-     * Factory method to create KMapper using parametners specified in the {@link com.milaboratory.core.alignment.KAlignerParameters}
+     * Factory method to create KMapper using parametners specified in the {@link KAlignerParameters}
      * object.
      *
      * @param parameters parameters instance

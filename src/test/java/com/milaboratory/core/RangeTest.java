@@ -16,6 +16,7 @@
 package com.milaboratory.core;
 
 import com.milaboratory.core.io.util.IOTestUtil;
+import com.milaboratory.test.TestUtil;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -107,5 +108,11 @@ public class RangeTest {
     public void test4() throws Exception {
         Range se = new Range(3, 5);
         IOTestUtil.assertJavaSerialization(se);
+    }
+
+    @Test
+    public void test5() throws Exception {
+        Range se = new Range(3, 5);
+        TestUtil.assertJson(se);
     }
 }

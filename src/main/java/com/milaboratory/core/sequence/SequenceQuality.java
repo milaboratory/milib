@@ -15,6 +15,8 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.io.sequence.fastq.QualityFormat;
 import com.milaboratory.core.io.sequence.fastq.WrongQualityFormat;
@@ -29,6 +31,8 @@ import java.util.Arrays;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
+@JsonSerialize(using = IO.SQSeqSerializer.class)
+@JsonDeserialize(using = IO.SQSeqDeserializer.class)
 @Serializable(by = IO.SequenceQualitySerializer.class)
 public final class SequenceQuality extends AbstractSeq<SequenceQuality>
         implements java.io.Serializable {

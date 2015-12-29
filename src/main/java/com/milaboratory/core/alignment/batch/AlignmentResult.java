@@ -21,7 +21,9 @@ import java.util.List;
  * @param <H> type of alignment hit
  */
 public interface AlignmentResult<H extends AlignmentHit<?, ?>> {
-    List<? extends H> getHits();
+    List<H> getHits();
+
+    H getBestHit();
 
     boolean hasHits();
 }

@@ -45,6 +45,11 @@ public class SimpleBatchAligner<S extends Sequence<S>, P> extends AbstractBatchA
         references.add(new Record<>(sequence, payload));
     }
 
+    @Override
+    public AlignmentResult<AlignmentHit<S, P>> align(S sequence, int from, int to) {
+        throw new UnsupportedOperationException();
+    }
+
     public AlignmentResult<AlignmentHit<S, P>> align(final S sequence) {
         // Special case
         if (references.isEmpty())

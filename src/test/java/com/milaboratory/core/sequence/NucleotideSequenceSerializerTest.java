@@ -48,4 +48,10 @@ public class NucleotideSequenceSerializerTest {
         Object se = new NucleotideSequence("AACCTTAAACC");
         IOTestUtil.assertJavaSerialization(se);
     }
+
+    @Test
+    public void test3() throws Exception {
+        NucleotideSequence se = new NucleotideSequence("AACCTTAAACC");
+        TestUtil.assertJson(se);
+    }
 }

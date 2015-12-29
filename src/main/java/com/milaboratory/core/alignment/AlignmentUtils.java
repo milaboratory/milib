@@ -30,6 +30,15 @@ public final class AlignmentUtils {
     private AlignmentUtils() {
     }
 
+    public static int calculateScore(AlignmentScoring scoring, int initialLength, Mutations mutations) {
+        if (scoring instanceof AffineGapAlignmentScoring)
+            return calculateScore((AffineGapAlignmentScoring) scoring, initialLength, mutations);
+        else if (scoring instanceof LinearGapAlignmentScoring)
+            return calculateScore((LinearGapAlignmentScoring) scoring, initialLength, mutations);
+        else
+            throw new IllegalArgumentException("Unknown scoring type");
+    }
+
     /**
      * Calculates score of alignments.
      *
@@ -38,12 +47,54 @@ public final class AlignmentUtils {
      * @param mutations     array of mutations
      * @return score of alignment
      */
-    public static float calculateScore(LinearGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
+    public static int calculateScore(AffineGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
         if (!scoring.uniformBasicMatchScore())
             throw new IllegalArgumentException("Scoring with non-uniform match score is not supported.");
 
-        float matchScore = scoring.getScore((byte) 0, (byte) 0);
-        float score = matchScore * initialLength;
+        int matchScore = scoring.getScore((byte) 0, (byte) 0);
+        int score = matchScore * initialLength;
+        int prevMutation = -1;
+        for (int i = 0; i < mutations.size(); ++i) {
+            int mutation = mutations.getMutation(i);
+
+            if (scoring.getAlphabet().isWildcard(getFrom(mutation)) || scoring.getAlphabet().isWildcard(getTo(mutation)))
+                throw new IllegalArgumentException("Mutations with wildcards are not supported.");
+
+            if (isDeletion(mutation)) {
+                if (i > 0 && isDeletion(prevMutation) && getPosition(mutation) - 1 == getPosition(prevMutation))
+                    score += scoring.getGapExtensionPenalty();
+                else
+                    score += scoring.getGapOpenPenalty();
+                score -= matchScore;
+            } else if (isInsertion(mutation)) {
+                if (i > 0 && isInsertion(prevMutation) && getPosition(mutation) == getPosition(prevMutation))
+                    score += scoring.getGapExtensionPenalty();
+                else
+                    score += scoring.getGapOpenPenalty();
+            } else {//Substitution
+                score += scoring.getScore(getFrom(mutation), getTo(mutation));
+                score -= matchScore;
+            }
+
+            prevMutation = mutation;
+        }
+        return score;
+    }
+
+    /**
+     * Calculates score of alignments.
+     *
+     * @param scoring       scoring
+     * @param initialLength length of initial sequence (before mutations; upper line of alignment)
+     * @param mutations     array of mutations
+     * @return score of alignment
+     */
+    public static int calculateScore(LinearGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
+        if (!scoring.uniformBasicMatchScore())
+            throw new IllegalArgumentException("Scoring with non-uniform match score is not supported.");
+
+        int matchScore = scoring.getScore((byte) 0, (byte) 0);
+        int score = matchScore * initialLength;
         for (int i = 0; i < mutations.size(); ++i) {
             int mutation = mutations.getMutation(i);
 

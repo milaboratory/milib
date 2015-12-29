@@ -15,10 +15,11 @@
  */
 package com.milaboratory.core.mutations;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.Range;
-import com.milaboratory.core.sequence.Alphabet;
-import com.milaboratory.core.sequence.Sequence;
-import com.milaboratory.core.sequence.SequenceBuilder;
+import com.milaboratory.core.sequence.*;
 import com.milaboratory.primitivio.annotations.Serializable;
 import com.milaboratory.util.IntArrayList;
 
@@ -30,24 +31,32 @@ import static com.milaboratory.core.mutations.Mutation.*;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = IO.MutationsSerializer.class)
 public final class Mutations<S extends Sequence<S>>
         implements java.io.Serializable {
     final Alphabet<S> alphabet;
     final int[] mutations;
 
-    public Mutations(Alphabet alphabet, IntArrayList mutations) {
+    public Mutations(Alphabet<S> alphabet, IntArrayList mutations) {
         this(alphabet, mutations.toArray(), true);
     }
 
-    public Mutations(Alphabet alphabet, int... mutations) {
+    @JsonCreator
+    public Mutations(@JsonProperty("alphabet") Alphabet<S> alphabet,
+                     @JsonProperty("mutations") String encodedMutations) {
+        this(alphabet, MutationsUtil.decode(encodedMutations, alphabet), true);
+    }
+
+    public Mutations(Alphabet<S> alphabet, int... mutations) {
         if (!MutationsUtil.isSorted(mutations))
             throw new IllegalArgumentException("Not sorted according to positions.");
         this.mutations = mutations.clone();
         this.alphabet = alphabet;
     }
 
-    Mutations(Alphabet alphabet, int[] mutations, boolean unsafe) {
+    Mutations(Alphabet<S> alphabet, int[] mutations, boolean unsafe) {
         assert unsafe;
         assert MutationsUtil.isSorted(mutations);
         this.mutations = mutations;
@@ -58,11 +67,16 @@ public final class Mutations<S extends Sequence<S>>
         return mutations.length;
     }
 
+    @JsonProperty("alphabet")
+    public Alphabet<S> getAlphabet() {
+        return alphabet;
+    }
+
     public int getMutation(int index) {
         return mutations[index];
     }
 
-    public int[] getAllMutations() {
+    public int[] getRAWMutations() {
         return mutations.clone();
     }
 
@@ -304,22 +318,143 @@ public final class Mutations<S extends Sequence<S>>
 
     /**
      * Extracts mutations for a range of positions in the original sequence and performs shift of corresponding
-     * positions (moves them to {@code -from}). <p/> <p>Insertions before {@code from} excluded. Insertions after
-     * {@code
-     * (to - 1)} included.</p> <p/> <p><b>Important:</b> to extract leftmost insertions (trailing insertions) use
-     * {@code
-     * from = -1}. So {@code extractMutationsForRange(mut, -1, seqLength) == mut}.</p>
+     * positions (moves them to {@code -from}).
+     *
+     * <p>Insertions before {@code from} excluded. Insertions after {@code (to - 1)} included.</p>
+     *
+     * <p>
+     * <b>Important:</b> to extract leftmost insertions (trailing insertions) use {@code from = -1}. E.g.
+     * {@code extractMutationsForRange(mut, -1, seqLength) == mut}.
+     * </p>
      *
      * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.
      * @param to   right bound of range, exclusive
      * @return mutations for a range of positions
      */
     public Mutations<S> extractMutationsForRange(int from, int to) {
-        //If range size is 0 return empty array
-        if (from == to)
-            return new Mutations<S>(alphabet, new int[0], true);
+        if (to < from)
+            throw new IllegalArgumentException("Reversed ranges are not supported.");
 
-        //Find first mutation for the range
+        long indexRange = getIndexRange(from, to);
+
+        // If range size is 0 return empty array
+        if (indexRange == 0)
+            return empty(alphabet);
+
+        // Unpacking
+        int fromIndex = (int) (indexRange >>> 32),
+                toIndex = (int) (indexRange & 0xFFFFFFFF);
+
+        // Don't create new object if result will be equal to this
+        if (from == 0 && fromIndex == 0 && toIndex == mutations.length)
+            return this;
+
+        // Creating result
+        int[] result = new int[toIndex - fromIndex];
+
+        // Constant to move positions in the output array
+        int offset;
+        if (from == -1)
+            offset = 0;
+        else
+            offset = ((-from) << POSITION_OFFSET);
+
+        // Copy and move mutations
+        for (int i = result.length - 1, j = toIndex - 1; i >= 0; --i, --j)
+            result[i] = mutations[j] + offset;
+
+        return new Mutations<>(alphabet, result, true);
+    }
+
+    /**
+     * See {@link #removeMutationsInRange(int, int)}.
+     *
+     * <p>Ranges must be sorted.</p>
+     *
+     * @param ranges ranges to remove
+     * @return
+     */
+    public Mutations<S> removeMutationsInRanges(Range... ranges) {
+        Mutations<S> result = this;
+        int offset = 0;
+        int lastTo = 0;
+        for (Range range : ranges) {
+            if (range.getFrom() < lastTo)
+                throw new IllegalArgumentException("Ranges are not sorted.");
+            result = result.removeMutationsInRange(range.move(offset));
+            offset -= range.length();
+            lastTo = range.getTo();
+        }
+        return result;
+    }
+
+    /**
+     * See {@link #removeMutationsInRange(int, int)}.
+     *
+     * @param range range to removes
+     * @return
+     */
+    public Mutations<S> removeMutationsInRange(Range range) {
+        return removeMutationsInRange(range.getFrom(), range.getTo());
+    }
+
+    /**
+     * Removes mutations for a range of positions in the original sequence and performs shift of corresponding
+     * positions of mutations.
+     *
+     * <p>Insertions before {@code from} will be left untouched. Insertions after {@code (to - 1)} will be removed.</p>
+     *
+     * <p>
+     * <b>Important:</b> to remove leftmost insertions (left trailing insertions) use {@code from = -1}. E.g.
+     * {@code extractMutationsForRange(mut, -1, seqLength) == mut}.
+     * </p>
+     *
+     * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.
+     * @param to   right bound of range, exclusive
+     * @return mutations for a range of positions
+     */
+    public Mutations<S> removeMutationsInRange(int from, int to) {
+        if (to < from)
+            throw new IllegalArgumentException("Reversed ranges are not supported.");
+
+        // If range is empty return untouched mutations object
+        if (from == to)
+            return this;
+
+        // Determine range in mutations to remove
+        long indexRange = getIndexRange(from, to);
+
+        // Unpacking
+        int fromIndex = (int) (indexRange >>> 32),
+                toIndex = (int) (indexRange & 0xFFFFFFFF);
+
+        if (fromIndex == 0 && toIndex == mutations.length)
+            return empty(alphabet);
+
+        // Creating result
+        int[] result = new int[mutations.length - (toIndex - fromIndex)];
+
+        // Constant to move positions in the output array
+        int offset = (from - to) << POSITION_OFFSET; // Negative value
+
+        // Copy and move mutations
+        int i = 0;
+        for (int j = 0; j < fromIndex; ++j)
+            result[i++] = mutations[j];
+        for (int j = toIndex; j < mutations.length; ++j)
+            result[i++] = mutations[j] + offset;
+
+        assert i == result.length;
+
+        return new Mutations<>(alphabet, result, true);
+    }
+
+    private long getIndexRange(int from, int to) {
+        // If range size is 0 return empty array
+        if (from == to)
+            return 0;
+
+        // Find first mutation for the range
         int fromIndex = firstMutationWithPosition(from);
         if (fromIndex < 0)
             fromIndex = -fromIndex - 1;
@@ -331,7 +466,7 @@ public final class Mutations<S extends Sequence<S>>
                 (mutations[fromIndex] & MUTATION_TYPE_MASK) == RAW_MUTATION_TYPE_INSERTION)
             ++fromIndex;
 
-        //Find last mutation
+        // Find last mutation
         int toIndex = firstMutationWithPosition(fromIndex, mutations.length, to);
         if (toIndex < 0)
             toIndex = -toIndex - 1;
@@ -341,21 +476,8 @@ public final class Mutations<S extends Sequence<S>>
                 (mutations[toIndex] & MUTATION_TYPE_MASK) == RAW_MUTATION_TYPE_INSERTION)
             ++toIndex;
 
-        //Creating result
-        int[] result = new int[toIndex - fromIndex];
-
-        //Constant to move positions in the output array
-        int offset;
-        if (from == -1)
-            offset = 0;
-        else
-            offset = ((-from) << POSITION_OFFSET);
-
-        //Copy and move mutations
-        for (int i = result.length - 1, j = toIndex - 1; i >= 0; --i, --j)
-            result[i] = mutations[j] + offset;
-
-        return new Mutations<S>(alphabet, result, true);
+        // Return indices packed into single long value
+        return (((long) fromIndex) << 32) | ((long) toIndex);
     }
 
     /**
@@ -383,6 +505,9 @@ public final class Mutations<S extends Sequence<S>>
      * @return mutations that will generate seq1 from seq2
      */
     public Mutations<S> invert() {
+        if (mutations.length == 0)
+            return this;
+
         int[] newMutations = new int[mutations.length];
         int delta = 0;
         for (int i = 0; i < mutations.length; i++) {
@@ -406,7 +531,7 @@ public final class Mutations<S extends Sequence<S>>
             }
             newMutations[i] = createMutation(type, pos + delta, to, from);
         }
-        return new Mutations<S>(alphabet, newMutations, true);
+        return new Mutations<>(alphabet, newMutations, true);
     }
 
     public int countOfIndels() {
@@ -437,7 +562,7 @@ public final class Mutations<S extends Sequence<S>>
      * @return sub mutations
      */
     public Mutations<S> getRange(int from, int to) {
-        return new Mutations<S>(alphabet, Arrays.copyOfRange(mutations, from, to));
+        return new Mutations<>(alphabet, Arrays.copyOfRange(mutations, from, to));
     }
 
     public int firsMutationPosition() {
@@ -474,6 +599,7 @@ public final class Mutations<S extends Sequence<S>>
         return builder.toString();
     }
 
+    @JsonProperty("mutations")
     public String encode() {
         return MutationsUtil.encode(mutations, alphabet);
     }
@@ -482,8 +608,16 @@ public final class Mutations<S extends Sequence<S>>
         return MutationsUtil.encodeFixed(mutations, alphabet);
     }
 
+    public static Mutations<NucleotideSequence> decodeNuc(String string) {
+        return decode(string, NucleotideSequence.ALPHABET);
+    }
+
+    public static Mutations<AminoAcidSequence> decodeAA(String string) {
+        return decode(string, AminoAcidSequence.ALPHABET);
+    }
+
     public static <S extends Sequence<S>> Mutations<S> decode(String string, Alphabet<S> alphabet) {
-        return new Mutations<S>(alphabet, MutationsUtil.decode(string, alphabet), true);
+        return new Mutations<>(alphabet, MutationsUtil.decode(string, alphabet), true);
     }
 
     @Override
@@ -560,5 +694,25 @@ public final class Mutations<S extends Sequence<S>>
             result.pop();
         else
             result.set(result.size() - 1, createSubstitution(position, from, to));
+    }
+
+    /**
+     * Identity mutations object for nucleotide sequences.
+     */
+    public static final Mutations<NucleotideSequence> EMPTY_NUCLEOTIDE_MUTATIONS = new Mutations<>(NucleotideSequence.ALPHABET);
+
+    /**
+     * Identity mutations object for amino acid sequences.
+     */
+    public static final Mutations<AminoAcidSequence> EMPTY_AMINO_ACID_MUTATIONS = new Mutations<>(AminoAcidSequence.ALPHABET);
+
+    @SuppressWarnings("unchecked")
+    public static <S extends Sequence<S>> Mutations<S> empty(Alphabet<S> alphabet) {
+        if ((Alphabet) alphabet == NucleotideSequence.ALPHABET)
+            return (Mutations<S>) EMPTY_NUCLEOTIDE_MUTATIONS;
+        else if ((Alphabet) alphabet == AminoAcidSequence.ALPHABET)
+            return (Mutations<S>) EMPTY_AMINO_ACID_MUTATIONS;
+        else
+            return new Mutations<>(alphabet);
     }
 }

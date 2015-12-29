@@ -13,8 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
+import com.milaboratory.core.alignment.AlignmentTest;
+import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -27,8 +29,8 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.milaboratory.core.alignment.KMapper.SEED_NOT_FOUND_OFFSET;
-import static com.milaboratory.core.alignment.KMapper.getBestOffset;
+import static com.milaboratory.core.alignment.kaligner1.KMapper.SEED_NOT_FOUND_OFFSET;
+import static com.milaboratory.core.alignment.kaligner1.KMapper.getBestOffset;
 import static com.milaboratory.core.mutations.generator.MutationsGenerator.generateMutations;
 import static com.milaboratory.test.TestUtil.its;
 import static com.milaboratory.test.TestUtil.randomSequence;
@@ -123,7 +125,7 @@ public class KMapperTest extends AlignmentTest {
             else
                 target = randomSequence(NucleotideSequence.ALPHABET, rdi, 20, 30).concatenate(seq.getRange(0, subSize));
 
-            int[] muts = generateMutations(target, model).getAllMutations();
+            int[] muts = generateMutations(target, model).getRAWMutations();
             target = mutate(target, muts);
 
             KMappingResult result = ka.align(target);

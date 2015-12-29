@@ -17,8 +17,11 @@ package com.milaboratory.core.sequence;
 
 import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.sequence.AminoAcidSequence.AminoAcidSequencePosition;
+import com.milaboratory.test.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static com.milaboratory.core.sequence.TranslationParameters.*;
 
 /**
  * @author Dmitry Bolotin
@@ -28,80 +31,70 @@ public class AminoAcidSequenceTest {
     @Test
     public void test1() throws Exception {
         Assert.assertEquals(new AminoAcidSequence("IR_"),
-                AminoAcidSequence.translate(true, true, new NucleotideSequence("ATTAGACA")));
+                AminoAcidSequence.translate(new NucleotideSequence("ATTAGACA"), FromLeftWithIncompleteCodon));
         Assert.assertEquals(new AminoAcidSequence("_*T"),
-                AminoAcidSequence.translate(false, true, new NucleotideSequence("ATTAGACA")));
+                AminoAcidSequence.translate(new NucleotideSequence("ATTAGACA"), FromRightWithIncompleteCodon));
 
         Assert.assertEquals(new AminoAcidSequence("I_T"),
-                AminoAcidSequence.translate(null, true, new NucleotideSequence("ATTAGACA")));
+                AminoAcidSequence.translate(new NucleotideSequence("ATTAGACA"), FromCenter));
 
-        Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(true, true, new NucleotideSequence("ATTAGA")));
-        Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(false, true, new NucleotideSequence("ATTAGA")));
-
-        Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(null, true, new NucleotideSequence("ATTAGA")));
+        for (TranslationParameters tt : TranslationParameters.getPreDefinedParameters())
+            Assert.assertEquals("TT=" + tt, new AminoAcidSequence("IR"),
+                    AminoAcidSequence.translate(new NucleotideSequence("ATTAGA"), tt));
     }
 
     @Test
     public void test2() throws Exception {
         Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(true, false, new NucleotideSequence("ATTAGACA")));
+                AminoAcidSequence.translate(new NucleotideSequence("ATTAGACA"), FromLeftWithoutIncompleteCodon));
         Assert.assertEquals(new AminoAcidSequence("*T"),
-                AminoAcidSequence.translate(false, false, new NucleotideSequence("ATTAGACA")));
-
-        Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(true, false, new NucleotideSequence("ATTAGA")));
-        Assert.assertEquals(new AminoAcidSequence("IR"),
-                AminoAcidSequence.translate(false, false, new NucleotideSequence("ATTAGA")));
+                AminoAcidSequence.translate(new NucleotideSequence("ATTAGACA"), FromRightWithoutIncompleteCodon));
     }
+
+    public static final TranslationParameters[] ALL_WITH_INCOMPLETE = {FromCenter, FromLeftWithIncompleteCodon, FromRightWithIncompleteCodon};
+    public static final TranslationParameters[] ALL_WITHOUT_INCOMPLETE = {FromLeftWithoutIncompleteCodon, FromRightWithoutIncompleteCodon};
 
     @Test
     public void test3() throws Exception {
-        Assert.assertEquals(new AminoAcidSequence("_"),
-                AminoAcidSequence.translate(false, true, new NucleotideSequence("AT")));
-        Assert.assertEquals(new AminoAcidSequence("_"),
-                AminoAcidSequence.translate(true, true, new NucleotideSequence("AT")));
-        Assert.assertEquals(new AminoAcidSequence("_"),
-                AminoAcidSequence.translate(null, true, new NucleotideSequence("AT")));
-
-        Assert.assertEquals(new AminoAcidSequence(""),
-                AminoAcidSequence.translate(false, true, new NucleotideSequence("")));
-        Assert.assertEquals(new AminoAcidSequence(""),
-                AminoAcidSequence.translate(true, true, new NucleotideSequence("")));
-        Assert.assertEquals(new AminoAcidSequence(""),
-                AminoAcidSequence.translate(null, true, new NucleotideSequence("")));
+        for (TranslationParameters tt : ALL_WITH_INCOMPLETE)
+            Assert.assertEquals("TT=" + tt, new AminoAcidSequence("_"),
+                    AminoAcidSequence.translate(new NucleotideSequence("AT"), tt));
+        for (TranslationParameters tt : ALL_WITHOUT_INCOMPLETE)
+            Assert.assertEquals("TT=" + tt, new AminoAcidSequence(""),
+                    AminoAcidSequence.translate(new NucleotideSequence("AT"), tt));
+        for (TranslationParameters tt : TranslationParameters.getPreDefinedParameters())
+            Assert.assertEquals("TT=" + tt, new AminoAcidSequence(""),
+                    AminoAcidSequence.translate(new NucleotideSequence(""), tt));
     }
 
     @Test
     public void testConvertPositionLeft1() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(0, 1),
-                AminoAcidSequence.convertPositionFromLeft(1, 10));
+                AminoAcidSequence.convertNtPositionToAAFromLeft(1, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 0),
-                AminoAcidSequence.convertPositionFromLeft(0, 10));
+                AminoAcidSequence.convertNtPositionToAAFromLeft(0, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(2, 1),
-                AminoAcidSequence.convertPositionFromLeft(7, 13));
+                AminoAcidSequence.convertNtPositionToAAFromLeft(7, 13));
     }
 
     @Test
     public void testConvertPositionRight1() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(1, 0),
-                AminoAcidSequence.convertPositionFromRight(1, 10));
+                AminoAcidSequence.convertNtPositionToAAFromRight(1, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 2),
-                AminoAcidSequence.convertPositionFromRight(0, 10));
+                AminoAcidSequence.convertNtPositionToAAFromRight(0, 10));
         Assert.assertEquals(new AminoAcidSequencePosition(3, 2),
-                AminoAcidSequence.convertPositionFromRight(9, 10));
+                AminoAcidSequence.convertNtPositionToAAFromRight(9, 10));
     }
 
     @Test
     public void testConvertPositionRight2() throws Exception {
         Assert.assertEquals(new AminoAcidSequencePosition(0, 1),
-                AminoAcidSequence.convertPositionFromRight(1, 9));
+                AminoAcidSequence.convertNtPositionToAAFromRight(1, 9));
         Assert.assertEquals(new AminoAcidSequencePosition(0, 0),
-                AminoAcidSequence.convertPositionFromRight(0, 9));
+                AminoAcidSequence.convertNtPositionToAAFromRight(0, 9));
         Assert.assertEquals(new AminoAcidSequencePosition(2, 2),
-                AminoAcidSequence.convertPositionFromRight(8, 9));
+                AminoAcidSequence.convertNtPositionToAAFromRight(8, 9));
     }
 
     @Test
@@ -118,9 +111,12 @@ public class AminoAcidSequenceTest {
                 new AminoAcidSequencePosition(3, 1),
                 new AminoAcidSequencePosition(3, 2),
         };
+
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertPositionFromCenter(i, 10));
+                    AminoAcidSequence.convertNtPositionToAAFromCenter(i, 10));
+            Assert.assertEquals(i - positions[i].positionInTriplet,
+                    AminoAcidSequence.convertAAPositionToNtFromCenter(positions[i].aminoAcidPosition, 10));
         }
     }
 
@@ -139,7 +135,9 @@ public class AminoAcidSequenceTest {
         };
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertPositionFromCenter(i, 9));
+                    AminoAcidSequence.convertNtPositionToAAFromCenter(i, 9));
+            Assert.assertEquals(i - positions[i].positionInTriplet,
+                    AminoAcidSequence.convertAAPositionToNtFromCenter(positions[i].aminoAcidPosition, 9));
         }
     }
 
@@ -160,8 +158,37 @@ public class AminoAcidSequenceTest {
         };
         for (int i = 0; i < positions.length; i++) {
             Assert.assertEquals(positions[i],
-                    AminoAcidSequence.convertPositionFromCenter(i, 11));
+                    AminoAcidSequence.convertNtPositionToAAFromCenter(i, 11));
+            Assert.assertEquals(i - positions[i].positionInTriplet,
+                    AminoAcidSequence.convertAAPositionToNtFromCenter(positions[i].aminoAcidPosition, 11));
         }
+    }
+
+    @Test
+    public void testConvertPositionSync1() throws Exception {
+        for (TranslationParameters tt : TranslationParameters.getPreDefinedParameters()) {
+            System.out.println(tt);
+            for (int length = 2; length < 20; length++) {
+                System.out.println(length);
+                for (int i = 0; i < length; i++) {
+                    AminoAcidSequencePosition pos = AminoAcidSequence.convertNtPositionToAA(i, length, tt);
+                    int actual = pos != null ? AminoAcidSequence.convertAAPositionToNt(pos.aminoAcidPosition, length, tt) : -1;
+                    //System.out.println(pos + "\t" + i + "\t" + actual);
+                    if (pos == null) {
+                        Assert.assertFalse(tt.includeIncomplete);
+                        continue;
+                    }
+                    Assert.assertEquals("TT=" + tt + " i=" + i + " length=" + length, Math.max(i - pos.positionInTriplet, 0),
+                            actual);
+                }
+            }
+        }
+    }
+
+    @Test
+    public void testName() throws Exception {
+        //System.out.println(AminoAcidSequence.convertNtPositionToAA(1, 6, FromRightWithIncompleteCodon));
+        System.out.println(AminoAcidSequence.convertAAPositionToNt(1, 6, FromRightWithIncompleteCodon));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -173,5 +200,11 @@ public class AminoAcidSequenceTest {
     public void test4() throws Exception {
         AminoAcidSequence se = new AminoAcidSequence("ATTAGACAN");
         IOTestUtil.assertJavaSerialization(se);
+    }
+
+    @Test
+    public void test5() throws Exception {
+        AminoAcidSequence se = new AminoAcidSequence("ATTAGACAN");
+        TestUtil.assertJson(se);
     }
 }

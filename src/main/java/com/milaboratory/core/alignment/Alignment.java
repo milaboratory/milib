@@ -56,9 +56,21 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
      */
     final float score;
 
+    public Alignment(S sequence1, Mutations<S> mutations, float score) {
+        this(sequence1, mutations, new Range(0, sequence1.size()),
+                new Range(0, sequence1.size() + mutations.getLengthDelta()),
+                score);
+    }
+
+    public Alignment(S sequence1, Mutations<S> mutations, AlignmentScoring<S> scoring) {
+        this(sequence1, mutations, new Range(0, sequence1.size()),
+                new Range(0, sequence1.size() + mutations.getLengthDelta()),
+                AlignmentUtils.calculateScore(scoring, sequence1.size(), mutations));
+    }
+
     public Alignment(S sequence1, Mutations<S> mutations,
                      Range sequence1Range, Range sequence2Range,
-                     LinearGapAlignmentScoring<S> scoring) {
+                     AlignmentScoring<S> scoring) {
         this(sequence1, mutations, sequence1Range, sequence2Range,
                 AlignmentUtils.calculateScore(scoring, sequence1Range.length(), mutations));
     }
@@ -70,7 +82,7 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
             if (!mutations.isCompatibleWith(sequence1)
                     || !sequence1Range.contains(mutations.getMutatedRange())
                     || sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
-                throw new IllegalArgumentException("Not compatible arguments.");
+                throw new IllegalArgumentException("Not compatible arguments: muts: " + mutations + " range1: " + sequence1Range + " range2: " + sequence2Range );
         } else if (sequence1Range.length() != sequence2Range.length())
             throw new IllegalArgumentException("Not compatible arguments.");
 

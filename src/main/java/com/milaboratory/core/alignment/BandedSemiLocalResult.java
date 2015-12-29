@@ -17,10 +17,10 @@ package com.milaboratory.core.alignment;
 
 /**
  * BandedSemiLocalResult - class which is result of BandedSemiLocal alignment.
- * <p/>
+ *
  * <p>BandedSemiLocal alignment - alignment where part of second sequence is aligned either to left part of to right
  * part of first sequence. </p>
- * <p/>
+ *
  * <p>"Banded alignment" means that sequences to be aligned are very similar and number of mutations is very low.</p>
  */
 public final class BandedSemiLocalResult implements java.io.Serializable {

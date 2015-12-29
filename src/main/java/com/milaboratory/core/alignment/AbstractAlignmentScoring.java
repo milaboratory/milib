@@ -15,9 +15,8 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 
@@ -28,7 +27,7 @@ import java.util.Arrays;
  *
  * @param <S> type of sequences to be aligned using scoring system
  */
-public class AbstractAlignmentScoring<S extends Sequence<S>> implements AlignmentScoring<S>, java.io.Serializable {
+public class AbstractAlignmentScoring<S extends Sequence<S>> implements AlignmentScoring<S> {
     /**
      * Link to alphabet
      */
@@ -36,15 +35,20 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     protected final Alphabet<S> alphabet;
 
     /**
-     * Substitution matrix
+     * Stores information about how the object was created. {@link #subsMatrixActual} used for actual calculations
      */
-    @JsonSerialize(using = ScoringMatrixIO.Serializer.class)
-    @JsonDeserialize(using = ScoringMatrixIO.Deserializer.class)
-    protected final int[] subsMatrix;
+    protected final SubstitutionMatrix subsMatrix;
+
+    /**
+     * Actual substitution matrix
+     */
+    @JsonIgnore
+    protected final int[] subsMatrixActual;
 
     /**
      * Flag indicating whether substitution matrix has the same value on main diagonal or not
      */
+    @JsonIgnore
     final boolean uniformBasicMatch;
 
     /**
@@ -54,33 +58,10 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
      *
      * @param alphabet alphabet to be used by scoring system
      */
-    protected AbstractAlignmentScoring(Alphabet<S> alphabet) {
-        this.alphabet = alphabet;
-        this.subsMatrix = null;
-        this.uniformBasicMatch = true;
-    }
-
-    /**
-     * Abstract class constructor. <p>Initializes uniformBasicMatch to {@code true}</p>
-     *
-     * @param alphabet   alphabet to be used by scoring system
-     * @param subsMatrix substitution matrix
-     */
-    public AbstractAlignmentScoring(Alphabet<S> alphabet, int[] subsMatrix) {
-        int size = alphabet.size();
-
-        //For deserialization see ScoringMatrixIO.Deserializer
-        if (subsMatrix.length == 2)
-            subsMatrix = ScoringUtils.getSymmetricMatrix(subsMatrix[0], subsMatrix[1], alphabet);
-        else {
-            //Normal arguments check
-            if (subsMatrix.length != size * size)
-                throw new IllegalArgumentException();
-            subsMatrix = subsMatrix.clone();
-        }
-
+    protected AbstractAlignmentScoring(Alphabet<S> alphabet, SubstitutionMatrix subsMatrix) {
         this.alphabet = alphabet;
         this.subsMatrix = subsMatrix;
+        this.subsMatrixActual = subsMatrix.createSubstitutionMatrix(alphabet);
 
         // Setting uniformity of match score flag
         int val = getScore((byte) 0, (byte) 0);
@@ -101,7 +82,7 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
      * @return score value
      */
     public int getScore(byte from, byte to) {
-        return subsMatrix[from * alphabet.size() + to];
+        return subsMatrixActual[from * alphabet.size() + to];
     }
 
     /**
@@ -132,11 +113,11 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
         if (getAlphabet() != ((AbstractAlignmentScoring) o).getAlphabet())
             return false;
 
-        return Arrays.equals(subsMatrix, that.subsMatrix);
+        return Arrays.equals(subsMatrixActual, that.subsMatrixActual);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(subsMatrix) + 31 * getAlphabet().hashCode();
+        return Arrays.hashCode(subsMatrixActual) + 31 * getAlphabet().hashCode();
     }
 }

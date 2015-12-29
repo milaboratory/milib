@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *
  * Used internally in all FastqReaders.
  */
-final class FastqRecordsReader implements AutoCloseable {
+public final class FastqRecordsReader implements AutoCloseable {
     private static final byte DELIMITER = '\n';
     final boolean lazyReads;
     final AtomicBoolean closed = new AtomicBoolean(false);
@@ -55,7 +55,7 @@ final class FastqRecordsReader implements AutoCloseable {
     /**
      * See main constructor for parameters.
      */
-    FastqRecordsReader(boolean lazyReads, RandomAccessFile inputStream, int bufferSize, boolean replaceWildcards,
+    public FastqRecordsReader(boolean lazyReads, RandomAccessFile inputStream, int bufferSize, boolean replaceWildcards,
                        boolean autoClose) {
         this(lazyReads, create(inputStream), bufferSize, replaceWildcards, autoClose);
     }
@@ -63,7 +63,7 @@ final class FastqRecordsReader implements AutoCloseable {
     /**
      * See main constructor for parameters.
      */
-    FastqRecordsReader(boolean lazyReads, InputStream inputStream, int bufferSize, boolean replaceWildcards,
+    public FastqRecordsReader(boolean lazyReads, InputStream inputStream, int bufferSize, boolean replaceWildcards,
                        boolean autoClose) {
         this(lazyReads, create(inputStream), bufferSize, replaceWildcards, autoClose);
     }
@@ -86,7 +86,7 @@ final class FastqRecordsReader implements AutoCloseable {
         this.autoClose = autoClose;
     }
 
-    SingleRead createRead(long id, QualityFormat format) {
+    public SingleRead createRead(long id, QualityFormat format) {
         if (lazyReads)
             return SingleReadLazy.create(format,
                     id,
@@ -129,7 +129,7 @@ final class FastqRecordsReader implements AutoCloseable {
             close();
     }
 
-    boolean nextRecord(boolean refillBuffer) throws IOException {
+    public boolean nextRecord(boolean refillBuffer) throws IOException {
         int pass = -1; //number of tries to fillBuffer
 
         while (true) {

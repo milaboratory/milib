@@ -43,7 +43,9 @@ public class TestUtil {
 
     public static boolean lt() {
         return Objects.equals(System.getProperty("longTests"), "") ||
-                Objects.equals(System.getProperty("longTests"), "true");
+                Objects.equals(System.getProperty("longTests"), "true") ||
+                Objects.equals(System.getProperty("longTest"), "") ||
+                Objects.equals(System.getProperty("longTest"), "true");
     }
 
     @Test
@@ -61,6 +63,10 @@ public class TestUtil {
     }
 
     public static int its(int shortTest, int longTest) {
+        return lt() ? longTest : shortTest;
+    }
+
+    public static long its(long shortTest, long longTest) {
         return lt() ? longTest : shortTest;
     }
 

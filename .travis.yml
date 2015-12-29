@@ -8,3 +8,4 @@ cache:
   - blast
 install:
   - ./init.sh
+script: "mvn clean install -DlongTests"

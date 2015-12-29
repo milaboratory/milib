@@ -30,12 +30,12 @@ import java.io.ByteArrayOutputStream;
 
 public class AlignmentTest {
 
-    static NucleotideSequence mutate(NucleotideSequence seq, int[] mut) {
+    public static NucleotideSequence mutate(NucleotideSequence seq, int[] mut) {
         return new Mutations<NucleotideSequence>(NucleotideSequence.ALPHABET, mut).mutate(seq);
     }
 
     static int[] move(int[] mutations, int offset) {
-        return new Mutations<NucleotideSequence>(NucleotideSequence.ALPHABET, mutations).move(offset).getAllMutations();
+        return new Mutations<NucleotideSequence>(NucleotideSequence.ALPHABET, mutations).move(offset).getRAWMutations();
     }
 
     @Before

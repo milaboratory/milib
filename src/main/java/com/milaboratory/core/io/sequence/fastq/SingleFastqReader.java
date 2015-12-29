@@ -35,6 +35,13 @@ import java.io.InputStream;
 public final class SingleFastqReader implements SingleReader, CanReportProgress, SequenceReaderCloseable<SingleRead> {
     public static final int DEFAULT_BUFFER_SIZE = 524288;
     /**
+     * If FastqReader fails to guess file format, this value will be used by default.
+     *
+     * Old value (version <= 1.1.2) was {@literal null}, which leads to {@link WrongQualityFormat} exception in case of
+     * failed format guessing.
+     */
+    public static final QualityFormat DEFAULT_QUALITY_FORMAT = QualityFormat.Phred33;
+    /**
      * Used to estimate progress
      */
     private long totalSize;
@@ -55,7 +62,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(String file, boolean replaceWildcards, boolean lazyReads) throws IOException {
-        this(new FileInputStream(file), null, CompressionType.detectCompressionType(file),
+        this(new FileInputStream(file), DEFAULT_QUALITY_FORMAT, CompressionType.detectCompressionType(file),
                 true, DEFAULT_BUFFER_SIZE, replaceWildcards, lazyReads);
     }
 
@@ -90,7 +97,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(String file, CompressionType ct) throws IOException {
-        this(new FileInputStream(file), null, ct, true, DEFAULT_BUFFER_SIZE, false, true);
+        this(new FileInputStream(file), DEFAULT_QUALITY_FORMAT, ct, true, DEFAULT_BUFFER_SIZE, false, true);
     }
 
     /**
@@ -116,7 +123,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(File file, boolean replaceWildcards, boolean lazyReads) throws IOException {
-        this(new FileInputStream(file), null, CompressionType.detectCompressionType(file),
+        this(new FileInputStream(file), DEFAULT_QUALITY_FORMAT, CompressionType.detectCompressionType(file),
                 true, DEFAULT_BUFFER_SIZE, replaceWildcards, lazyReads);
     }
 
@@ -151,7 +158,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(File file, CompressionType ct) throws IOException {
-        this(new FileInputStream(file), null, ct, true, DEFAULT_BUFFER_SIZE, false, true);
+        this(new FileInputStream(file), DEFAULT_QUALITY_FORMAT, ct, true, DEFAULT_BUFFER_SIZE, false, true);
     }
 
     /**
@@ -174,7 +181,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(InputStream stream, CompressionType ct) throws IOException {
-        this(stream, null, ct, true, DEFAULT_BUFFER_SIZE, false, true);
+        this(stream, DEFAULT_QUALITY_FORMAT, ct, true, DEFAULT_BUFFER_SIZE, false, true);
     }
 
     /**
@@ -184,7 +191,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(InputStream stream) throws IOException {
-        this(stream, null, CompressionType.None, true, DEFAULT_BUFFER_SIZE, false, true);
+        this(stream, DEFAULT_QUALITY_FORMAT, CompressionType.None, true, DEFAULT_BUFFER_SIZE, false, true);
     }
 
     /**
@@ -194,7 +201,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
      * @throws IOException in case there is problem with reading from files
      */
     public SingleFastqReader(InputStream stream, boolean replaceWildcards) throws IOException {
-        this(stream, null, CompressionType.None, true, DEFAULT_BUFFER_SIZE, replaceWildcards, true);
+        this(stream, DEFAULT_QUALITY_FORMAT, CompressionType.None, true, DEFAULT_BUFFER_SIZE, replaceWildcards, true);
     }
 
     /**

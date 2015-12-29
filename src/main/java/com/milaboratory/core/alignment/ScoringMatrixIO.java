@@ -35,14 +35,13 @@ import static com.milaboratory.core.sequence.AminoAcidAlphabet.INCOMPLETE_CODON;
 import static com.milaboratory.core.sequence.AminoAcidAlphabet.STOP;
 
 final class ScoringMatrixIO {
-    public static final class Deserializer extends JsonDeserializer<int[]> {
+    public static final class Deserializer extends JsonDeserializer<SubstitutionMatrix> {
         @Override
-        public int[] deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+        public SubstitutionMatrix deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
             String strValue = jp.readValueAs(String.class);
             strValue = strValue.replaceAll("\\s", "").toLowerCase();
 
             if (strValue.startsWith("raw(")) {
-
                 if (!strValue.endsWith(")"))
                     throw new IOException("Not balanced brackets in : " + strValue);
 
@@ -53,7 +52,7 @@ final class ScoringMatrixIO {
                 for (int i = 0; i < split.length; ++i)
                     values[i] = Integer.parseInt(split[i], 10);
 
-                return values;
+                return new SubstitutionMatrix(values);
             }
 
             if (strValue.startsWith("simple(")) {
@@ -79,44 +78,22 @@ final class ScoringMatrixIO {
                 if (mismatch == Integer.MIN_VALUE)
                     throw new IOException("Mismatch value not set in : " + strValue);
 
-                return new int[]{match, mismatch};
+                return new SubstitutionMatrix(match, mismatch);
             }
 
             throw new IOException("Can't parse: " + strValue);
         }
     }
 
-    public static final class Serializer extends JsonSerializer<int[]> {
+    public static final class Serializer extends JsonSerializer<SubstitutionMatrix> {
         @Override
-        public void serialize(int[] value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException {
-            int size = (int) (Math.sqrt(value.length));
-
-            if (value.length != size * size)
-                throw new IOException("Wrong matrix size.");
-
-            int diagonalValue = value[0];
-            int otherValue = value[1];
-
-            boolean isSymmetric = true;
-
-            for (int i = 0; i < size; ++i)
-                for (int j = 0; j < size; ++j) {
-
-                    if (i == j)
-                        isSymmetric &= (value[size * i + j] == diagonalValue);
-                    else
-                        isSymmetric &= (value[size * i + j] == otherValue);
-
-                    if (!isSymmetric)
-                        break;
-                }
-
-            if (isSymmetric)
-                jgen.writeString("simple(match = " + diagonalValue + ", mismatch = " + otherValue + ")");
+        public void serialize(SubstitutionMatrix value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException {
+            if (value.data.length == 2)
+                jgen.writeString("simple(match = " + value.data[0] + ", mismatch = " + value.data[1] + ")");
             else {
                 StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < value.length; ++i) {
-                    sb.append(value[i]);
+                for (int i = 0; i < value.data.length; ++i) {
+                    sb.append(value.data[i]);
                     sb.append(", ");
                 }
                 sb.delete(sb.length() - 2, sb.length());
@@ -125,10 +102,100 @@ final class ScoringMatrixIO {
         }
     }
 
+    //public static final class Deserializer extends JsonDeserializer<int[]> {
+    //    @Override
+    //    public int[] deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
+    //        String strValue = jp.readValueAs(String.class);
+    //        strValue = strValue.replaceAll("\\s", "").toLowerCase();
+    //
+    //        if (strValue.startsWith("raw(")) {
+    //
+    //            if (!strValue.endsWith(")"))
+    //                throw new IOException("Not balanced brackets in : " + strValue);
+    //
+    //            strValue = strValue.substring(4, strValue.length() - 1);
+    //            String split[] = strValue.split(",");
+    //
+    //            int[] values = new int[split.length];
+    //            for (int i = 0; i < split.length; ++i)
+    //                values[i] = Integer.parseInt(split[i], 10);
+    //
+    //            return values;
+    //        }
+    //
+    //        if (strValue.startsWith("simple(")) {
+    //            if (!strValue.endsWith(")"))
+    //                throw new IOException("Not balanced brackets in : " + strValue);
+    //
+    //            strValue = strValue.substring(7, strValue.length() - 1);
+    //
+    //            String split[] = strValue.split(",");
+    //
+    //            int match = Integer.MIN_VALUE, mismatch = Integer.MIN_VALUE;
+    //
+    //            for (int i = 0; i < split.length; ++i) {
+    //                if (split[i].startsWith("match="))
+    //                    match = Integer.parseInt(split[i].substring(6), 10);
+    //                if (split[i].startsWith("mismatch="))
+    //                    mismatch = Integer.parseInt(split[i].substring(9), 10);
+    //            }
+    //
+    //            if (match == Integer.MIN_VALUE)
+    //                throw new IOException("Match value not set in : " + strValue);
+    //
+    //            if (mismatch == Integer.MIN_VALUE)
+    //                throw new IOException("Mismatch value not set in : " + strValue);
+    //
+    //            return new int[]{match, mismatch};
+    //        }
+    //
+    //        throw new IOException("Can't parse: " + strValue);
+    //    }
+    //}
+    //
+    //public static final class Serializer extends JsonSerializer<int[]> {
+    //    @Override
+    //    public void serialize(int[] value, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException {
+    //        int size = (int) (Math.sqrt(value.length));
+    //
+    //        if (value.length != size * size)
+    //            throw new IOException("Wrong matrix size.");
+    //
+    //        int diagonalValue = value[0];
+    //        int otherValue = value[1];
+    //
+    //        boolean isSymmetric = true;
+    //
+    //        for (int i = 0; i < size; ++i)
+    //            for (int j = 0; j < size; ++j) {
+    //
+    //                if (i == j)
+    //                    isSymmetric &= (value[size * i + j] == diagonalValue);
+    //                else
+    //                    isSymmetric &= (value[size * i + j] == otherValue);
+    //
+    //                if (!isSymmetric)
+    //                    break;
+    //            }
+    //
+    //        if (isSymmetric)
+    //            jgen.writeString("simple(match = " + diagonalValue + ", mismatch = " + otherValue + ")");
+    //        else {
+    //            StringBuilder sb = new StringBuilder();
+    //            for (int i = 0; i < value.length; ++i) {
+    //                sb.append(value[i]);
+    //                sb.append(", ");
+    //            }
+    //            sb.delete(sb.length() - 2, sb.length());
+    //            jgen.writeString("raw(" + sb.toString() + ")");
+    //        }
+    //    }
+    //}
+
     /**
      * Reads BLAST AminoAcid substitution matrix from InputStream
      *
-     * @param stream   InputStream
+     * @param stream InputStream
      * @return BLAST AminoAcid substitution matrix
      * @throws java.io.IOException
      */
@@ -193,7 +260,7 @@ final class ScoringMatrixIO {
     /**
      * Returns AminoAcid code
      *
-     * @param letter   letter
+     * @param letter letter
      * @return code
      */
     private static byte getAACode(String letter) {

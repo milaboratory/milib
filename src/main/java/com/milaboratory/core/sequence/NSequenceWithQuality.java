@@ -15,6 +15,9 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.Range;
 import com.milaboratory.primitivio.annotations.Serializable;
 
@@ -25,6 +28,8 @@ import com.milaboratory.primitivio.annotations.Serializable;
  * @author Stanislav Poslavsky
  * @see com.milaboratory.core.sequence.SequenceWithQuality
  */
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = IO.NSequenceWithQualitySerializer.class)
 public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSequence>
         implements NSeq<NSequenceWithQuality> {
@@ -35,7 +40,9 @@ public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSe
      * @param quality  quality
      * @throws java.lang.IllegalArgumentException if {@code sequence.size() != quality.size()}
      */
-    public NSequenceWithQuality(NucleotideSequence sequence, SequenceQuality quality) {
+    @JsonCreator
+    public NSequenceWithQuality(@JsonProperty("sequence") NucleotideSequence sequence,
+                                @JsonProperty("quality") SequenceQuality quality) {
         super(sequence, quality);
     }
 

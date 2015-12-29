@@ -19,8 +19,8 @@ import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
-public final class BandedAligner {
-    private BandedAligner() {
+public final class BandedLinearAligner {
+    private BandedLinearAligner() {
     }
 
     /**

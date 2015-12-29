@@ -15,19 +15,22 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.sequence.NucleotideAlphabet;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.util.GlobalObjectMappers;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class LinearGapAlignmentScoringTest {
+public class AlignmentScoringTest {
     @Test
     public void test1() throws Exception {
         AlignmentScoring expected = AffineGapAlignmentScoring.getNucleotideBLASTScoring();
         String s = GlobalObjectMappers.PRETTY.writeValueAsString(expected);
         AlignmentScoring scoring = GlobalObjectMappers.ONE_LINE.readValue(s, AlignmentScoring.class);
         Assert.assertEquals(expected, scoring);
+        IOTestUtil.assertJavaSerialization(expected);
+        IOTestUtil.assertJavaSerialization(scoring);
     }
 
     @Test
@@ -36,6 +39,8 @@ public class LinearGapAlignmentScoringTest {
         String s = GlobalObjectMappers.PRETTY.writeValueAsString(expected);
         AlignmentScoring scoring = GlobalObjectMappers.ONE_LINE.readValue(s, AlignmentScoring.class);
         Assert.assertEquals(expected, scoring);
+        IOTestUtil.assertJavaSerialization(expected);
+        IOTestUtil.assertJavaSerialization(scoring);
     }
 
     @Test

@@ -22,7 +22,7 @@ import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.Sequence;
 
-import static com.milaboratory.core.alignment.ScoringUtils.getSymmetricMatrix;
+import java.io.ObjectStreamException;
 
 /**
  * AffineGapAlignmentScoring - scoring which uses different penalties for gap opening and gap extension
@@ -45,9 +45,22 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     @SuppressWarnings("unchecked")
     private AffineGapAlignmentScoring() {
-        super((Alphabet) NucleotideSequence.ALPHABET);
-        gapExtensionPenalty = -1;
-        gapOpenPenalty = -10;
+        super((Alphabet) NucleotideSequence.ALPHABET, new SubstitutionMatrix(Integer.MIN_VALUE, Integer.MIN_VALUE));
+        gapExtensionPenalty = Integer.MIN_VALUE;
+        gapOpenPenalty = Integer.MIN_VALUE;
+    }
+
+    @JsonCreator
+    public AffineGapAlignmentScoring(
+            @JsonProperty("alphabet") Alphabet<S> alphabet,
+            @JsonProperty("subsMatrix") SubstitutionMatrix subsMatrix,
+            @JsonProperty("gapOpenPenalty") int gapOpenPenalty,
+            @JsonProperty("gapExtensionPenalty") int gapExtensionPenalty) {
+        super(alphabet, subsMatrix);
+        if (gapOpenPenalty >= 0 || gapExtensionPenalty >= 0)
+            throw new IllegalArgumentException();
+        this.gapOpenPenalty = gapOpenPenalty;
+        this.gapExtensionPenalty = gapExtensionPenalty;
     }
 
     /**
@@ -58,13 +71,12 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      * @param gapOpenPenalty      penalty for opening gap
      * @param gapExtensionPenalty penalty for extending gap
      */
-    @JsonCreator
     public AffineGapAlignmentScoring(
-            @JsonProperty("alphabet") Alphabet<S> alphabet,
-            @JsonProperty("subsMatrix") int[] subsMatrix,
-            @JsonProperty("gapOpenPenalty") int gapOpenPenalty,
-            @JsonProperty("gapExtensionPenalty") int gapExtensionPenalty) {
-        super(alphabet, subsMatrix);
+            Alphabet<S> alphabet,
+            int[] subsMatrix,
+            int gapOpenPenalty,
+            int gapExtensionPenalty) {
+        super(alphabet, new SubstitutionMatrix(subsMatrix));
         if (gapOpenPenalty >= 0 || gapExtensionPenalty >= 0)
             throw new IllegalArgumentException();
         this.gapOpenPenalty = gapOpenPenalty;
@@ -83,7 +95,7 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     public AffineGapAlignmentScoring(Alphabet<S> alphabet, int match, int mismatch,
                                      int gapOpen, int gapExtension) {
-        this(alphabet, getSymmetricMatrix(match, mismatch, alphabet), gapOpen, gapExtension);
+        this(alphabet, new SubstitutionMatrix(match, mismatch), gapOpen, gapExtension);
     }
 
     /**
@@ -112,6 +124,28 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
      */
     public int getGapExtensionPenalty() {
         return gapExtensionPenalty;
+    }
+
+    public AffineGapAlignmentScoring<S> setMatchScore(int matchScore) {
+        return new AffineGapAlignmentScoring<>(alphabet,
+                ScoringUtils.setMatchScore(alphabet, subsMatrixActual, matchScore),
+                gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    public AffineGapAlignmentScoring<S> setMismatchScore(int mismatchScore) {
+        return new AffineGapAlignmentScoring<>(alphabet,
+                ScoringUtils.setMismatchScore(alphabet, subsMatrixActual, mismatchScore),
+                gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    public AffineGapAlignmentScoring<S> setGapOpenScore(int gapOpenPenalty) {
+        return new AffineGapAlignmentScoring<>(alphabet,
+                subsMatrixActual.clone(), gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    public AffineGapAlignmentScoring<S> setGapExtensionScore(int gapExtensionPenalty) {
+        return new AffineGapAlignmentScoring<>(alphabet,
+                subsMatrixActual.clone(), gapOpenPenalty, gapExtensionPenalty);
     }
 
     @Override
@@ -180,5 +214,47 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
         return new AffineGapAlignmentScoring<>(AminoAcidSequence.ALPHABET,
                 matrix.getMatrix(),
                 gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    /**
+     * Scoring as used in <a href="http://www.ncbi.nlm.nih.gov/igblast/">IgBlast</a> for alignments of V genes
+     */
+    public static final AffineGapAlignmentScoring<NucleotideSequence> IGBLAST_NUCLEOTIDE_SCORING =
+            new AffineGapAlignmentScoring<>(NucleotideSequence.ALPHABET, 10, -30, -40, -10);
+
+    /**
+     * Scoring threshold as used in <a href="http://www.ncbi.nlm.nih.gov/igblast/">IgBlast</a> for alignments of V
+     * genes
+     */
+    public static final int IGBLAST_NUCLEOTIDE_SCORING_THRESHOLD = 150;
+
+    /* Internal methods for Java Serialization */
+
+    protected Object writeReplace() throws ObjectStreamException {
+        return new SerializationObject(alphabet, subsMatrix, gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    protected static class SerializationObject implements java.io.Serializable {
+        final Alphabet alphabet;
+        final SubstitutionMatrix matrix;
+        private final int gapOpenPenalty, gapExtensionPenalty;
+
+        public SerializationObject() {
+            this(null, null, 0, 0);
+        }
+
+        public SerializationObject(Alphabet alphabet, SubstitutionMatrix matrix,
+                                   int gapOpenPenalty, int gapExtensionPenalty) {
+            this.alphabet = alphabet;
+            this.matrix = matrix;
+            this.gapOpenPenalty = gapOpenPenalty;
+            this.gapExtensionPenalty = gapExtensionPenalty;
+        }
+
+        @SuppressWarnings("unchecked")
+        private Object readResolve()
+                throws ObjectStreamException {
+            return new AffineGapAlignmentScoring<>(alphabet, matrix, gapOpenPenalty, gapExtensionPenalty);
+        }
     }
 }

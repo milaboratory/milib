@@ -18,8 +18,11 @@ package com.milaboratory.core.alignment;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import org.apache.commons.math3.random.RandomDataGenerator;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static com.milaboratory.test.TestUtil.randomSequence;
 
 /**
  * @author Dmitry Bolotin
@@ -38,5 +41,25 @@ public class AlignmentUtilsTest {
 
         //3 matches(15) - 1 mismatch(-4) - 1 insertion(-4);
         Assert.assertEquals(6, (int) score);
+    }
+
+    @Test
+    public void testAffineScore() throws Exception {
+        AffineGapAlignmentScoring<NucleotideSequence> scoring =
+                new AffineGapAlignmentScoring<>(NucleotideSequence.ALPHABET, 10, -5, -11, -7);
+
+        NucleotideSequence s1 = new NucleotideSequence("atcgcgatcgactgcatgca");
+        NucleotideSequence s2 = new NucleotideSequence("atcgcgatcgactgactgcatgca");
+
+        Alignment<NucleotideSequence> al = BandedAffineAligner.align(scoring, s1, s2, 0, s1.size(), 0, s2.size(), 0);
+        Assert.assertEquals(168, (int) al.score);
+
+        int score = AlignmentUtils.calculateScore(scoring, s1.size(), al.mutations);
+        Assert.assertEquals((int) al.score, score);
+
+
+        al = BandedAffineAligner.align(scoring, s2, s1, 0, s2.size(), 0, s1.size(), 0);
+        score = AlignmentUtils.calculateScore(scoring, s2.size(), al.mutations);
+        Assert.assertEquals((int) al.score, score);
     }
 }

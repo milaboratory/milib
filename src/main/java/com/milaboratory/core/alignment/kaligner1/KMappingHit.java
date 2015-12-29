@@ -13,10 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.alignment;
+package com.milaboratory.core.alignment.kaligner1;
 
 /**
- * KMappingHit - class which represents single hit for {@link com.milaboratory.core.alignment.KMappingResult}
+ * KMappingHit - class which represents single hit for {@link KMappingResult}
  */
 public final class KMappingHit implements java.io.Serializable {
     /**
@@ -45,7 +45,7 @@ public final class KMappingHit implements java.io.Serializable {
      * Creates new KMappingHit
      *
      * @param offset best offset value (most popular offset)
-     * @param id     reference id (in {@link com.milaboratory.core.alignment.KMapper} storage)
+     * @param id     reference id (in {@link KMapper} storage)
      * @param score  absolute alignment score value
      * @param from   index of seed in seeds array of {@link KMappingResult} from which intersection range of target and reference sequences starts
      * @param to     index of seed in seeds array of {@link KMappingResult} from which intersection range of target and reference sequences ends

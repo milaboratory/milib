@@ -10,6 +10,6 @@ import com.milaboratory.core.sequence.Sequence;
  *            subsequent identification in result (e.g. {@link Integer} to just index sequences.
  * @param <H> hit class
  */
-public interface BatchAlignerWithBase<S extends Sequence<S>, P, H extends AlignmentHit<? extends S, ? extends P>>
+public interface BatchAlignerWithBase<S extends Sequence<S>, P, H extends AlignmentHit<S, P>>
         extends BatchAligner<S, H>, WithBase<S, P> {
 }
