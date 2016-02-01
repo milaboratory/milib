@@ -15,13 +15,6 @@
  */
 package com.milaboratory.core.sequence;
 
-import gnu.trove.map.hash.TCharObjectHashMap;
-
-import java.util.Collection;
-import java.util.Collections;
-
-import static java.lang.Character.toUpperCase;
-
 /**
  * Amino acid alphabet with additional symbols.
  *
@@ -29,7 +22,6 @@ import static java.lang.Character.toUpperCase;
  *
  * @author Bolotin Dmitriy (bolotin.dmitriy@gmail.com)
  * @author Shugay Mikhail (mikhail.shugay@gmail.com)
- *
  * @see com.milaboratory.core.sequence.Alphabet
  * @see com.milaboratory.core.sequence.AminoAcidSequence
  * @see com.milaboratory.core.sequence.Sequence
@@ -148,110 +140,109 @@ public final class AminoAcidAlphabet extends AbstractArrayAlphabet<AminoAcidSequ
     /**
      * Stop codon wildcard
      */
-    public static final Wildcard STOP_WILDCARD = new Wildcard('*', STOP);
+    public static final Wildcard STOP_WILDCARD = new Wildcard('*', STOP, 1, new byte[]{STOP});
     /**
      * Alanine wildcard
      */
-    public static final Wildcard A_WILDCARD = new Wildcard('A', A);
+    public static final Wildcard A_WILDCARD = new Wildcard('A', A, 1,new byte[]{A, X});
     /**
      * Cysteine wildcard
      */
-    public static final Wildcard C_WILDCARD = new Wildcard('C', C);
+    public static final Wildcard C_WILDCARD = new Wildcard('C', C, 1,new byte[]{C, X});
     /**
      * Aspartic Acid wildcard
      */
-    public static final Wildcard D_WILDCARD = new Wildcard('D', D);
+    public static final Wildcard D_WILDCARD = new Wildcard('D', D, 1,new byte[]{D, X, B});
     /**
      * Glutamic Acid wildcard
      */
-    public static final Wildcard E_WILDCARD = new Wildcard('E', E);
+    public static final Wildcard E_WILDCARD = new Wildcard('E', E, 1,new byte[]{E, X, Z});
     /**
      * Phenylalanine wildcard
      */
-    public static final Wildcard F_WILDCARD = new Wildcard('F', F);
+    public static final Wildcard F_WILDCARD = new Wildcard('F', F, 1,new byte[]{F, X});
     /**
      * Glycine wildcard
      */
-    public static final Wildcard G_WILDCARD = new Wildcard('G', G);
+    public static final Wildcard G_WILDCARD = new Wildcard('G', G, 1,new byte[]{G, X});
     /**
      * Histidine wildcard
      */
-    public static final Wildcard H_WILDCARD = new Wildcard('H', H);
+    public static final Wildcard H_WILDCARD = new Wildcard('H', H, 1,new byte[]{H, X});
     /**
      * Isoleucine wildcard
      */
-    public static final Wildcard I_WILDCARD = new Wildcard('I', I);
+    public static final Wildcard I_WILDCARD = new Wildcard('I', I, 1,new byte[]{I, X, J});
     /**
      * Lysine wildcard
      */
-    public static final Wildcard K_WILDCARD = new Wildcard('K', K);
+    public static final Wildcard K_WILDCARD = new Wildcard('K', K, 1,new byte[]{K, X});
     /**
      * Leucine wildcard
      */
-    public static final Wildcard L_WILDCARD = new Wildcard('L', L);
+    public static final Wildcard L_WILDCARD = new Wildcard('L', L, 1,new byte[]{L, X, J});
     /**
      * Methionine wildcard
      */
-    public static final Wildcard M_WILDCARD = new Wildcard('M', M);
+    public static final Wildcard M_WILDCARD = new Wildcard('M', M, 1,new byte[]{M, X});
     /**
      * Asparagine wildcard
      */
-    public static final Wildcard N_WILDCARD = new Wildcard('N', N);
+    public static final Wildcard N_WILDCARD = new Wildcard('N', N, 1,new byte[]{N, X, B});
     /**
      * Proline wildcard
      */
-    public static final Wildcard P_WILDCARD = new Wildcard('P', P);
+    public static final Wildcard P_WILDCARD = new Wildcard('P', P, 1,new byte[]{P, X});
     /**
      * Glutamine wildcard
      */
-    public static final Wildcard Q_WILDCARD = new Wildcard('Q', Q);
+    public static final Wildcard Q_WILDCARD = new Wildcard('Q', Q, 1,new byte[]{Q, X, Z});
     /**
      * Arginine wildcard
      */
-    public static final Wildcard R_WILDCARD = new Wildcard('R', R);
+    public static final Wildcard R_WILDCARD = new Wildcard('R', R, 1,new byte[]{R, X});
     /**
      * Serine wildcard
      */
-    public static final Wildcard S_WILDCARD = new Wildcard('S', S);
+    public static final Wildcard S_WILDCARD = new Wildcard('S', S, 1,new byte[]{S, X});
     /**
      * Threonine wildcard
      */
-    public static final Wildcard T_WILDCARD = new Wildcard('T', T);
+    public static final Wildcard T_WILDCARD = new Wildcard('T', T, 1,new byte[]{T, X});
     /**
      * Valine wildcard
      */
-    public static final Wildcard V_WILDCARD = new Wildcard('V', V);
+    public static final Wildcard V_WILDCARD = new Wildcard('V', V, 1,new byte[]{V, X});
     /**
      * Tryptophan wildcard
      */
-    public static final Wildcard W_WILDCARD = new Wildcard('W', W);
+    public static final Wildcard W_WILDCARD = new Wildcard('W', W, 1,new byte[]{W, X});
     /**
      * Tyrosine wildcard
      */
-    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y);
+    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y, 1,new byte[]{Y, X});
     /**
      * Incomplete codon wildcard
      */
-    public static final Wildcard INCOMPLETE_CODON_WILDCARD = new Wildcard('_', INCOMPLETE_CODON);
+    public static final Wildcard INCOMPLETE_CODON_WILDCARD = new Wildcard('_', INCOMPLETE_CODON, 1,new byte[]{INCOMPLETE_CODON});
 
 
     /**
      * Any amino acid wildcard
      */
-    public static final Wildcard X_WILDCARD = new Wildcard('X', X, new byte[]{A, C, D, E, F, G, H, I, K, L, M, N, P,
-            Q, R, S, T, V, W, Y});
+    public static final Wildcard X_WILDCARD = new Wildcard('X', X, 20, new byte[]{A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W, Y, X, B, J, Z});
     /**
      * Aspartic acid or Asparagine (N or D) wildcard
      */
-    public static final Wildcard B_WILDCARD = new Wildcard('B', B, new byte[]{N, D});
+    public static final Wildcard B_WILDCARD = new Wildcard('B', B, 2, new byte[]{D, N, X, B});
     /**
      * Leucine or Isoleucine (I or L) wildcard
      */
-    public static final Wildcard J_WILDCARD = new Wildcard('J', J, new byte[]{I, L});
+    public static final Wildcard J_WILDCARD = new Wildcard('J', J, 2, new byte[]{I, L, X, J});
     /**
      * Glutamine or Glutamic acid (E or Q) wildcard
      */
-    public static final Wildcard Z_WILDCARD = new Wildcard('Z', Z, new byte[]{E, Q});
+    public static final Wildcard Z_WILDCARD = new Wildcard('Z', Z, 2, new byte[]{E, Q, X, Z});
 
     /**
      * Instance of amino acid alphabet.

@@ -17,12 +17,18 @@ package com.milaboratory.core.motif;
 
 import com.milaboratory.core.sequence.Sequence;
 
+/**
+ * Use {@link Motif#getBitapPattern()} to create bitap pattern.
+ */
 public final class BitapPattern implements java.io.Serializable {
     final int size;
     final long[] patternMask;
     final long[] reversePatternMask;
 
-    public BitapPattern(int size, long[] patternMask, long[] reversePatternMask) {
+    /**
+     * Use {@link Motif#getBitapPattern()} to create bitap pattern.
+     */
+    BitapPattern(int size, long[] patternMask, long[] reversePatternMask) {
         this.size = size;
         this.patternMask = patternMask;
         this.reversePatternMask = reversePatternMask;
@@ -37,7 +43,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     public int exactSearch(Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().basicSize() != patternMask.length)
+        if (sequence.getAlphabet().size() != patternMask.length)
             throw new IllegalArgumentException();
 
         long R = ~1L;
@@ -53,7 +59,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     public BitapMatcher exactMatcher(final Sequence sequence, final int from, final int to) {
-        if (sequence.getAlphabet().basicSize() != patternMask.length)
+        if (sequence.getAlphabet().size() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcher() {
@@ -83,7 +89,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     /**
-     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}. Search allows no more then {@code
+     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}. Search allows no more than {@code
      * substitutions} number of substitutions. Matcher will return positions of first matched letter in the motif in
      * ascending order.
      *
@@ -97,7 +103,7 @@ public final class BitapPattern implements java.io.Serializable {
 
     /**
      * Returns a BitapMatcher preforming a fuzzy search in a subsequence of {@code sequence}. Search range starts from
-     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more then {@code substitutions}
+     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more than {@code substitutions}
      * number of substitutions. Matcher will return positions of first matched letter in the motif in ascending order.
      *
      * @param substitutions maximal number of allowed substitutions
@@ -107,7 +113,7 @@ public final class BitapPattern implements java.io.Serializable {
      * @return matcher which will return positions of first matched letter in the motif in ascending order
      */
     public BitapMatcher substitutionOnlyMatcherFirst(int substitutions, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().basicSize() != patternMask.length)
+        if (sequence.getAlphabet().size() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(substitutions + 1, from, to) {
@@ -157,7 +163,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     /**
-     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}.  Search allows no more then {@code
+     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}.  Search allows no more than {@code
      * maxNumberOfErrors} number of substitutions/insertions/deletions. Matcher will return positions of last matched
      * letter in the motif in ascending order.
      *
@@ -171,7 +177,8 @@ public final class BitapPattern implements java.io.Serializable {
 
     /**
      * Returns a BitapMatcher preforming a fuzzy search in a subsequence of {@code sequence}. Search range starts from
-     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more then {@code maxNumberOfErrors}
+     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more than {@code
+     * maxNumberOfErrors}
      * number of substitutions/insertions/deletions. Matcher will return positions of last matched letter in the motif
      * in ascending order.
      *
@@ -182,7 +189,7 @@ public final class BitapPattern implements java.io.Serializable {
      * @return matcher which will return positions of last matched letter in the motif in ascending order
      */
     public BitapMatcher substitutionAndIndelMatcherLast(int maxNumberOfErrors, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().basicSize() != patternMask.length)
+        if (sequence.getAlphabet().size() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(maxNumberOfErrors + 1, from, to) {
@@ -238,7 +245,7 @@ public final class BitapPattern implements java.io.Serializable {
     }
 
     /**
-     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}. Search allows no more then {@code
+     * Returns a BitapMatcher preforming a fuzzy search in a whole {@code sequence}. Search allows no more than {@code
      * maxNumberOfErrors} number of substitutions/insertions/deletions. Matcher will return positions of first matched
      * letter in the motif in descending order.
      *
@@ -246,15 +253,15 @@ public final class BitapPattern implements java.io.Serializable {
      * @param sequence          target sequence
      * @return matcher which will return positions of first matched letter in the motif in descending order
      */
-    public BitapMatcher mismatchAndIndelMatcherFirst(int maxNumberOfErrors, final Sequence sequence) {
-        return mismatchAndIndelMatcherFirst(maxNumberOfErrors, sequence, 0, sequence.size());
+    public BitapMatcher substitutionAndIndelMatcherFirst(int maxNumberOfErrors, final Sequence sequence) {
+        return substitutionAndIndelMatcherFirst(maxNumberOfErrors, sequence, 0, sequence.size());
     }
 
     /**
      * Returns a BitapMatcher preforming a fuzzy search in a subsequence of {@code sequence}. Search range starts from
-     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more then {@code maxNumberOfErrors}
-     * number of substitutions/insertions/deletions. Matcher will return positions of first matched letter in the motif
-     * in descending order.
+     * {@code from} (inclusive) and ends at {@code to} (exclusive). Search allows no more than {@code
+     * maxNumberOfErrors} number of substitutions/insertions/deletions. Matcher will return positions of first matched
+     * letter in the motif in descending order.
      *
      * @param maxNumberOfErrors maximal number of allowed substitutions/insertions/deletions
      * @param sequence          target sequence
@@ -262,8 +269,8 @@ public final class BitapPattern implements java.io.Serializable {
      * @param to                right boundary of search range (exclusive)
      * @return matcher which will return positions of first matched letter in the motif in descending order
      */
-    public BitapMatcher mismatchAndIndelMatcherFirst(int maxNumberOfErrors, final Sequence sequence, int from, int to) {
-        if (sequence.getAlphabet().basicSize() != patternMask.length)
+    public BitapMatcher substitutionAndIndelMatcherFirst(int maxNumberOfErrors, final Sequence sequence, int from, int to) {
+        if (sequence.getAlphabet().size() != patternMask.length)
             throw new IllegalArgumentException();
 
         return new BitapMatcherImpl(maxNumberOfErrors + 1, to - 1, from) {

@@ -19,8 +19,6 @@ import com.milaboratory.util.HashFunctions;
 
 import java.util.Arrays;
 
-import static java.util.Arrays.binarySearch;
-
 /**
  * Representation of a wildcard symbol.
  */
@@ -34,6 +32,10 @@ public final class Wildcard {
      */
     final byte bSymbol;
     /**
+     * Number of basic letters in matchingCodes array
+     */
+    final byte basicSize;
+    /**
      * Set of codes in wildcard
      */
     final byte[] matchingCodes;
@@ -41,6 +43,16 @@ public final class Wildcard {
      * Code representing this wildcard (e.g. code == codes[0] for pure letters)
      */
     final byte code;
+    /**
+     * Wildcard bit basicMask is a long integer where:
+     * ((basicMask >>> i) & 1) == 1, if wildcard matches i-th basic code
+     */
+    final long basicMask;
+    /**
+     * Wildcard bit mask is a long integer where:
+     * ((mask >>> i) & 1) == 1, if wildcard matches i-th code
+     */
+    final long mask;
 
     /**
      * Pure letter constructor
@@ -49,17 +61,18 @@ public final class Wildcard {
      * @param code    code
      */
     Wildcard(char cSymbol, byte code) {
-        this(cSymbol, code, new byte[]{code});
+        this(cSymbol, code, 1, new byte[]{code});
     }
 
     /**
      * Wildcard constructor
      *
-     * @param cSymbol       uppercase symbol of wildcard
-     * @param code          code of wildcard
-     * @param matchingCodes set of codes that this wildcards matches
+     * @param cSymbol            uppercase symbol of wildcard
+     * @param code               code of wildcard
+     * @param numberOfBasicCodes number of basic letters in matchingCodes array
+     * @param matchingCodes      set of codes that this wildcards matches
      */
-    Wildcard(char cSymbol, byte code, byte[] matchingCodes) {
+    Wildcard(char cSymbol, byte code, int numberOfBasicCodes, byte[] matchingCodes) {
         if (matchingCodes.length == 0 || Character.isLowerCase(cSymbol))
             throw new IllegalArgumentException();
 
@@ -67,6 +80,7 @@ public final class Wildcard {
         this.bSymbol = (byte) cSymbol;
         this.code = code;
         this.matchingCodes = matchingCodes.clone();
+        this.basicSize = (byte) numberOfBasicCodes;
 
         // Sorting for binary search
         Arrays.sort(this.matchingCodes);
@@ -75,6 +89,18 @@ public final class Wildcard {
         if (matchingCodes.length == 1 && code != matchingCodes[0])
             throw new IllegalArgumentException();
 
+        // Creating basicMask representation
+        long basicMask = 0, mask = 0;
+        for (int i = 0; i < matchingCodes.length; i++) {
+            byte c = matchingCodes[i];
+            if (c >= 64)
+                throw new IllegalArgumentException("Don't allow matching codes greater then 63.");
+            if (i < numberOfBasicCodes)
+                basicMask |= 1 << c;
+            mask |= 1 << c;
+        }
+        this.basicMask = basicMask;
+        this.mask = mask;
     }
 
     /**
@@ -87,12 +113,35 @@ public final class Wildcard {
     }
 
     /**
-     * Returns a number of letters corresponding to this wildcard. For example, for nucleotide wildcard 'R' the
-     * corresponding nucleotides are 'A' and 'G', so size is 2.
+     * Returns basicMask representation of the wildcard.
      *
-     * @return number of letters corresponding to this wildcard
+     * Wildcard bit basicMask is a long integer where:
+     * (basicMask >>> i) & 1 == 1, if wildcard includes i-th code
+     *
+     * @return basicMask representation of the wildcard
      */
-    public int count() {
+    public long getBasicMask() {
+        return basicMask;
+    }
+
+    /**
+     * Returns a number of basic letters that matches this wildcard. For example, for nucleotide wildcard 'R' the
+     * corresponding nucleotides are A and G, so the basicSize is 2.
+     *
+     * @return number of basic letters corresponding to this wildcard
+     */
+    public int basicSize() {
+        return basicSize;
+    }
+
+    /**
+     * Returns a number of letters (including wildcards) that matches this wildcard. For example, for nucleotide
+     * wildcard 'R' the corresponding nucleotides and wildcards are A, G, N, R, S, W, K, M, B, D and V, so the size is
+     * 11.
+     *
+     * @return number of basic letters corresponding to this wildcard
+     */
+    public int size() {
         return matchingCodes.length;
     }
 
@@ -104,14 +153,14 @@ public final class Wildcard {
      * letter and formally it is not a wildcard
      */
     public boolean isBasic() {
-        return matchingCodes.length == 1;
+        return basicSize == 1;
     }
 
     /**
-     * Returns <i>i-th</i> element of this wildcard.
+     * Returns <i>i-th</i> code that this wildcard matches.
      *
      * @param i index of letter
-     * @return <i>i-th</i> element of this wildcard
+     * @return <i>i-th</i> code that this wildcard matches
      */
     public byte getMatchingCode(int i) {
         return matchingCodes[i];
@@ -132,8 +181,8 @@ public final class Wildcard {
      * @param code binary code of element
      * @return true if this wildcard contains specified element and false otherwise
      */
-    public boolean contains(byte code) {
-        return binarySearch(matchingCodes, code) >= 0;
+    public boolean matches(byte code) {
+        return (mask & (1 << code)) != 0;
     }
 
     /**
@@ -145,17 +194,18 @@ public final class Wildcard {
      * by {@code otherWildcard}
      */
     public boolean intersectsWith(Wildcard otherWildcard) {
-        byte[] a = this.matchingCodes, b = otherWildcard.matchingCodes;
-        int bPointer = 0, aPointer = 0;
-        while (aPointer < a.length && bPointer < b.length)
-            if (a[aPointer] == b[bPointer]) {
-                return true;
-            } else if (a[aPointer] < b[bPointer])
-                aPointer++;
-            else if (a[aPointer] > b[bPointer]) {
-                bPointer++;
-            }
-        return false;
+        //byte[] a = this.matchingCodes, b = otherWildcard.matchingCodes;
+        //int bPointer = 0, aPointer = 0;
+        //while (aPointer < a.length && bPointer < b.length)
+        //    if (a[aPointer] == b[bPointer]) {
+        //        return true;
+        //    } else if (a[aPointer] < b[bPointer])
+        //        aPointer++;
+        //    else if (a[aPointer] > b[bPointer]) {
+        //        bPointer++;
+        //    }
+        //return false;
+        return (this.basicMask & otherWildcard.basicMask) != 0;
     }
 
     /**
@@ -171,6 +221,6 @@ public final class Wildcard {
 
         seed = HashFunctions.JenkinWang64shift(seed);
         if (seed < 0) seed = -seed;
-        return matchingCodes[(int) (seed % matchingCodes.length)];
+        return matchingCodes[(int) (seed % basicSize)];
     }
 }

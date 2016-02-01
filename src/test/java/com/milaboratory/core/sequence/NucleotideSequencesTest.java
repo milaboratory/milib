@@ -76,6 +76,22 @@ public class NucleotideSequencesTest {
         assertThat(rc.hashCode(), not(ns.hashCode()));
     }
 
+    public static final String forRC = "AGCTNRYSWKMBDHV";
+    public static final String afterRC = "BDHVKMWSRYNAGCT";
+    public static final String afterC = "TCGANYRSWMKVHDB";
+
+    @Test
+    public void testRC2Wildcards() {
+        NucleotideSequence ns = new NucleotideSequence(forRC);
+        NucleotideSequence rc = ns.getReverseComplement();
+        NucleotideSequence rcrc = rc.getReverseComplement();
+        assertEquals(new NucleotideSequence(afterRC), rc);
+        assertEquals(rcrc, ns);
+        assertEquals(rcrc.hashCode(), ns.hashCode());
+        assertThat(rc, not(ns));
+        assertThat(rc.hashCode(), not(ns.hashCode()));
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void testUnknownSymbol1() throws Exception {
         new NucleotideSequence("ATTANQ");

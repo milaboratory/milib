@@ -215,7 +215,7 @@ public class KMapper2Test {
         System.out.println(timing);
 
         System.out.println("\n\n\n");
-        System.out.println("Clusters count");
+        System.out.println("Clusters basicSize");
         System.out.println(clusters);
 
         System.out.println("\n\n\n");

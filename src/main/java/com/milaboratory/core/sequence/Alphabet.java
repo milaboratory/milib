@@ -19,7 +19,9 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.primitivio.annotations.Serializable;
 import gnu.trove.impl.Constants;
+import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TCharByteHashMap;
+import gnu.trove.map.hash.TLongObjectHashMap;
 
 import java.io.ObjectStreamException;
 import java.util.Arrays;
@@ -88,6 +90,14 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * Wildcard for any letter (e.g. N for nucleotides, X for amino acids)
      */
     private final Wildcard wildcardForAnyLetter;
+    /**
+     * Mapping between wildcard basicMask representation (bit representation) and wildcard object
+     */
+    private final TLongObjectMap<Wildcard> basicMaskToWildcard;
+    ///**
+    // * 0b1111...11 = 2 ^ basicLettersCount - 1
+    // */
+    //final long basicLettersMask;
 
     Alphabet(String alphabetName, byte alphabetId, int countOfBasicLetters, Wildcard wildcardForAnyLetter,
              Wildcard... wildcards) {
@@ -105,6 +115,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
         // -1 in constructor here is to simplify return of -1 for undefined symbols in symbolToCode
         symbolToCode = new TCharByteHashMap(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR,
                 (char) -1, (byte) -1);
+        this.basicMaskToWildcard = new TLongObjectHashMap<>();
 
         // Filling internal maps/arrays
         for (Wildcard wildcard : wildcards) {
@@ -116,6 +127,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
             codeToWildcard[wildcard.getCode()] = wildcard;
             symbolToCode.put(wildcard.getSymbol(), wildcard.getCode());
             symbolToCode.put(Character.toLowerCase(wildcard.getSymbol()), wildcard.getCode());
+            basicMaskToWildcard.put(wildcard.getBasicMask(), wildcard);
         }
 
         // Error checking
@@ -123,17 +135,9 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
             if (codeToSymbol[i] == 0xFFFF)
                 throw new IllegalArgumentException("Symbol for code " + i + " is not set.");
 
+        // To be returned by corresponding getter
         this.wildcardsList = Collections.unmodifiableList(Arrays.asList(codeToWildcard));
-    }
-
-    /**
-     * Gets a char symbol for an alphabet code of the letter
-     *
-     * @param code alphabet code of segment
-     * @return char symbol for an alphabet code of the letter
-     */
-    public final char codeToSymbol(byte code) {
-        return codeToSymbol[code];
+        //this.basicLettersMask = ~(0xFFFFFFFFFFFFFFFFL << countOfBasicLetters);
     }
 
     /**
@@ -204,7 +208,27 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
         return wildcardForAnyLetter;
     }
 
+    /**
+     * Converts wildcard basicMask to Wildcard object.
+     *
+     * @param basicMask bit represenatation of wildcard
+     * @return wildcard object; {@literal null} if there is no such wildcard in the alphabet
+     */
+    public Wildcard maskToWildcard(long basicMask) {
+        return basicMaskToWildcard.get(basicMask);
+    }
+
     /* Conversion */
+
+    /**
+     * Gets a char symbol for an alphabet code of the letter
+     *
+     * @param code alphabet code of segment
+     * @return char symbol for an alphabet code of the letter
+     */
+    public final char codeToSymbol(byte code) {
+        return codeToSymbol[code];
+    }
 
     /**
      * Gets the binary code representing given symbol (case insensitive) or -1 if there

@@ -17,6 +17,7 @@ package com.milaboratory.core.motif;
 
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
+import com.milaboratory.core.sequence.Wildcard;
 import com.milaboratory.util.BitArray;
 
 public final class MotifBuilder<S extends Sequence<S>> {
@@ -27,13 +28,15 @@ public final class MotifBuilder<S extends Sequence<S>> {
     public MotifBuilder(Alphabet<S> alphabet, int size) {
         this.alphabet = alphabet;
         this.size = size;
-        this.data = new BitArray(alphabet.basicSize() * size);
+        this.data = new BitArray(alphabet.size() * size);
     }
 
     public void setAllowedLetter(int position, byte letter) {
         if (letter > alphabet.basicSize())
             throw new IllegalArgumentException();
-        data.set(letter * size + position);
+        Wildcard wc = alphabet.codeToWildcard(letter);
+        for (int i = 0; i < wc.size(); i++)
+            data.set(wc.getMatchingCode(i) * size + position);
     }
 
     public Motif<S> createAndDestroy() {

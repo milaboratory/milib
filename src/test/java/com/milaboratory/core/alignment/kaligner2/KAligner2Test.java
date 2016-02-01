@@ -4,6 +4,7 @@ import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
 import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.alignment.AlignmentUtils;
 import com.milaboratory.core.alignment.benchmark.*;
+import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.MutationsGenerator;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
@@ -158,7 +159,13 @@ public class KAligner2Test {
             int b = ref.size() / 3;
             int from = r.nextInt(b);
             int to = from + b + r.nextInt(b);
-            NucleotideSequence q = MutationsGenerator.generateMutations(ref, model).mutate(ref);
+            Mutations<NucleotideSequence> muts = MutationsGenerator.generateMutations(ref, model);
+            NucleotideSequence q = muts.mutate(ref);
+            from = muts.convertPosition(from);
+            to = muts.convertPosition(to);
+            from = from < 0 ? ~from : from;
+            to = to < 0 ? ~to + 1 : to;
+
             KAlignmentResult2<Integer> res = aligner.align(q, from, to);
             for (KAlignmentHit2<Integer> hit2 : res.getHits()) {
                 Assert.assertTrue(hit2.getAlignment().getSequence2Range().getFrom() >= from);

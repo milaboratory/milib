@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -30,11 +30,12 @@ public class WildcardTest {
         int[] unif;
         int tries = 2000;
         double precision = 0.15, expected;
+        int otherCodes = 10;
         for (int count = 2; count < 10; ++count) {
-            codes = new byte[count];
-            for (int i = 1; i < count; ++i)
+            codes = new byte[count + otherCodes];
+            for (int i = 1; i < count + otherCodes; ++i)
                 codes[i] = (byte) i;
-            symbol = new Wildcard('A', (byte) 0, codes);
+            symbol = new Wildcard('A', (byte) 0, count, codes);
             unif = new int[count];
             for (int i = 0; i < tries; ++i)
                 unif[symbol.getUniformlyDistributedBasicCode(i)]++;
@@ -49,5 +50,34 @@ public class WildcardTest {
         Assert.assertTrue(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.Y_WILDCARD));
         Assert.assertFalse(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.W_WILDCARD));
         Assert.assertTrue(NucleotideAlphabet.S_WILDCARD.intersectsWith(NucleotideAlphabet.C_WILDCARD));
+    }
+
+    public static void calculateAllMatches(Alphabet<?> a) {
+        for (Wildcard wc1 : a.getAllWildcards()) {
+            System.out.print(wc1.cSymbol + " -> new byte[]{");
+            boolean first = true;
+            for (Wildcard wc2 : a.getAllWildcards())
+                if (wc1.intersectsWith(wc2)) {
+                    if (first)
+                        first = false;
+                    else
+                        System.out.print(", ");
+                    System.out.print(wc2.cSymbol);
+                }
+            System.out.println("}");
+        }
+    }
+
+    public static void testMatches(Alphabet<?> a) {
+        for (Wildcard wc1 : a.getAllWildcards()) {
+            for (Wildcard wc2 : a.getAllWildcards())
+                if (wc1.intersectsWith(wc2)) {
+                    Assert.assertTrue(wc1.matches(wc2.code));
+                    Assert.assertTrue(wc2.matches(wc1.code));
+                }else {
+                    Assert.assertFalse(wc1.matches(wc2.code));
+                    Assert.assertFalse(wc2.matches(wc1.code));
+                }
+        }
     }
 }

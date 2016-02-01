@@ -89,11 +89,11 @@ public final class ScoringUtils {
                 if ((wc1.isBasic() || excludeSet.contains(wc1.getCode())) && (wc2.isBasic() || excludeSet.contains(wc2.getCode())))
                     continue;
                 int sumScore = 0;
-                for (int i = 0; i < wc1.count(); i++)
-                    for (int j = 0; j < wc2.count(); j++) {
+                for (int i = 0; i < wc1.basicSize(); i++)
+                    for (int j = 0; j < wc2.basicSize(); j++) {
                         sumScore += matrix[wc1.getMatchingCode(i) + wc2.getMatchingCode(j) * alSize];
                     }
-                sumScore /= wc1.count() * wc2.count();
+                sumScore /= wc1.basicSize() * wc2.basicSize();
                 matrix[wc1.getCode() + wc2.getCode() * alSize] = sumScore;
             }
 

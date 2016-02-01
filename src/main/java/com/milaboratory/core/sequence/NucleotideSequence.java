@@ -148,7 +148,7 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
         int reverseCord;
         for (int coord = 0, s = to - from; coord < s; ++coord) {
             reverseCord = to - 1 - coord;
-            newData[coord] = NucleotideAlphabet.getComplement(data[reverseCord]);
+            newData[coord] = NucleotideAlphabet.complementCode(data[reverseCord]);
         }
         return newData;
     }
