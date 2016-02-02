@@ -7,12 +7,12 @@ import com.milaboratory.core.Range;
  * @author Stanislav Poslavsky
  */
 public final class CoverageCounter {
-    final int refFrom, refTo;
+    final int from, to;
     final long[] counters;
 
-    CoverageCounter(int refFrom, int refTo, long[] counters) {
-        this.refFrom = refFrom;
-        this.refTo = refTo;
+    CoverageCounter(int from, int to, long[] counters) {
+        this.from = from;
+        this.to = to;
         this.counters = counters;
     }
 
@@ -20,15 +20,15 @@ public final class CoverageCounter {
         this(seqRange.getFrom(), seqRange.getTo());
     }
 
-    public CoverageCounter(int refFrom, int refTo) {
-        this.refFrom = refFrom;
-        this.refTo = refTo;
-        this.counters = new long[refTo - refFrom];
+    public CoverageCounter(int from, int to) {
+        this.from = from;
+        this.to = to;
+        this.counters = new long[to - from];
     }
 
     public void aggregate(final Range r, final Weight weight) {
         final int from = r.getFrom(), to = r.getTo();
-        if (from < refFrom || to > refTo)
+        if (from < this.from || to > this.to)
             throw new IndexOutOfBoundsException();
         for (int i = from; i < to; ++i)
             counters[i] += weight.weight(i);
@@ -39,6 +39,8 @@ public final class CoverageCounter {
     }
 
     public long totalWeight(int position) {
-        return counters[position - refFrom];
+        if (position < from || position >= to)
+            return 0;
+        return counters[position - from];
     }
 }

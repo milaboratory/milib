@@ -8,7 +8,6 @@ import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -60,9 +59,18 @@ public class AggregatedMutations<S extends Sequence<S>> {
         Arrays.fill(quality, Byte.MAX_VALUE);
 
         mutationsDelta = 0;
-        for (int position = from; position < to; ++position) {
+        // position <= to ("=" for trailing insertions)
+        for (int position = from; position <= to; ++position) {
             int[] muts = mutations.get(position);
-            byte q = qualityProvider.getQuality(coverageWeight(position), mutationWeight(position), null);
+
+            // In case without trailing insertions
+            if(muts == null && position == to)
+                break;
+
+            long coverage = coverageWeight(position);
+            if (containInsertions(muts))
+                coverage = Math.max(coverage, coverageWeight(position - 1));
+            byte q = qualityProvider.getQuality(coverage, mutationWeight(position), muts);
             int index = mutationsDelta + position - from;
             if (muts != null) {
                 int lDelta = MutationsUtil.getLengthDelta(muts);
@@ -74,20 +82,33 @@ public class AggregatedMutations<S extends Sequence<S>> {
                         quality[index] = min(quality[mutationsDelta + position], q);
                 } else
                     for (int i = 0; i < lDelta + 1; i++)
-                        quality[index + i] = q;
+                        quality[index + i - 1] = min(quality[index + i - 1], q);
 
                 mBuilder.append(muts);
                 mutationsDelta += lDelta;
-            } else if (index > 0 && index < quality.length)
-                quality[index] = q;
+            } else
+                quality[index] = min(quality[index], q);
         }
 
         return new Consensus<>(new SequenceQuality(quality), reference,
                 new Alignment<>(reference, mBuilder.createAndDestroy(), range, scoring));
     }
 
+    public static boolean containInsertions(int[] muts) {
+        if(muts == null)
+            return false;
+        for (int mut : muts)
+            if (Mutation.isInsertion(mut))
+                return true;
+        return false;
+    }
+
     public static byte min(byte a, byte b) {
         return (a <= b) ? a : b;
+    }
+
+    public static byte max(byte a, byte b) {
+        return (a >= b) ? a : b;
     }
 
     public interface QualityProvider {

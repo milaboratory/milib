@@ -41,8 +41,8 @@ public final class MutationConsensusBuilder<S extends Sequence<S>> {
         final int refTo = range.getTo();
         final int len = range.length();
 
-        final long[] topMutationCount = new long[len];
-        final long[] totalMutationCount = new long[len];
+        final long[] topMutationCount = new long[len + 1];
+        final long[] totalMutationCount = new long[len + 1];
         final TIntObjectHashMap<int[]> def = new TIntObjectHashMap<>();
 
         final TIntLongIterator it = mutations.counter.iterator();
