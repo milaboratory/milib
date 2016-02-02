@@ -348,4 +348,27 @@ public final class MutationsUtil {
         }
         return result.createAndDestroy();
     }
+
+    /**
+     * Returns the difference between the length of initial sequence and length of mutated sequence. Negative values
+     * denotes that mutated sequence is shorter.
+     *
+     * @param mutations mutations
+     * @return difference between the length of initial sequence and mutated sequence
+     */
+    public static int getLengthDelta(final int[] mutations) {
+        int delta = 0;
+
+        for (int mut : mutations)
+            switch (mut & MUTATION_TYPE_MASK) {
+                case RAW_MUTATION_TYPE_DELETION:
+                    --delta;
+                    break;
+                case RAW_MUTATION_TYPE_INSERTION:
+                    ++delta;
+                    break;
+            }
+
+        return delta;
+    }
 }
