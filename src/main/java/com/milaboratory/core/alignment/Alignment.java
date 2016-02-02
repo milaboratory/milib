@@ -174,6 +174,10 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                 sequence2Range, sequence1Range, score);
     }
 
+    public Alignment<S> getRange(int from, int to, AlignmentScoring<S> scoring) {
+        return new Alignment<>(sequence1, mutations.extractMutationsForRange(from, to), new Range(from, to), scoring);
+    }
+
     /**
      * Returns number of matches divided by sum of number of matches and mismatches.
      *

@@ -83,7 +83,7 @@ public class AggregatedMutations<S extends Sequence<S>> {
         }
 
         return new Consensus<>(new SequenceQuality(quality), reference,
-                new Alignment<>(reference, mBuilder.createAndDestroy(), range, scoring));
+                new Alignment<>(reference.getRange(from, to), mBuilder.createAndDestroy(), range, scoring));
     }
 
     public static byte min(byte a, byte b) {
@@ -105,6 +105,32 @@ public class AggregatedMutations<S extends Sequence<S>> {
             this.alignment = alignment;
         }
 
-        //public ArrayList<Co>
+        public ArrayList<Consensus<S>> split(byte qualityThreshold, AlignmentScoring<S> scoring) {
+            ArrayList<Consensus<S>> result = new ArrayList<>();
+
+            int beginIn1 = 0, beginIn2 = 0;
+            Range sequence1Range = alignment.getSequence1Range();
+            int seq1To = sequence1Range.getTo();
+            for (int positionIn1 = sequence1Range.getFrom(); positionIn1 < seq1To; ++positionIn1) {
+                int positionIn2 = alignment.convertPosition(positionIn1);
+                 if (positionIn2 >= 0 && quality.value(positionIn2) < qualityThreshold) {
+                    if (positionIn1 > beginIn1 && positionIn2 > beginIn2)
+                        result.add(new Consensus<>(quality.getRange(beginIn2, positionIn2),
+                                sequence.getRange(beginIn2, positionIn2),
+                                alignment.getRange(beginIn1, positionIn1, scoring)));
+
+                    beginIn1 = positionIn1 + 1;
+                    beginIn2 = positionIn2 + 1;
+                }
+            }
+
+            int positionIn2 = alignment.convertPosition(seq1To);
+            if (seq1To != beginIn1 && positionIn2 != beginIn2)
+                result.add(new Consensus<>(quality.getRange(beginIn2, positionIn2),
+                        sequence.getRange(beginIn2, positionIn2),
+                        alignment.getRange(beginIn1, seq1To, scoring)));
+
+            return result;
+        }
     }
 }
