@@ -15,14 +15,19 @@
  */
 package com.milaboratory.core.mutations.generator;
 
+import com.milaboratory.util.RandomUtil;
 import org.apache.commons.math3.random.RandomGenerator;
 
 import static com.milaboratory.core.mutations.generator.SubstitutionModels.getEmpiricalNucleotideSubstitutionModelWithNoise;
 
 public class MutationModels {
-    public static NucleotideMutationModel getEmpiricalNucleotideMutationModel() {
+    public static NucleotideMutationModel getEmpiricalNucleotideMutationModel(long seed) {
         return new GenericNucleotideMutationModel(
-                SubstitutionModels.getEmpiricalNucleotideSubstitutionModel(), 0.00522, 0.00198);
+                SubstitutionModels.getEmpiricalNucleotideSubstitutionModel(), 0.00522, 0.00198, seed);
+    }
+
+    public static NucleotideMutationModel getEmpiricalNucleotideMutationModel() {
+        return getEmpiricalNucleotideMutationModel(RandomUtil.getThreadLocalRandom().nextLong());
     }
 
     public static NucleotideMutationModel getEmpiricalNucleotideMutationModelWithNoise(
