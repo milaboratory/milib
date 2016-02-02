@@ -46,8 +46,16 @@ public final class MutationsCounter {
             adjust(mutations, enumerator, delta);
     }
 
+    public void adjust(Mutations<?> mutations, MutationsEnumerator enumerator, Weight weight) {
+        adjust(mutations.mutations, enumerator.getOffset(), enumerator.getLength(), weight);
+    }
+
     public void adjust(Mutations<?> mutations, MutationsEnumerator enumerator, int delta) {
         adjust(mutations.mutations, enumerator.getOffset(), enumerator.getLength(), delta);
+    }
+
+    void adjust(int[] mutationsArray, int offset, int length, Weight weight) {
+        adjust(mutationsArray, offset, length, weight.weight(Mutation.getPosition(mutationsArray[offset])));
     }
 
     void adjust(int[] mutationsArray, int offset, int length, int delta) {
@@ -55,8 +63,7 @@ public final class MutationsCounter {
         if (length == 1)
             adjustSingleMutation(mutationsArray[offset], delta);
         else
-            adjustLongInsert(Arrays.copyOfRange(mutationsArray, offset, offset + length),
-                    delta);
+            adjustLongInsert(Arrays.copyOfRange(mutationsArray, offset, offset + length), delta);
     }
 
     public <S extends Sequence<S>> Mutations<S> build(Alphabet<S> alphabet, Filter filter) {

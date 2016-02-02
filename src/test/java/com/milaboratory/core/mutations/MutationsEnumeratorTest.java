@@ -7,6 +7,8 @@ import com.milaboratory.test.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static com.milaboratory.core.sequence.NucleotideSequence.ALPHABET;
 
 /**
@@ -16,38 +18,48 @@ public class MutationsEnumeratorTest {
     @Test
     public void test1() throws Exception {
         for (int c = 0; c < TestUtil.its(100, 1000); c++) {
-            Mutations<NucleotideSequence> mutations = MutationsGenerator.generateMutations(TestUtil.randomSequence(ALPHABET, 10, 100), MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(500));
+            Mutations<NucleotideSequence> mutations = MutationsGenerator.generateMutations(TestUtil.randomSequence(ALPHABET, 10, 100),
+                    MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(500));
             MutationsEnumerator enumerator = new MutationsEnumerator(mutations);
             MutationsBuilder<NucleotideSequence> check = new MutationsBuilder<>(ALPHABET);
+            int previousPosition = -1;
             while (enumerator.next()) {
                 int offset = enumerator.getOffset();
                 int length = enumerator.getLength();
-                switch (enumerator.getType()) {
-                    case Substitution:
-                        Assert.assertEquals(1, length);
-                        check.appendSubstitution(
-                                mutations.getPositionByIndex(offset),
-                                mutations.getFromAsCodeByIndex(offset),
-                                mutations.getToAsCodeByIndex(offset));
-                        break;
-                    case Deletion:
-                        Assert.assertEquals(1, length);
-                        check.appendDeletion(
-                                mutations.getPositionByIndex(offset),
-                                mutations.getFromAsCodeByIndex(offset));
-                        break;
-                    case Insertion:
-                        for (int i = 0; i < length; i++) {
-                            if (i != 0)
-                                Assert.assertEquals(
-                                        mutations.getPositionByIndex(offset),
-                                        mutations.getPositionByIndex(offset + i));
-                            check.appendInsertion(
-                                    mutations.getPositionByIndex(offset + i),
-                                    mutations.getToAsCodeByIndex(offset + i));
-                        }
-                        break;
-                }
+                int position = mutations.getPositionByIndex(offset);
+                if (previousPosition != -1)
+                    Assert.assertFalse(position == previousPosition);
+                for (int i = offset + 1; i < offset + length; i++)
+                    Assert.assertEquals(mutations.getPositionByIndex(i), position);
+                previousPosition = position;
+                check.append(Arrays.copyOfRange(mutations.mutations, offset, offset + length));
+
+//                switch (enumerator.getType()) {
+//                    case Substitution:
+//                        Assert.assertEquals(1, length);
+//                        check.appendSubstitution(
+//                                mutations.getPositionByIndex(offset),
+//                                mutations.getFromAsCodeByIndex(offset),
+//                                mutations.getToAsCodeByIndex(offset));
+//                        break;
+//                    case Deletion:
+//                        Assert.assertEquals(1, length);
+//                        check.appendDeletion(
+//                                mutations.getPositionByIndex(offset),
+//                                mutations.getFromAsCodeByIndex(offset));
+//                        break;
+//                    case Insertion:
+//                        for (int i = 0; i < length; i++) {
+//                            if (i != 0)
+//                                Assert.assertEquals(
+//                                        mutations.getPositionByIndex(offset),
+//                                        mutations.getPositionByIndex(offset + i));
+//                            check.appendInsertion(
+//                                    mutations.getPositionByIndex(offset + i),
+//                                    mutations.getToAsCodeByIndex(offset + i));
+//                        }
+//                        break;
+//                }
             }
             Assert.assertEquals(mutations, check.createAndDestroy());
         }

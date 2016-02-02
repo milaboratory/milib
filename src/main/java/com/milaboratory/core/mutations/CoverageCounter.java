@@ -10,6 +10,12 @@ public final class CoverageCounter {
     final int refFrom, refTo;
     final long[] counters;
 
+    CoverageCounter(int refFrom, int refTo, long[] counters) {
+        this.refFrom = refFrom;
+        this.refTo = refTo;
+        this.counters = counters;
+    }
+
     public CoverageCounter(Range seqRange) {
         this(seqRange.getFrom(), seqRange.getTo());
     }
@@ -20,32 +26,19 @@ public final class CoverageCounter {
         this.counters = new long[refTo - refFrom];
     }
 
-    public void aggregate(final Range r, final Provider provider) {
+    public void aggregate(final Range r, final Weight weight) {
         final int from = r.getFrom(), to = r.getTo();
         if (from < refFrom || to > refTo)
             throw new IndexOutOfBoundsException();
         for (int i = from; i < to; ++i)
-            counters[i] += provider.delta(i);
+            counters[i] += weight.weight(i);
     }
 
-    public void aggregate(final Range r, final int delta) {
-        aggregate(r, constantDelta(delta));
+    public void aggregate(final Range r) {
+        aggregate(r, Weight.ONE);
     }
 
-    public long count(int position) {
-        return counters[position];
-    }
-
-    public interface Provider {
-        long delta(int position);
-    }
-
-    public static Provider constantDelta(final int delta) {
-        return new Provider() {
-            @Override
-            public long delta(int position) {
-                return delta;
-            }
-        };
+    public long totalWeight(int position) {
+        return counters[position - refFrom];
     }
 }
