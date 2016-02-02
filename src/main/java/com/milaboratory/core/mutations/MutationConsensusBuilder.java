@@ -78,9 +78,9 @@ public final class MutationConsensusBuilder<S extends Sequence<S>> {
         }
 
         for (int position = refFrom; position < refTo; ++position) {
-            long diff = coverage.totalWeight(position) - totalMutationCount[position - refFrom];
-            if (diff > topMutationCount[position - refFrom]) {
-                topMutationCount[position - refFrom] = diff;
+            long noMutationCount = coverage.totalWeight(position) - totalMutationCount[position - refFrom];
+            if (noMutationCount > topMutationCount[position - refFrom]) {
+                topMutationCount[position - refFrom] = noMutationCount;
                 def.remove(position);
             }
         }
