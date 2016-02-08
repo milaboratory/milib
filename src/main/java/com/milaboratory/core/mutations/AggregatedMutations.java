@@ -57,7 +57,7 @@ public class AggregatedMutations<S extends Sequence<S>> {
             mutationsDelta += MutationsUtil.getLengthDelta(ints);
 
         final byte[] quality = new byte[length + mutationsDelta];
-        Arrays.fill(quality, Byte.MAX_VALUE);
+        Arrays.fill(quality, (byte) (Byte.MAX_VALUE - 70));
 
         mutationsDelta = 0;
         // position <= to ("=" for trailing insertions)
@@ -65,30 +65,34 @@ public class AggregatedMutations<S extends Sequence<S>> {
             int[] muts = mutations.get(position);
 
             // In case without trailing insertions
-            if(muts == null && position == to)
+            if (position == to)
                 break;
 
             long coverage = coverageWeight(position);
             if (containInsertions(muts))
                 coverage = Math.max(coverage, coverageWeight(position - 1));
-            byte q = qualityProvider.getQuality(coverage, mutationWeight(position), muts);
             int index = mutationsDelta + position - from;
-            if (muts != null) {
+            byte q = qualityProvider.getQuality(coverage, mutationWeight(position), muts);
+
+            if (muts == null) {
+                quality[index] = min(quality[index], q);
+            } else {
                 int lDelta = MutationsUtil.getLengthDelta(muts);
-                if (lDelta < 0) {
+                if (lDelta == 0) {
+                    quality[index] = min(quality[index], q);
+                } else if (lDelta < 0) {
                     assert lDelta == -1;
-                    if (index - 1 >= 0)
-                        quality[index - 1] = min(quality[mutationsDelta + position - 1], q);
+                    if (index >= 1)
+                        quality[index - 1] = min(quality[index - 1], q);
                     if (index < quality.length)
-                        quality[index] = min(quality[mutationsDelta + position], q);
+                        quality[index] = min(quality[index], q);
                 } else
                     for (int i = 0; i < lDelta + 1; i++)
-                        quality[index + i - 1] = min(quality[index + i - 1], q);
+                        quality[index + i] = min(quality[index + i], q);
 
                 mBuilder.append(muts);
                 mutationsDelta += lDelta;
-            } else
-                quality[index] = min(quality[index], q);
+            }
         }
 
         return new Consensus<>(new SequenceQuality(quality), reference,
@@ -96,7 +100,7 @@ public class AggregatedMutations<S extends Sequence<S>> {
     }
 
     public static boolean containInsertions(int[] muts) {
-        if(muts == null)
+        if (muts == null)
             return false;
         for (int mut : muts)
             if (Mutation.isInsertion(mut))

@@ -48,6 +48,10 @@ public final class RandomUtil {
         return seed;
     }
 
+    public static long reseedThreadLocalFromTime() {
+        return reseedThreadLocal(System.currentTimeMillis());
+    }
+
     public static Well19937c getThreadLocalRandom() {
         return threadLocalRandom.get().generator;
     }
