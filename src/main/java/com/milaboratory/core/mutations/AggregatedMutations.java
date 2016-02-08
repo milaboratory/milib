@@ -131,11 +131,11 @@ public class AggregatedMutations<S extends Sequence<S>> {
             ArrayList<Consensus<S>> result = new ArrayList<>();
 
             int beginIn1 = 0, beginIn2 = 0;
-            Range sequence1Range = alignment.getSequence1Range();
-            int seq1To = sequence1Range.getTo();
+            final Range sequence1Range = alignment.getSequence1Range();
+            final int seq1To = sequence1Range.getTo();
             for (int positionIn1 = sequence1Range.getFrom(); positionIn1 < seq1To; ++positionIn1) {
                 int positionIn2 = alignment.convertPosition(positionIn1);
-                 if (positionIn2 >= 0 && quality.value(positionIn2) < qualityThreshold) {
+                if (positionIn2 >= 0 && quality.value(positionIn2) <= qualityThreshold) {
                     if (positionIn1 > beginIn1 && positionIn2 > beginIn2)
                         result.add(new Consensus<>(quality.getRange(beginIn2, positionIn2),
                                 sequence.getRange(beginIn2, positionIn2),

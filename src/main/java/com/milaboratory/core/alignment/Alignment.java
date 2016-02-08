@@ -175,7 +175,7 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
     }
 
     public Alignment<S> getRange(int from, int to, AlignmentScoring<S> scoring) {
-        return new Alignment<>(sequence1, mutations.extractMutationsForRange(from, to), new Range(from, to), scoring);
+        return new Alignment<>(sequence1, mutations.extractMutationsForRange(from, to).move(from), new Range(from, to), scoring);
     }
 
     /**

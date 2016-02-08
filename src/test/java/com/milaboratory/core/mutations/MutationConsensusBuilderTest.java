@@ -43,12 +43,14 @@ public class MutationConsensusBuilderTest {
             }
         }, sc);
 
-        ArrayList<AggregatedMutations.Consensus<NucleotideSequence>> split = consesus.split((byte) 127, sc);
-        for (AggregatedMutations.Consensus<NucleotideSequence> qs : split) {
-            System.out.println(qs.alignment.getAlignmentHelper());
-        }
-
         Assert.assertEquals(coreMutations, consesus.alignment.getAbsoluteMutations());
+
+        ArrayList<AggregatedMutations.Consensus<NucleotideSequence>> split = consesus.split((byte) 0, sc);
+        Assert.assertEquals(split.size(), 1);
+        Assert.assertEquals(split.get(0).alignment, consesus.alignment);
+
+        split = consesus.split((byte) 127, sc);
+        Assert.assertEquals(split.size(), 0);
     }
 
     @Test
