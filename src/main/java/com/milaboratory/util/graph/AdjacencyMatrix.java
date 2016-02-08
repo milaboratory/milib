@@ -46,6 +46,9 @@ public class AdjacencyMatrix {
         List<BitArrayInt> cliques = new ArrayList<>();
         BStack stack = new BStack();
         stack.currentP().setAll();
+        stack.currentPi().setAll();
+        BitArrayInt tmp = new BitArrayInt(size);
+
         while (true) {
             int v = stack.nextVertex();
 
@@ -62,10 +65,28 @@ public class AdjacencyMatrix {
             stack.currentP().clear(v);
             stack.currentX().set(v);
 
-            stack.push();
+            if (stack.nextP().isEmpty() && stack.nextX().isEmpty()){
+                cliques.add(stack.nextR().clone());
+                continue;
+            }
 
-            if (stack.currentP().isEmpty() && stack.currentX().isEmpty())
-                cliques.add(stack.currentR().clone());
+            tmp.loadValueFrom(stack.nextP());
+            tmp.or(stack.nextX());
+            int u = 0, bestU = -1, count = -1;
+            while ((u = tmp.nextBit(u)) != -1) {
+                int c = tmp.numberOfCommonBits(data[u]);
+                if (bestU == -1 || c > count) {
+                    bestU = u;
+                    count = c;
+                }
+                ++u;
+            }
+
+            stack.nextPi().loadValueFrom(data[bestU]);
+            stack.nextPi().xor(stack.nextP());
+            stack.nextPi().and(stack.nextP());
+
+            stack.push();
         }
         return cliques;
     }
@@ -83,15 +104,15 @@ public class AdjacencyMatrix {
         final BList R = new BList();
         final BList X = new BList();
         final BList P = new BList();
-        ///**
-        // * P for vertices enumeration
-        // */
-        //final BList Pi = new BList();
-        final IntArrayList lastP = new IntArrayList();
+        /**
+         * P for vertices enumeration = P / N(v)
+         */
+        final BList Pi = new BList();
+        final IntArrayList lastVertex = new IntArrayList();
         int currentLevel = 0;
 
         public BStack() {
-            lastP.push(0);
+            lastVertex.push(0);
         }
 
         BitArrayInt currentR() {
@@ -106,9 +127,13 @@ public class AdjacencyMatrix {
             return P.get(currentLevel);
         }
 
+        BitArrayInt currentPi() {
+            return Pi.get(currentLevel);
+        }
+
         int nextVertex() {
-            int nextVertex = currentP().nextBit(lastP.peek());
-            lastP.set(currentLevel, nextVertex);
+            int nextVertex = currentPi().nextBit(lastVertex.peek());
+            lastVertex.set(currentLevel, nextVertex + 1);
             return nextVertex;
         }
 
@@ -127,14 +152,30 @@ public class AdjacencyMatrix {
             return P.get(currentLevel + 1);
         }
 
+        BitArrayInt nextX() {
+            return X.get(currentLevel + 1);
+        }
+
+        BitArrayInt nextP() {
+            return P.get(currentLevel + 1);
+        }
+
+        BitArrayInt nextR() {
+            return R.get(currentLevel + 1);
+        }
+
+        BitArrayInt nextPi() {
+            return Pi.get(currentLevel + 1);
+        }
+
         void push() {
             currentLevel++;
-            lastP.push(0);
+            lastVertex.push(0);
         }
 
         boolean pop() {
             currentLevel--;
-            lastP.pop();
+            lastVertex.pop();
             return currentLevel != -1;
         }
     }

@@ -457,6 +457,15 @@ public class BitArrayInt {
             loadValueFrom(d >>> (32 - res), (position + 1) << 5, length);
     }
 
+    public int numberOfCommonBits(BitArrayInt other) {
+        if (other.size != size)
+            throw new IllegalArgumentException();
+        int result = 0;
+        for (int i = 0; i < data.length; i++)
+            result += Integer.bitCount(other.data[i] & data[i]);
+        return result;
+    }
+
     public BitArrayInt append(BitArrayInt other) {
         BitArrayInt ba = new BitArrayInt(size + other.size);
         System.arraycopy(data, 0, ba.data, 0, data.length);
