@@ -18,7 +18,7 @@ package com.milaboratory.core.sequence;
 /**
  * Defines standard genetic code.
  */
-final class GeneticCode {
+public final class GeneticCode {
     private static byte[] code = null;
 
     static {
@@ -38,11 +38,11 @@ final class GeneticCode {
         }
     }
 
-    static byte getAminoAcid(int triplet) {
+    public static byte getAminoAcid(int triplet) {
         return code[triplet];
     }
 
-    static void translate(byte[] dest, int offsetInDest, NucleotideSequence sequence, int offsetInSeq, int seqLength) {
+    public static void translate(byte[] dest, int offsetInDest, NucleotideSequence sequence, int offsetInSeq, int seqLength) {
         if (seqLength % 3 != 0)
             throw new IllegalArgumentException("Only nucleotide sequences with size multiple " +
                     "of three are supported (in-frame).");
