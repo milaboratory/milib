@@ -162,6 +162,19 @@ public class BitArray implements java.io.Serializable {
         return bits;
     }
 
+    //public int nextBit(int from){
+    //    from
+    //    int word = data[u] & (WORD_MASK << fromIndex);
+    //
+    //    while (true) {
+    //        if (word != 0)
+    //            return (u * BITS_PER_WORD) + Long.numberOfTrailingZeros(word);
+    //        if (++u == wordsInUse)
+    //            return -1;
+    //        word = words[u];
+    //    }
+    //}
+
     public int size() {
         return size;
     }
