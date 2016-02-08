@@ -100,7 +100,7 @@ public final class MutationsCounter {
 
     private void adjustLongInsert(int[] insert, int delta) {
         if (insertMapping == null)
-            insertMapping = new TObjectIntCustomHashMap<>(new IntArrayHashingStrategy(),
+            insertMapping = new TObjectIntCustomHashMap<>(IntArrayHashingStrategy,
                     Constants.DEFAULT_CAPACITY,
                     Constants.DEFAULT_LOAD_FACTOR, Mutation.NON_MUTATION);
         int next = nextId();
@@ -116,7 +116,7 @@ public final class MutationsCounter {
         return (insertMapping.size() + 1) << Mutation.FROM_OFFSET;
     }
 
-    private static final class IntArrayHashingStrategy implements HashingStrategy<int[]> {
+    public static final HashingStrategy<int[]> IntArrayHashingStrategy = new HashingStrategy<int[]>() {
         @Override
         public int computeHashCode(int[] object) {
             return Arrays.hashCode(object);
@@ -126,7 +126,7 @@ public final class MutationsCounter {
         public boolean equals(int[] o1, int[] o2) {
             return Arrays.equals(o1, o2);
         }
-    }
+    };
 
     public interface Filter {
         boolean accept(long count, int position, int mutation, int[] mutations);

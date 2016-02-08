@@ -15,7 +15,7 @@ import java.util.Arrays;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public class AggregatedMutations<S extends Sequence<S>> {
+public final class AggregatedMutations<S extends Sequence<S>> {
     final Alphabet<S> alphabet;
     final CoverageCounter coverageWeight;
     final CoverageCounter mutationWeight;
