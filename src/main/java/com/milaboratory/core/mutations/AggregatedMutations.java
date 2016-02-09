@@ -6,10 +6,12 @@ import com.milaboratory.core.alignment.AlignmentScoring;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.core.sequence.SequenceQuality;
+import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Dmitry Bolotin
@@ -99,6 +101,19 @@ public final class AggregatedMutations<S extends Sequence<S>> {
                 new Alignment<>(reference.getRange(from, to), mBuilder.createAndDestroy(), range, scoring));
     }
 
+    public List<int[]> filtered(MutationsFilter filter) {
+        TIntObjectIterator<int[]> it = mutations.iterator();
+        List<int[]> filtered = new ArrayList<>();
+        while (it.hasNext()) {
+            it.advance();
+            int pos = it.key();
+            int[] muts = it.value();
+            if (filter.filter(pos, muts, coverageWeight(pos), mutationWeight(pos)))
+                filtered.add(muts);
+        }
+        return filtered;
+    }
+
     public static boolean containInsertions(int[] muts) {
         if (muts == null)
             return false;
@@ -118,6 +133,10 @@ public final class AggregatedMutations<S extends Sequence<S>> {
 
     public interface QualityProvider {
         byte getQuality(long coverageWeight, long mutationCount, int[] mutations);
+    }
+
+    public interface MutationsFilter {
+        boolean filter(int position, int[] mutations, long coverageWeight, long mutationWeight);
     }
 
     public static final class Consensus<S extends Sequence<S>> {
