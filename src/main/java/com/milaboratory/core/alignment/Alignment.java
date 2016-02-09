@@ -74,6 +74,11 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                 AlignmentUtils.calculateScore(scoring, sequence1Range.length(), mutations));
     }
 
+    public Alignment(S sequence1, Mutations<S> mutations,
+                     Range sequence1Range, float score) {
+        this(sequence1, mutations, sequence1Range, new Range(0, sequence1Range.length() + mutations.getLengthDelta()),
+                score);
+    }
 
     public Alignment(S sequence1, Mutations<S> mutations,
                      Range sequence1Range, Range sequence2Range,

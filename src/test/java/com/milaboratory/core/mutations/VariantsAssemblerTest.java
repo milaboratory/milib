@@ -1,5 +1,6 @@
 package com.milaboratory.core.mutations;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.MutationsGenerator;
@@ -25,24 +26,34 @@ public class VariantsAssemblerTest {
         final int NUMBER_OF_CLONES = 400;
         final int MIN_NUMBER_OF_READS = 100;
         final int MAX_NUMBER_OF_READS = 1000;
-        final int NUMBER_OF_ALLELES = 3;
+        final int MIN_REF_LENGTH = 100;
+        final int MAX_REF_LENGTH = 200;
+        final double RANDOM_COVERAGE_OFFSET_SIZE = 0.2;
+        final int NUMBER_OF_ALLELES = 4;
+        final boolean FIRST_ALLELE_IS_WT = true;
 
         RandomUtil.reseedThreadLocalFromTime();
-        RandomUtil.reseedThreadLocal(1234);
+        //RandomUtil.reseedThreadLocal(1234);
         Well19937c random = RandomUtil.getThreadLocalRandom();
 
         NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(30);
-        NucleotideMutationModel noise = MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(10);
-        NucleotideSequence reference = TestUtil.randomSequence(NucleotideSequence.ALPHABET, 100, 200);
+        model.reseed(random.nextLong());
+        NucleotideMutationModel noise = MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(3);
+        noise.reseed(random.nextLong());
 
+        NucleotideSequence reference = TestUtil.randomSequence(NucleotideSequence.ALPHABET, MIN_REF_LENGTH, MAX_REF_LENGTH);
+        final int randomCoverageOffsetSize = (int) (RANDOM_COVERAGE_OFFSET_SIZE * reference.size());
 
         Mutations<NucleotideSequence>[] alleles = new Mutations[NUMBER_OF_ALLELES];
         NucleotideSequence[] alleleSeqs = new NucleotideSequence[NUMBER_OF_ALLELES];
-        for (int i = 0; i < NUMBER_OF_ALLELES; i++) {
+        for (int i = FIRST_ALLELE_IS_WT ? 1 : 0; i < NUMBER_OF_ALLELES; i++) {
             alleles[i] = MutationsGenerator.generateMutations(reference, model);
             alleleSeqs[i] = alleles[i].mutate(reference);
         }
-
+        if (FIRST_ALLELE_IS_WT) {
+            alleles[0] = Mutations.EMPTY_NUCLEOTIDE_MUTATIONS;
+            alleleSeqs[0] = reference;
+        }
 
         List<AggregatedMutations<NucleotideSequence>> aggregators = new ArrayList<>();
         for (int i = 0; i < NUMBER_OF_CLONES; i++) {
@@ -58,7 +69,9 @@ public class VariantsAssemblerTest {
                 Mutations<NucleotideSequence> noiseMuts =
                         MutationsGenerator.generateMutations(alleleSeq, noise);
                 Mutations<NucleotideSequence> totalMutations = allele.combineWith(noiseMuts);
-                Alignment<NucleotideSequence> alignment = new Alignment<>(reference, totalMutations, 0);
+                Range r = new Range(random.nextInt(randomCoverageOffsetSize), reference.size() - random.nextInt(randomCoverageOffsetSize));
+                totalMutations = totalMutations.extractMutationsForRange(r).move(r.getFrom());
+                Alignment<NucleotideSequence> alignment = new Alignment<>(reference, totalMutations, r, 0);
                 builder.aggregate(alignment, Weight.ONE);
             }
 
@@ -66,16 +79,16 @@ public class VariantsAssemblerTest {
         }
 
         VariantsAssembler<NucleotideSequence> assembler = new VariantsAssembler<>(NucleotideSequence.ALPHABET,
-                aggregators, 100, new AggregatedMutations.MutationsFilter() {
+                aggregators, 50, new AggregatedMutations.MutationsFilter() {
             @Override
             public boolean filter(int position, int[] mutations, long coverageWeight, long mutationWeight) {
                 return 1. * mutationWeight / coverageWeight > .7;
             }
         });
 
-        Arrays.sort(alleles, M_COMPARATOR);
+        //Arrays.sort(alleles, M_COMPARATOR);
         List<Mutations<NucleotideSequence>> actualAlleles = assembler.initialVariants();
-        Collections.sort(actualAlleles, M_COMPARATOR);
+        //Collections.sort(actualAlleles, M_COMPARATOR);
         HashSet<Mutations<NucleotideSequence>> expectedSet = new HashSet<>(Arrays.asList(alleles));
 
         System.out.println("\nUnique actual:");

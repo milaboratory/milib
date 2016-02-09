@@ -58,11 +58,12 @@ public class AdjacencyMatrix {
                 else
                     break;
 
+            stack.currentP().clear(v);
+
             stack.loadAndGetNextR().set(v);
             stack.loadAndGetNextP().and(data[v]);
             stack.loadAndGetNextX().and(data[v]);
 
-            stack.currentP().clear(v);
             stack.currentX().set(v);
 
             if (stack.nextP().isEmpty() && stack.nextX().isEmpty()){
@@ -83,6 +84,7 @@ public class AdjacencyMatrix {
             }
 
             stack.nextPi().loadValueFrom(data[bestU]);
+            stack.nextPi().clear(bestU);
             stack.nextPi().xor(stack.nextP());
             stack.nextPi().and(stack.nextP());
 

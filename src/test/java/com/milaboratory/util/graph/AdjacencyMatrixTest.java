@@ -57,6 +57,57 @@ public class AdjacencyMatrixTest {
     }
 
     @Test
+    public void test4() throws Exception {
+        AdjacencyMatrix matrix = new AdjacencyMatrix(6);
+        matrix.setConnected(0, 4);
+        matrix.setConnected(0, 1);
+        matrix.setConnected(1, 4);
+        matrix.setConnected(1, 2);
+        matrix.setConnected(2, 3);
+        matrix.setConnected(3, 4);
+        matrix.setConnected(3, 5);
+        for (int i = 0; i < 6; i++)
+            matrix.setConnected(i, i);
+
+        List<BitArrayInt> cliques = matrix.calculateMaximalCliques();
+        HashSet<BitArrayInt> set = new HashSet<>(cliques);
+
+        Assert.assertEquals(cliques.size(), set.size());
+        Assert.assertEquals(5, set.size());
+
+        Assert.assertTrue(set.contains(createSet(6, 0, 1, 4)));
+        Assert.assertTrue(set.contains(createSet(6, 1, 2)));
+        Assert.assertTrue(set.contains(createSet(6, 2, 3)));
+        Assert.assertTrue(set.contains(createSet(6, 3, 4)));
+        Assert.assertTrue(set.contains(createSet(6, 3, 5)));
+    }
+
+    @Test
+    public void test5() throws Exception {
+        AdjacencyMatrix matrix = new AdjacencyMatrix(6);
+        matrix.setConnected(0, 4);
+        matrix.setConnected(0, 1);
+        matrix.setConnected(1, 4);
+        matrix.setConnected(1, 2);
+        matrix.setConnected(2, 3);
+        matrix.setConnected(3, 4);
+        for (int i = 0; i < 6; i++)
+            matrix.setConnected(i, i);
+
+        List<BitArrayInt> cliques = matrix.calculateMaximalCliques();
+        HashSet<BitArrayInt> set = new HashSet<>(cliques);
+
+        Assert.assertEquals(cliques.size(), set.size());
+        Assert.assertEquals(5, set.size());
+
+        Assert.assertTrue(set.contains(createSet(6, 0, 1, 4)));
+        Assert.assertTrue(set.contains(createSet(6, 1, 2)));
+        Assert.assertTrue(set.contains(createSet(6, 2, 3)));
+        Assert.assertTrue(set.contains(createSet(6, 3, 4)));
+        Assert.assertTrue(set.contains(createSet(6, 5)));
+    }
+
+    @Test
     public void test2() throws Exception {
         TestData testData = generateTestData(130, 5, 5, 10, 10);
         AdjacencyMatrix matrix = testData.matrix;
