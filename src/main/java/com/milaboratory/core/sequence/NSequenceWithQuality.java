@@ -50,6 +50,11 @@ public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSe
         super(new NucleotideSequence(sequence), new SequenceQuality(quality));
     }
 
+    public NSequenceWithQuality(String sequence) {
+        super(new NucleotideSequence(sequence),
+                SequenceQuality.getUniformQuality(SequenceQuality.GOOD_QUALITY_VALUE, sequence.length()));
+    }
+
     /**
      * Returns reverse complement sequence with reversed quality.
      *
