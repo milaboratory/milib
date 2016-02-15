@@ -1,11 +1,14 @@
 package com.milaboratory.core.mutations;
 
+import com.fasterxml.jackson.annotation.*;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.alignment.Alignment;
 import com.milaboratory.core.alignment.AlignmentScoring;
+import com.milaboratory.core.alignment.kaligner1.KAlignerParameters;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.core.sequence.SequenceQuality;
+import com.milaboratory.primitivio.annotations.Serializable;
 import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -135,8 +138,54 @@ public final class AggregatedMutations<S extends Sequence<S>> {
         byte getQuality(long coverageWeight, long mutationCount, int[] mutations);
     }
 
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+            getterVisibility = JsonAutoDetect.Visibility.NONE)
+    @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type", defaultImpl = KAlignerParameters.class)
+    @JsonSubTypes({@JsonSubTypes.Type(value = SimpleMutationsFilter.class, name = "simple")})
+    @Serializable(asJson = true)
     public interface MutationsFilter {
         boolean filter(int position, int[] mutations, long coverageWeight, long mutationWeight);
+    }
+
+    public static final class SimpleMutationsFilter implements MutationsFilter {
+        public final long minimalCoverage;
+        public final double minimalRatio;
+
+        @JsonCreator
+        public SimpleMutationsFilter(@JsonProperty("minimalCoverage") long minimalCoverage,
+                                     @JsonProperty("minimalRatio") double minimalRatio) {
+            this.minimalCoverage = minimalCoverage;
+            this.minimalRatio = minimalRatio;
+        }
+
+        @Override
+        public boolean filter(int position, int[] mutations, long coverageWeight, long mutationWeight) {
+            if (coverageWeight < minimalCoverage)
+                return false;
+            return (1. * mutationWeight / coverageWeight) >= minimalRatio;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof SimpleMutationsFilter)) return false;
+
+            SimpleMutationsFilter that = (SimpleMutationsFilter) o;
+
+            if (minimalCoverage != that.minimalCoverage) return false;
+            return Double.compare(that.minimalRatio, minimalRatio) == 0;
+
+        }
+
+        @Override
+        public int hashCode() {
+            int result;
+            long temp;
+            result = (int) (minimalCoverage ^ (minimalCoverage >>> 32));
+            temp = Double.doubleToLongBits(minimalRatio);
+            result = 31 * result + (int) (temp ^ (temp >>> 32));
+            return result;
+        }
     }
 
     public static final class Consensus<S extends Sequence<S>> {
