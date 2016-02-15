@@ -80,7 +80,7 @@ public class VariantsAssemblerTest {
 
         VariantsAssembler<NucleotideSequence> assembler = new VariantsAssembler<>(NucleotideSequence.ALPHABET,
                 aggregators, new VariantsAssemblerParameters(50, 30, new AggregatedMutations.SimpleMutationsFilter(1, 0.7),
-                0.9f, 10f, 1f));
+                0.9f, 10f, 1f, 2));
 
         //Arrays.sort(alleles, M_COMPARATOR);
         final AssignedVariants<NucleotideSequence> variants = assembler.initialVariants();
@@ -105,9 +105,15 @@ public class VariantsAssemblerTest {
 
     @Test
     public void test2() throws Exception {
+//        not sorted
+//        0 (46):  [S10:C->T,I13:C,S30:A->G,D47:T,D53:A,D55:C,S61:T->G,S62:A->T,D63:A,D64:C,I76:A,S80:G->T,I83:G,S100:A->G,D104:C,D107:C,D109:C,D120:C,I131:C,D141:G,I156:A,I169:A,D178:A,D179:C]
+//        1 (115):  [S8:A->G,D18:C,S24:G->C,I41:G,D54:C,I65:G,D70:C,S74:A->T,S75:A->G,D87:T,D108:T,S118:G->A,D122:T,D129:C,D132:C,S160:C->T,I172:C,S184:C->T,S186:G->T]
+//        2 (61):  []
+//        3 (51):  [D18:C,S24:G->C,I41:G,D54:C,I65:G,D70:C,S74:A->T,S75:A->G,D87:T,D108:T,S118:G->A,D122:T,D129:C,D132:C,S160:C->T]
+//        4 (44):  [D47:T,D53:A,D55:C,D63:A,D64:C,S80:G->T,S100:A->G,D104:C,D107:C,D109:C,D120:C,D141:G]
         final int NUMBER_OF_CLONES = 400;
-        final int MIN_NUMBER_OF_READS = 100;
-        final int MAX_NUMBER_OF_READS = 1000;
+        final int MIN_NUMBER_OF_READS = 1;
+        final int MAX_NUMBER_OF_READS = 10;
         final int MIN_REF_LENGTH = 100;
         final int MAX_REF_LENGTH = 200;
         final double RANDOM_COVERAGE_OFFSET_SIZE = 0.2;
@@ -116,8 +122,8 @@ public class VariantsAssemblerTest {
         final boolean LAST_ALLELE_IS_SECOND_ADDED = true;
 
 
-        RandomUtil.reseedThreadLocalFromTime();
-        //RandomUtil.reseedThreadLocal(1234);
+//        RandomUtil.reseedThreadLocalFromTime();
+        RandomUtil.reseedThreadLocal(1234);
         Well19937c random = RandomUtil.getThreadLocalRandom();
 
         NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(10);
@@ -169,12 +175,12 @@ public class VariantsAssemblerTest {
 
         VariantsAssembler<NucleotideSequence> assembler = new VariantsAssembler<>(NucleotideSequence.ALPHABET,
                 aggregators, new VariantsAssemblerParameters(50, 30, new AggregatedMutations.SimpleMutationsFilter(1, 0.7),
-                0.9f, 10f, 1f));
+                0.9f, 10f, 1f, 5));
 
         //Arrays.sort(alleles, M_COMPARATOR);
         final AssignedVariants<NucleotideSequence> variants = assembler.initialVariants();
         for (int i = 0; i < variants.alleles.length; i++)
-            System.out.println(i + ":  " + variants.alleles[i]);
+            System.out.println(i + " (" + variants.counts[i] + "):  " + variants.alleles[i]);
 
         for (VariantsAssembler.AlleleAssignmentResult assignment : variants.assignments) {
             System.out.println(assignment);

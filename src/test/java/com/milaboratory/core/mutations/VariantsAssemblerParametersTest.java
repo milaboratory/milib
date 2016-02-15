@@ -22,7 +22,7 @@ public class VariantsAssemblerParametersTest {
     @Test
     public void test1() throws Exception {
         VariantsAssemblerParameters params = new VariantsAssemblerParameters(10, 25,
-                new AggregatedMutations.SimpleMutationsFilter(12, 0.8), 0.95f, 10.0f, 1.0f);
+                new AggregatedMutations.SimpleMutationsFilter(12, 0.8), 0.95f, 10.0f, 1.0f, 2);
         TestUtil.assertJson(params);
     }
 }

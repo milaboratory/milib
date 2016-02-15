@@ -8,9 +8,11 @@ import com.milaboratory.util.graph.AdjacencyMatrix;
 import com.milaboratory.util.graph.IntAdjacencyMatrix;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -32,6 +34,7 @@ public final class VariantsAssembler<S extends Sequence<S>> {
     private final float nullMutationMatchWeight;
     private final int minimalClonesInAllele;
     private final float minimalAssignmentScore;
+    private final int depth;
 
     public VariantsAssembler(Alphabet<S> alphabet, List<AggregatedMutations<S>> aggregators,
                              VariantsAssemblerParameters parameters) {
@@ -43,13 +46,52 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         this.nullMutationMatchWeight = parameters.getNullMutationMatchWeight();
         this.minimalClonesInAllele = parameters.getMinimalClonesInAllele();
         this.minimalAssignmentScore = parameters.getMinimalAssignmentScore();
+        this.depth = parameters.getMaxDepth();
     }
 
     public static final int SHORT_ID_MASK = 0xFFFF;
     public static final int POSITION_OFFSET = 16;
     public static final int POSITION_MASK = 0xFFFF0000;
 
+    @SuppressWarnings("unchecked")
     public AssignedVariants<S> initialVariants() {
+        AlleleAssignmentResult[] assignments = new AlleleAssignmentResult[aggregators.size()];
+        Arrays.fill(assignments, UNASSIGNED);
+
+        final ArrayList<Wrapper<S>> oMutations = new ArrayList<>();
+        int id = 0;
+        for (int i = 0; i < depth; i++) {
+            final IntermediateResult<S> temp = buildVariant(assignments, oMutations.size(), i);
+            oMutations.ensureCapacity(temp.mutations.size());
+            for (int j = 0; j < temp.mutations.size(); ++j)
+                oMutations.add(new Wrapper<>(temp.mutations.get(j), temp.counts[j], id++));
+            if (temp.unassigned == 0 || temp.additionallyAssigned == 0)
+                break;
+        }
+        final Wrapper[] wrappers = oMutations.toArray(new Wrapper[oMutations.size()]);
+        Arrays.sort(wrappers);
+
+        final TIntIntHashMap renaming = new TIntIntHashMap();
+        final List<Mutations<S>> mutations = new ArrayList<>();
+        final IntArrayList counts = new IntArrayList();
+        id = 0;
+        for (int i = 0; i < wrappers.length; ++i) {
+            if (wrappers[i].mutations == null)
+                continue;
+            renaming.put(wrappers[i].id, id++);
+            mutations.add(wrappers[i].mutations);
+            counts.add(wrappers[i].count);
+        }
+
+        for (AlleleAssignmentResult assignment : assignments)
+            if (assignment != null)
+                assignment.alleleId = renaming.get(assignment.alleleId);
+
+        return new AssignedVariants<>(mutations.toArray(new Mutations[mutations.size()]), counts.toArray(), assignments);
+    }
+
+
+    public IntermediateResult<S> buildVariant(AlleleAssignmentResult[] assignments, int offset, int depth) {
         TObjectIntCustomHashMap<int[]> map = new TObjectIntCustomHashMap<>(IntArrayHashingStrategy,
                 Constants.DEFAULT_CAPACITY,
                 Constants.DEFAULT_LOAD_FACTOR, -1);
@@ -58,6 +100,8 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         int[][] cloneMutationIds = new int[aggregators.size()][];
         IntArrayList shortToFullId = new IntArrayList();
         for (i = 0; i < aggregators.size(); i++) {
+            if (assignments[i] != UNASSIGNED)
+                continue;
             List<int[]> filtered = aggregators.get(i).filtered(mutationsFilter);
             int[] ids = new int[filtered.size()];
             j = 0;
@@ -78,15 +122,19 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         }
 
         final IntAdjacencyMatrix intMatrix = new IntAdjacencyMatrix(map.size());
-        for (int[] ids : cloneMutationIds)
+        for (int[] ids : cloneMutationIds) {
+            if (ids == null)
+                continue;
             for (i = 0; i < ids.length; ++i)
                 for (j = i + 1; j < ids.length; ++j)
                     intMatrix.increment(ids[i] & SHORT_ID_MASK, ids[j] & SHORT_ID_MASK);
+        }
 
         final AdjacencyMatrix matrix = intMatrix.filter(minimalPairCount);
         final List<BitArrayInt> cliques = matrix.calculateMaximalCliques();
 
-        final int[][] initialAlleles = new int[cliques.size() + 1][];
+        //identity mutation only on the first iteration
+        final int[][] initialAlleles = new int[cliques.size() + (depth > 0 ? 0 : 1)][];
 
         for (i = 0; i < cliques.size(); i++) {
             initialAlleles[i] = cliques.get(i).getBits();
@@ -94,33 +142,45 @@ public final class VariantsAssembler<S extends Sequence<S>> {
                 initialAlleles[i][j] = shortToFullId.get(initialAlleles[i][j]);
             Arrays.sort(initialAlleles[i]);
         }
-        initialAlleles[initialAlleles.length - 1] = new int[0];
+        if (depth == 0)
+            initialAlleles[initialAlleles.length - 1] = new int[0];
 
         final AlleleAssigner assigner = new AlleleAssigner(initialAlleles);
-        final AlleleAssignmentResult[] assignments = new AlleleAssignmentResult[aggregators.size()];
         final int[] allelesCounts = new int[initialAlleles.length];
 
-        for (i = 0; i < cloneMutationIds.length; i++) {
-            assignments[i] = assigner.assignAllele(cloneMutationIds[i]);
-            if (assignments[i].score < minimalAssignmentScore)
-                assignments[i] = UNASSIGNED;
-            else
-                ++allelesCounts[assignments[i].alleleId];
+        for (i = 0; i < aggregators.size(); i++) {
+            if (assignments[i] == UNASSIGNED) {
+                assignments[i] = assigner.assignAllele(cloneMutationIds[i]).shiftId(offset);
+                assignments[i].depth = depth;
+                if (assignments[i].score < minimalAssignmentScore)
+                    assignments[i] = UNASSIGNED;
+                else
+                    ++allelesCounts[assignments[i].alleleId - offset];
+            }
         }
 
-        for (i = 0; i < cloneMutationIds.length; i++)
-            if (assignments[i] != UNASSIGNED && allelesCounts[assignments[i].alleleId] < minimalClonesInAllele)
+        int stillUnassigned = 0;
+        for (i = 0; i < aggregators.size(); ++i) {
+            if (assignments[i] != UNASSIGNED
+                    && assignments[i].alleleId >= offset
+                    && allelesCounts[assignments[i].alleleId - offset] < minimalClonesInAllele)
                 assignments[i] = UNASSIGNED;
+            if (assignments[i] == UNASSIGNED)
+                ++stillUnassigned;
+        }
 
-        Mutations<S>[] result = new Mutations[initialAlleles.length];
+        List<Mutations<S>> result = new ArrayList<>();
+
+        int additionallyAssigned = 0;
         for (i = 0; i < initialAlleles.length; i++)
             if (allelesCounts[i] < minimalClonesInAllele)
-                result[i] = null;
-            else
-                result[i] = toMutations(iMap, initialAlleles[i]);
+                result.add(null);
+            else {
+                result.add(toMutations(iMap, initialAlleles[i]));
+                additionallyAssigned += allelesCounts[i];
+            }
 
-
-        return new AssignedVariants<>(result, assignments);
+        return new IntermediateResult<>(result, allelesCounts, stillUnassigned, additionallyAssigned);
     }
 
     Mutations<S> toMutations(final TIntObjectHashMap<int[]> iMap, final int[] mutIds) {
@@ -222,21 +282,43 @@ public final class VariantsAssembler<S extends Sequence<S>> {
     }
 
     public final static class AlleleAssignmentResult {
-        final int alleleId;
-        final double score;
+        public int alleleId;
+        public double score;
+        public int depth = 0;
 
         public AlleleAssignmentResult(int alleleId, double score) {
             this.alleleId = alleleId;
             this.score = score;
         }
 
+        private AlleleAssignmentResult shiftId(int offset) {
+            if (offset == 0)
+                return this;
+            alleleId += offset;
+            return this;
+        }
+
         @Override
         public String toString() {
-            return "Allele(" + alleleId + "): " + score;
+            return "Allele(" + alleleId + "): score:" + score + "  depth: " + depth;
         }
     }
 
-    static final AlleleAssignmentResult UNASSIGNED = null;
+    private static final AlleleAssignmentResult UNASSIGNED = null;
+
+    private static final class IntermediateResult<S extends Sequence<S>> {
+        final List<Mutations<S>> mutations;
+        final int[] counts;
+        final int unassigned;
+        final int additionallyAssigned;
+
+        public IntermediateResult(List<Mutations<S>> mutations, int[] counts, int unassigned, int additionallyAssigned) {
+            this.mutations = mutations;
+            this.counts = counts;
+            this.unassigned = unassigned;
+            this.additionallyAssigned = additionallyAssigned;
+        }
+    }
 
     static Comparator<int[]> MI_COMPARATOR = new Comparator<int[]>() {
         @Override
@@ -245,4 +327,20 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         }
     };
 
+    private static final class Wrapper<S extends Sequence<S>> implements Comparable<Wrapper<S>> {
+        final Mutations<S> mutations;
+        final int count;
+        final int id;
+
+        public Wrapper(Mutations<S> mutations, int count, int id) {
+            this.mutations = mutations;
+            this.count = count;
+            this.id = id;
+        }
+
+        @Override
+        public int compareTo(Wrapper<S> o) {
+            return Integer.compare(o.count, count);
+        }
+    }
 }
