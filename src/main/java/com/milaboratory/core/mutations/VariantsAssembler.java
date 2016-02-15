@@ -11,7 +11,9 @@ import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.hash.TIntHashSet;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
 
 import static com.milaboratory.core.mutations.Mutation.MUTATION_POSITION_MASK;
 import static com.milaboratory.core.mutations.Mutation.getPosition;
@@ -26,22 +28,28 @@ public final class VariantsAssembler<S extends Sequence<S>> {
     private final List<AggregatedMutations<S>> aggregators;
     private final int minimalPairCount;
     private final AggregatedMutations.MutationsFilter mutationsFilter;
-    private final float mutationMatchWeight = 10.0f;
-    private final float nullMutationMatchWeight = 1.0f;
+    private final float mutationMatchWeight;
+    private final float nullMutationMatchWeight;
+    private final int minimalClonesInAllele;
+    private final float minimalAssignmentScore;
 
     public VariantsAssembler(Alphabet<S> alphabet, List<AggregatedMutations<S>> aggregators,
-                             int minimalPairCount, AggregatedMutations.MutationsFilter mutationsFilter) {
+                             VariantsAssemblerParameters parameters) {
         this.alphabet = alphabet;
         this.aggregators = aggregators;
-        this.minimalPairCount = minimalPairCount;
-        this.mutationsFilter = mutationsFilter;
+        this.minimalPairCount = parameters.getMinimalPairCount();
+        this.mutationsFilter = parameters.getMutationsFilter();
+        this.mutationMatchWeight = parameters.getMutationMatchWeight();
+        this.nullMutationMatchWeight = parameters.getNullMutationMatchWeight();
+        this.minimalClonesInAllele = parameters.getMinimalClonesInAllele();
+        this.minimalAssignmentScore = parameters.getMinimalAssignmentScore();
     }
 
     public static final int SHORT_ID_MASK = 0xFFFF;
     public static final int POSITION_OFFSET = 16;
     public static final int POSITION_MASK = 0xFFFF0000;
 
-    public List<Mutations<S>> initialVariants() {
+    public AssignedVariants<S> initialVariants() {
         TObjectIntCustomHashMap<int[]> map = new TObjectIntCustomHashMap<>(IntArrayHashingStrategy,
                 Constants.DEFAULT_CAPACITY,
                 Constants.DEFAULT_LOAD_FACTOR, -1);
@@ -88,23 +96,31 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         }
         initialAlleles[initialAlleles.length - 1] = new int[0];
 
-        i = 0;
-        for (int[] initialAllele : initialAlleles)
-            System.out.println("A" + (i++) + ": " + toMutations(iMap, initialAllele));
+        final AlleleAssigner assigner = new AlleleAssigner(initialAlleles);
+        final AlleleAssignmentResult[] assignments = new AlleleAssignmentResult[aggregators.size()];
+        final int[] allelesCounts = new int[initialAlleles.length];
 
-        AlleleAssigner assigner = new AlleleAssigner(initialAlleles);
-
-        AlleleAssignmentResult aResult = new AlleleAssignmentResult();
-        for (int[] clone : cloneMutationIds) {
-            assigner.assignAllele(clone, aResult);
-            System.out.println(aResult);
+        for (i = 0; i < cloneMutationIds.length; i++) {
+            assignments[i] = assigner.assignAllele(cloneMutationIds[i]);
+            if (assignments[i].score < minimalAssignmentScore)
+                assignments[i] = UNASSIGNED;
+            else
+                ++allelesCounts[assignments[i].alleleId];
         }
 
-        List<Mutations<S>> result = new ArrayList<>();
-        for (int[] initialAllele : initialAlleles)
-            result.add(toMutations(iMap, initialAllele));
+        for (i = 0; i < cloneMutationIds.length; i++)
+            if (assignments[i] != UNASSIGNED && allelesCounts[assignments[i].alleleId] < minimalClonesInAllele)
+                assignments[i] = UNASSIGNED;
 
-        return result;
+        Mutations<S>[] result = new Mutations[initialAlleles.length];
+        for (i = 0; i < initialAlleles.length; i++)
+            if (allelesCounts[i] < minimalClonesInAllele)
+                result[i] = null;
+            else
+                result[i] = toMutations(iMap, initialAlleles[i]);
+
+
+        return new AssignedVariants<>(result, assignments);
     }
 
     Mutations<S> toMutations(final TIntObjectHashMap<int[]> iMap, final int[] mutIds) {
@@ -139,7 +155,7 @@ public final class VariantsAssembler<S extends Sequence<S>> {
             Arrays.sort(this.positionsOfInterest);
         }
 
-        public void assignAllele(int[] clone, AlleleAssignmentResult result) {
+        public AlleleAssignmentResult assignAllele(int[] clone) {
             //int[] match = new int[alleles.length];
             int bestId = -1;
             float bestScore = 0.0f;
@@ -190,31 +206,37 @@ public final class VariantsAssembler<S extends Sequence<S>> {
                     }
                 }
 
-                score /= allele.length * mutationMatchWeight + (positionsOfInterest.length - allele.length) * nullMutationMatchWeight;
+                final float length = allele.length * mutationMatchWeight + (positionsOfInterest.length - allele.length) * nullMutationMatchWeight;
+                if (length == 0f)
+                    score = 1.0f;
+                else
+                    score /= length;
 
                 if (bestId == -1 || score > bestScore) {
                     bestId = i;
                     bestScore = score;
                 }
             }
-            result.set(bestId, bestScore);
+            return new AlleleAssignmentResult(bestId, bestScore);
         }
     }
 
-    final class AlleleAssignmentResult {
-        int alleleId;
-        double score;
+    public final static class AlleleAssignmentResult {
+        final int alleleId;
+        final double score;
 
-        public void set(int alleleId, double score) {
+        public AlleleAssignmentResult(int alleleId, double score) {
             this.alleleId = alleleId;
             this.score = score;
         }
 
         @Override
         public String toString() {
-            return "A" + alleleId + ": " + score;
+            return "Allele(" + alleleId + "): " + score;
         }
     }
+
+    static final AlleleAssignmentResult UNASSIGNED = null;
 
     static Comparator<int[]> MI_COMPARATOR = new Comparator<int[]>() {
         @Override
