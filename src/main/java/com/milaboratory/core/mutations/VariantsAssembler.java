@@ -78,7 +78,7 @@ public final class VariantsAssembler<S extends Sequence<S>> {
         final AdjacencyMatrix matrix = intMatrix.filter(minimalPairCount);
         final List<BitArrayInt> cliques = matrix.calculateMaximalCliques();
 
-        final int[][] initialAlleles = new int[cliques.size()][];
+        final int[][] initialAlleles = new int[cliques.size() + 1][];
 
         for (i = 0; i < cliques.size(); i++) {
             initialAlleles[i] = cliques.get(i).getBits();
@@ -86,6 +86,7 @@ public final class VariantsAssembler<S extends Sequence<S>> {
                 initialAlleles[i][j] = shortToFullId.get(initialAlleles[i][j]);
             Arrays.sort(initialAlleles[i]);
         }
+        initialAlleles[initialAlleles.length - 1] = new int[0];
 
         i = 0;
         for (int[] initialAllele : initialAlleles)

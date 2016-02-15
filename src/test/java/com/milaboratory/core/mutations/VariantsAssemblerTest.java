@@ -98,7 +98,7 @@ public class VariantsAssemblerTest {
         System.out.println("\nUnique expected:");
         for (Mutations<NucleotideSequence> expected : expectedSet)
             System.out.println(expected);
-
+        int i =0;
 //
 //        System.out.println("\n\n\n Expected:");
 //        for (Mutations<NucleotideSequence> allele : alleles)
