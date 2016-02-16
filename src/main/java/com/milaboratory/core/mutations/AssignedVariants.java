@@ -8,10 +8,12 @@ import com.milaboratory.core.sequence.Sequence;
  */
 public final class AssignedVariants<S extends Sequence<S>> {
     public final Mutations<S>[] alleles;
+    public final int[] counts;
     public final VariantsAssembler.AlleleAssignmentResult[] assignments;
 
-    public AssignedVariants(Mutations<S>[] alleles, VariantsAssembler.AlleleAssignmentResult[] assignments) {
+    public AssignedVariants(Mutations<S>[] alleles, int[] counts, VariantsAssembler.AlleleAssignmentResult[] assignments) {
         this.alleles = alleles;
+        this.counts = counts;
         this.assignments = assignments;
     }
 }

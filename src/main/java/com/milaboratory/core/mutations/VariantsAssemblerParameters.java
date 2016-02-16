@@ -28,6 +28,7 @@ public final class VariantsAssemblerParameters {
     private float minimalAssignmentScore;
     private float mutationMatchWeight;
     private float nullMutationMatchWeight;
+    private int maxDepth;
 
     @JsonCreator
     public VariantsAssemblerParameters(@JsonProperty("minimalPairCount") int minimalPairCount,
@@ -35,13 +36,15 @@ public final class VariantsAssemblerParameters {
                                        @JsonProperty("mutationsFilter") AggregatedMutations.MutationsFilter mutationsFilter,
                                        @JsonProperty("minimalAssignmentScore") float minimalAssignmentScore,
                                        @JsonProperty("mutationMatchWeight") float mutationMatchWeight,
-                                       @JsonProperty("nullMutationMatchWeight") float nullMutationMatchWeight) {
+                                       @JsonProperty("nullMutationMatchWeight") float nullMutationMatchWeight,
+                                       @JsonProperty("maxDepth") int maxDepth) {
         this.minimalPairCount = minimalPairCount;
         this.minimalClonesInAllele = minimalClonesInAllele;
         this.mutationsFilter = mutationsFilter;
         this.minimalAssignmentScore = minimalAssignmentScore;
         this.mutationMatchWeight = mutationMatchWeight;
         this.nullMutationMatchWeight = nullMutationMatchWeight;
+        this.maxDepth = maxDepth;
     }
 
     public int getMinimalPairCount() {
@@ -95,6 +98,15 @@ public final class VariantsAssemblerParameters {
 
     public VariantsAssemblerParameters setMinimalAssignmentScore(float minimalAssignmentScore) {
         this.minimalAssignmentScore = minimalAssignmentScore;
+        return this;
+    }
+
+    public int getMaxDepth() {
+        return maxDepth;
+    }
+
+    public VariantsAssemblerParameters setMaxDepth(int maxDepth) {
+        this.maxDepth = maxDepth;
         return this;
     }
 
