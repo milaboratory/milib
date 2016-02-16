@@ -30,6 +30,15 @@ public class MutationModels {
         return getEmpiricalNucleotideMutationModel(RandomUtil.getThreadLocalRandom().nextLong());
     }
 
+    public static NucleotideMutationModel getEmpiricalNucleotideMutationModelLowIndels() {
+        return getEmpiricalNucleotideMutationModelLowIndels(RandomUtil.getThreadLocalRandom().nextLong());
+    }
+
+    public static NucleotideMutationModel getEmpiricalNucleotideMutationModelLowIndels(long seed) {
+        return new GenericNucleotideMutationModel(
+                SubstitutionModels.getEmpiricalNucleotideSubstitutionModel(), 0.0000522, 0.0000198, seed);
+    }
+
     public static NucleotideMutationModel getEmpiricalNucleotideMutationModelWithNoise(
             RandomGenerator rd, double minFactor, double maxFactor) {
         double l = maxFactor - minFactor;
