@@ -47,7 +47,9 @@ public class BenchmarkResults {
         return processedGoodQueries;
     }
 
-    public int getProcessedQueries() { return processedQueries; }
+    public int getProcessedQueries() {
+        return processedQueries;
+    }
 
     public int getMismatched() {
         return mismatched;
@@ -78,6 +80,8 @@ public class BenchmarkResults {
     }
 
     public long getAverageTiming() {
-        return executionTime / processedQueries;
+        return processedQueries == 0 ?
+                Long.MAX_VALUE :
+                (executionTime / processedQueries);
     }
 }
