@@ -169,16 +169,6 @@ final class IO {
         public NucleotideSequence deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
             return new NucleotideSequence(jp.readValueAs(String.class));
         }
-
-        @Override
-        public NucleotideSequence getEmptyValue() {
-            return null;
-        }
-
-        @Override
-        public NucleotideSequence getNullValue() {
-            return null;
-        }
     }
 
     public static final class AASeqSerializer extends JsonSerializer<AminoAcidSequence> {
@@ -194,16 +184,6 @@ final class IO {
         @Override
         public AminoAcidSequence deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
             return new AminoAcidSequence(jp.readValueAs(String.class));
-        }
-
-        @Override
-        public AminoAcidSequence getEmptyValue() {
-            return null;
-        }
-
-        @Override
-        public AminoAcidSequence getNullValue() {
-            return null;
         }
     }
 
@@ -221,16 +201,6 @@ final class IO {
         @Override
         public SequenceQuality deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException, JsonProcessingException {
             return new SequenceQuality(jp.readValueAs(String.class));
-        }
-
-        @Override
-        public SequenceQuality getEmptyValue() {
-            return null;
-        }
-
-        @Override
-        public SequenceQuality getNullValue() {
-            return null;
         }
     }
 }

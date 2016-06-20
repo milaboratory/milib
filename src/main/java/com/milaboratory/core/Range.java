@@ -29,19 +29,18 @@ import java.util.Comparator;
  *
  * <p><b>Main contract:</b> upper limit (with biggest value) is always exclusive, and lower is always inclusive.</p>
  */
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = RangeSerializer.class)
 public final class Range implements java.io.Serializable {
     static final long serialVersionUID = 1L;
 
-    private final int lower, upper;
+    private final int lower;
+    private final int upper;
     private final boolean reversed;
-    
-    @JsonCreator
-    public Range(@JsonProperty("lower") int lower,
-                 @JsonProperty("upper") int upper,
-                 @JsonProperty("reversed") boolean reversed) {
+
+    public Range(int lower, int upper, boolean reversed) {
         if (lower > upper)
             throw new IllegalArgumentException();
 
@@ -50,7 +49,9 @@ public final class Range implements java.io.Serializable {
         this.reversed = reversed;
     }
 
-    public Range(int from, int to) {
+    @JsonCreator
+    public Range(@JsonProperty("from") int from,
+                 @JsonProperty("to") int to) {
         if (this.reversed = (from > to)) {
             this.upper = from;
             this.lower = to;
@@ -66,6 +67,15 @@ public final class Range implements java.io.Serializable {
 
     public Range expand(int leftOffset, int rightOffset) {
         return new Range(lower - leftOffset, upper + rightOffset, reversed);
+    }
+
+    /**
+     * Returns {@literal true} if {@code length() == 0}.
+     *
+     * @return {@literal true} if {@code length() == 0}.
+     */
+    public boolean isEmpty() {
+        return upper == lower;
     }
 
     /**
@@ -92,6 +102,7 @@ public final class Range implements java.io.Serializable {
      *
      * @return from value (exclusive or inclusive)
      */
+    @JsonProperty("from")
     public int getFrom() {
         return reversed ? upper : lower;
     }
@@ -102,6 +113,7 @@ public final class Range implements java.io.Serializable {
      *
      * @return to value (exclusive or inclusive)
      */
+    @JsonProperty("to")
     public int getTo() {
         return reversed ? lower : upper;
     }
@@ -164,7 +176,9 @@ public final class Range implements java.io.Serializable {
      * @return {@code true} if range intersects with {@code other} range
      */
     public boolean intersectsWith(Range other) {
-        return contains(other.lower) || contains(other.upper - 1) || (other.upper > upper && other.lower < lower);
+        return (this.contains(other.lower) && !other.isEmpty())
+                || (other.contains(this.lower) && !this.isEmpty())
+                || (other.upper > upper && other.lower < lower);
     }
 
     /**

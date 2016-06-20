@@ -34,13 +34,14 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
     private static final long serialVersionUID = 2L;
 
     /**
-     * Empty instance
-     */
-    public static final NucleotideSequence EMPTY = new NucleotideSequence("");
-    /**
      * Nucleotide alphabet
      */
     public static final NucleotideAlphabet ALPHABET = NucleotideAlphabet.INSTANCE;
+
+    /**
+     * Empty instance
+     */
+    public static final NucleotideSequence EMPTY = new NucleotideSequence("");
 
     /**
      * Creates nucleotide sequence from its string representation (e.g. "ATCGG" or "atcgg").

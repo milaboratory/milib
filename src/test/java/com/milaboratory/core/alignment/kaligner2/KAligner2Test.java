@@ -14,6 +14,7 @@ import com.milaboratory.util.GlobalObjectMappers;
 import com.milaboratory.util.RandomUtil;
 import org.apache.commons.math3.random.Well19937c;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import static com.milaboratory.core.alignment.AffineGapAlignmentScoring.IGBLAST_NUCLEOTIDE_SCORING;
@@ -182,6 +183,7 @@ public class KAligner2Test {
     }
 
     @Test
+    @Ignore
     public void testCase0() throws Exception {
         // Tests no Assertion errors inside KAligner2/KMapper2 code
 

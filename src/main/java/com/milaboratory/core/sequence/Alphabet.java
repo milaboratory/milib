@@ -18,6 +18,7 @@ package com.milaboratory.core.sequence;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.primitivio.annotations.Serializable;
+import com.milaboratory.util.HashFunctions;
 import gnu.trove.impl.Constants;
 import gnu.trove.map.TLongObjectMap;
 import gnu.trove.map.hash.TCharByteHashMap;
@@ -64,6 +65,8 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      */
     private final String alphabetName;
 
+    private final int hashCode;
+
     /* Content */
 
     /**
@@ -94,6 +97,11 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * Mapping between wildcard basicMask representation (bit representation) and wildcard object
      */
     private final TLongObjectMap<Wildcard> basicMaskToWildcard;
+    /**
+     * Singleton empty sequence
+     */
+    private volatile S empty;
+
     ///**
     // * 0b1111...11 = 2 ^ basicLettersCount - 1
     // */
@@ -103,6 +111,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
              Wildcard... wildcards) {
         this.alphabetName = alphabetName;
         this.alphabetId = alphabetId;
+        this.hashCode = HashFunctions.JenkinWang32shift(alphabetId);
         this.countOfBasicLetters = countOfBasicLetters;
         this.wildcardForAnyLetter = wildcardForAnyLetter;
 
@@ -264,6 +273,20 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
     public abstract SequenceBuilder<S> getBuilder();
 
     /**
+     * Returns empty sequence singleton
+     *
+     * @return empty sequence singleton
+     */
+    public S getEmptySequence() {
+        if (empty == null)
+            synchronized (this) {
+                if (empty == null)
+                    empty = getBuilder().createAndDestroy();
+            }
+        return empty;
+    }
+
+    /**
      * Returns the human readable name of this alphabet.
      *
      * <p>This name can be then used to obtain the instance of this alphabet using {@link
@@ -318,7 +341,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      */
     @Override
     public final int hashCode() {
-        return super.hashCode();
+        return hashCode;
     }
 
     /**

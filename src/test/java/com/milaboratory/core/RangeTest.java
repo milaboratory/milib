@@ -51,7 +51,7 @@ public class RangeTest {
     }
 
     @Test
-    public void testIntersection() throws Exception {
+    public void testIntersection1() throws Exception {
         assertEquals(r(10, 20).intersection(r(14, 40)), r(14, 20));
         assertEquals(r(10, 20).intersection(r(21, 40)), null);
     }
@@ -63,7 +63,7 @@ public class RangeTest {
     }
 
     @Test
-    public void testIntersects() throws Exception {
+    public void testIntersection2() throws Exception {
         assertTrue(r(10, 20).intersectsWith(r(20, 10)));
         assertTrue(r(10, 20).intersectsWith(r(19, 11)));
         assertTrue(r(19, 11).intersectsWith(r(20, 10)));
@@ -114,5 +114,54 @@ public class RangeTest {
     public void test5() throws Exception {
         Range se = new Range(3, 5);
         TestUtil.assertJson(se);
+    }
+
+    @Test
+    public void testIntersection3() throws Exception {
+        Range se = new Range(3, 5);
+        Range s3 = new Range(3, 3);
+        Range s5 = new Range(5, 5);
+
+        assertNotIntersects(se, s3);
+        assertNotIntersects(se, s5);
+
+        assertIntersectsOrTouches(se, s3);
+        assertIntersectsOrTouches(se, s5);
+    }
+
+    @Test
+    public void testIntersection4() throws Exception {
+        Range se = new Range(30, 50);
+        for (int i = 29; i <= 31; i++)
+            for (int j = 49; j <= 51; j++){
+                assertIntersects(se, new Range(i, j));
+                assertIntersectsOrTouches(se, new Range(i, j));
+            }
+
+        assertNotIntersects(se, new Range(50, 60));
+        assertNotIntersects(se, new Range(20, 30));
+
+        assertIntersectsOrTouches(se, new Range(50, 60));
+        assertIntersectsOrTouches(se, new Range(20, 30));
+    }
+
+    public static void assertIntersects(Range r1, Range r2) {
+        assertEquals(r1.intersectsWith(r2), r2.intersectsWith(r1));
+        assertTrue(r1.intersectsWith(r2));
+    }
+
+    public static void assertNotIntersects(Range r1, Range r2) {
+        assertEquals(r1.intersectsWith(r2), r2.intersectsWith(r1));
+        assertFalse(r1.intersectsWith(r2));
+    }
+
+    public static void assertIntersectsOrTouches(Range r1, Range r2) {
+        assertEquals(r1.intersectsWithOrTouches(r2), r2.intersectsWithOrTouches(r1));
+        assertTrue(r1.intersectsWithOrTouches(r2));
+    }
+
+    public static void assertNotIntersectsOrTouches(Range r1, Range r2) {
+        assertEquals(r1.intersectsWithOrTouches(r2), r2.intersectsWithOrTouches(r1));
+        assertFalse(r1.intersectsWithOrTouches(r2));
     }
 }

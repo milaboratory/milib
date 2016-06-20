@@ -261,16 +261,6 @@ public final class TreeSearchParameters
                 return new TreeSearchParameters(maxErrors, penalty, maxPenalty);
             }
         }
-
-        @Override
-        public TreeSearchParameters getEmptyValue() {
-            return null;
-        }
-
-        @Override
-        public TreeSearchParameters getNullValue() {
-            return null;
-        }
     }
 
     public static final class Serializer extends JsonSerializer<TreeSearchParameters> {

@@ -17,12 +17,15 @@ package com.milaboratory.core.mutations;
 
 import com.milaboratory.core.alignment.AlignmentScoring;
 import com.milaboratory.core.sequence.Alphabet;
+import com.milaboratory.util.IntArrayList;
 
 public final class Mutation {
     public static final int RAW_MUTATION_TYPE_SUBSTITUTION = 0x20,
             RAW_MUTATION_TYPE_DELETION = 0x40,
             RAW_MUTATION_TYPE_INSERTION = 0x60,
+            RAW_MUTATION_TYPE_RESERVED = 0x00,
             MUTATION_TYPE_MASK = 0x60,
+            MUTATION_POSITION_MASK = 0xFFFFF000,
             LETTER_MASK = 0x1F,
             FROM_OFFSET = 7,
             POSITION_OFFSET = 12,
@@ -152,7 +155,8 @@ public final class Mutation {
      * <li><b>Deletion</b>: starts with {@code D} then nucleotide that was deleted encoded in one letter (<b>from</b>)
      * then <b>position</b>. (Example: {@code DG43} = G deleted at position 43).</li>
      *
-     * <li><b>Insertion</b>: starts with {@code I} then <b>position</b> then inserted letter <b>to</b>. (Example: {@code
+     * <li><b>Insertion</b>: starts with {@code I} then <b>position</b> then inserted letter <b>to</b>. (Example:
+     * {@code
      * I54C} = C inserted before letter at position 54).</li>
      *
      * </ul>
@@ -183,4 +187,15 @@ public final class Mutation {
         }
         throw new IllegalArgumentException("Illegal mutation code.");
     }
+
+    /**
+     * Compares int mutations by their positions
+     */
+    public static IntArrayList.IntComparator POSITION_COMPARATOR = new IntArrayList.IntComparator() {
+        @Override
+        public int compare(int a, int b) {
+            return Integer.compare((MUTATION_TYPE_MASK ^ a) & (Mutation.MUTATION_TYPE_MASK | Mutation.MUTATION_POSITION_MASK),
+                    (MUTATION_TYPE_MASK ^ b) & (Mutation.MUTATION_TYPE_MASK | Mutation.MUTATION_POSITION_MASK));
+        }
+    };
 }

@@ -17,8 +17,7 @@ package com.milaboratory.util;
 
 import com.milaboratory.core.Range;
 
-import java.util.Comparator;
-import java.util.TreeMap;
+import java.util.*;
 
 import static java.util.Map.Entry;
 
@@ -28,7 +27,7 @@ public final class RangeMap<T> implements java.io.Serializable {
     public RangeMap() {
     }
 
-    public Entry<Range, T> getEntryThatContains(Range range) {
+    public Entry<Range, T> findContaining(Range range) {
         Entry<Range, T> ret = map.floorEntry(range);
         if (ret != null && ret.getKey().contains(range))
             return ret;
@@ -36,7 +35,11 @@ public final class RangeMap<T> implements java.io.Serializable {
     }
 
     public void put(Range range, T value) {
-        if (findSingleIntersection(range) != null)
+        if (range.isReverse())
+            throw new IllegalArgumentException("Don't support inverted ranges.");
+        if (range.isEmpty())
+            throw new IllegalArgumentException("Don't support empty ranges.");
+        if (containIntersectingRanges(range))
             throw new IntersectingRangesException();
         map.put(range, value);
     }
@@ -45,9 +48,49 @@ public final class RangeMap<T> implements java.io.Serializable {
         return map.remove(range);
     }
 
-    public Entry<Range, T> findSingleIntersection(Range range) {
+    public List<Entry<Range, T>> findAllIntersecting(Range range) {
+        if (range.isEmpty())
+            return Collections.EMPTY_LIST;
+
+        List<Entry<Range, T>> result = new ArrayList<>();
+
         Entry<Range, T> tmp = map.floorEntry(range);
-        Entry<Range, T> ret = null;
+        if (tmp == null)
+            tmp = map.firstEntry();
+        while (tmp != null && tmp.getKey().getFrom() < range.getTo()) {
+            if (tmp.getKey().intersectsWith(range))
+                result.add(tmp);
+            tmp = map.higherEntry(tmp.getKey());
+        }
+
+        return result;
+    }
+
+    public List<Entry<Range, T>> findAllIntersectingOrTouching(Range range) {
+        List<Entry<Range, T>> result = new ArrayList<>();
+
+        Entry<Range, T> tmp = map.floorEntry(range);
+        if (tmp == null)
+            tmp = map.firstEntry();
+        while (tmp != null && tmp.getKey().getFrom() <= range.getTo()) {
+            if (tmp.getKey().intersectsWithOrTouches(range))
+                result.add(tmp);
+            tmp = map.higherEntry(tmp.getKey());
+        }
+
+        return result;
+    }
+
+    public boolean containIntersectingRanges(Range range) {
+        Entry<Range, T> tmp = map.floorEntry(range);
+        if (tmp != null && tmp.getKey().intersectsWith(range))
+            return true;
+        tmp = map.higherEntry(range);
+        return tmp != null && tmp.getKey().intersectsWith(range);
+    }
+
+    public Entry<Range, T> findSingleIntersection(Range range) {
+        Entry<Range, T> ret = null, tmp = map.floorEntry(range);
         if (tmp != null && tmp.getKey().intersectsWith(range))
             ret = tmp;
         tmp = map.higherEntry(range);
@@ -59,7 +102,18 @@ public final class RangeMap<T> implements java.io.Serializable {
         return ret;
     }
 
-    public static final class IntersectingRangesException extends RuntimeException {
+    public boolean isOverFragmented() {
+        Range prev = null;
+        for (Range range : map.navigableKeySet()) {
+            if (prev == null)
+                prev = range;
+            else if (prev.getTo() == range.getFrom())
+                return true;
+        }
+        return false;
+    }
+
+    public static final class IntersectingRangesException extends IllegalArgumentException {
         public IntersectingRangesException() {
         }
 
@@ -75,7 +129,7 @@ public final class RangeMap<T> implements java.io.Serializable {
             if ((cmp = Integer.compare(o1.getLower(), o2.getLower())) != 0)
                 return cmp;
 
-            return Integer.compare(o2.getUpper(), o1.getUpper());
+            return 0; //Integer.compare(o2.getUpper(), o1.getUpper());
         }
     };
 }

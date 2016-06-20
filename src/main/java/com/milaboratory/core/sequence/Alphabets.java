@@ -17,7 +17,6 @@ package com.milaboratory.core.sequence;
 
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.JsonSerializer;
@@ -98,12 +97,12 @@ public final class Alphabets {
         }
 
         @Override
-        public Alphabet getEmptyValue() {
+        public Alphabet getEmptyValue(DeserializationContext context) {
             return NucleotideAlphabet.INSTANCE;
         }
 
         @Override
-        public Alphabet getNullValue() {
+        public Alphabet getNullValue(DeserializationContext context) {
             return NucleotideAlphabet.INSTANCE;
         }
     }

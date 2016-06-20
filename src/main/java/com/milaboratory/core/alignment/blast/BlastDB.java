@@ -8,6 +8,7 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.Sequence;
 import org.apache.commons.io.IOUtils;
 
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -115,8 +116,8 @@ public class BlastDB<S extends Sequence<S>> {
         try {
             ProcessBuilder processBuilder = Blast.getProcessBuilder(Blast.CMD_BLASTDBCMD, "-db", name, "-info");
             Process proc = processBuilder.start();
-            List<String> lines = IOUtils.readLines(proc.getInputStream());
-            String error = IOUtils.toString(proc.getErrorStream());
+            List<String> lines = IOUtils.readLines(proc.getInputStream(), Charset.forName("US-ASCII"));
+            String error = IOUtils.toString(proc.getErrorStream(), Charset.forName("US-ASCII"));
             if (proc.waitFor() != 0) {
                 throw new RuntimeException("Error: " + error);
             }

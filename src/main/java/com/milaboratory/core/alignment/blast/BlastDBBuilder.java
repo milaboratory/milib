@@ -7,6 +7,7 @@ import com.milaboratory.util.RandomUtil;
 import com.milaboratory.util.TempFileManager;
 import org.apache.commons.io.IOUtils;
 
+import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -61,7 +62,7 @@ public final class BlastDBBuilder {
             for (int i = 0; i < sequences.size(); i++)
                 writer.write(getIdFasta(i), sequences.get(i));
             writer.close();
-            String err = IOUtils.toString(proc.getErrorStream());
+            String err = IOUtils.toString(proc.getErrorStream(), Charset.forName("US-ASCII"));
             if (proc.waitFor() != 0)
                 throw new RuntimeException("Something goes wrong: " + err);
             return BlastDB.get(fullName, tmp);

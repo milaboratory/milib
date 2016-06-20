@@ -95,13 +95,25 @@ public final class IntArrayList implements java.io.Serializable {
         data[position] = num;
     }
 
-    public void copyFrom(IntArrayList other){
+    public void copyFrom(IntArrayList other) {
         clear();
         addAll(other);
     }
 
     public void sort() {
         Arrays.sort(data, 0, size);
+    }
+
+    public void stableSort(IntComparator comparator) {
+        int i, j;
+        int key;
+        for (i = 1; i < size; i++) {
+            key = data[i];
+            for (j = i; j > 0 && comparator.compare(data[j - 1], key) > 0; j--) {
+                data[j] = data[j - 1];
+            }
+            data[j] = key;
+        }
     }
 
     /**
@@ -255,5 +267,9 @@ public final class IntArrayList implements java.io.Serializable {
 
     public static int[] getArrayReference(IntArrayList list) {
         return list.data;
+    }
+
+    public interface IntComparator {
+        int compare(int i1, int i2);
     }
 }
