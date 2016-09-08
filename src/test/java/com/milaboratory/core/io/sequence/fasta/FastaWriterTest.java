@@ -59,6 +59,6 @@ public class FastaWriterTest {
         byte[] seq = new byte[50 + random.nextInt(150)];
         for (int i = 0; i < seq.length; ++i)
             seq[i] = (byte) random.nextInt(alphabet.size());
-        return new FastaRecord<>(id, "id" + id, alphabet.getBuilder().append(seq).createAndDestroy());
+        return new FastaRecord<>(id, "id" + id, alphabet.createBuilder().append(seq).createAndDestroy());
     }
 }

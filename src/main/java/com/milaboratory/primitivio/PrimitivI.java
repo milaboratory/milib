@@ -109,6 +109,25 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         }
     }
 
+    public long readVarLongZigZag() {
+        return Util.zigZagDecodeLong(readVarLong());
+    }
+
+    public long readVarLong() {
+        long value = 0, tmp;
+        int shift = 0;
+        do {
+            tmp = readByte();
+            value |= (tmp & 0x7F) << (shift);
+            shift += 7;
+        } while ((tmp & 0x80) != 0);
+        return value;
+    }
+
+    public int readVarIntZigZag() {
+        return Util.zigZagDecodeInt(readVarInt());
+    }
+
     public int readVarInt() {
         int value = 0, tmp;
         int shift = 0;

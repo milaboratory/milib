@@ -61,7 +61,7 @@ public final class ChallengeProvider implements OutputPort<Challenge> {
             model.reseed(generator.getRandomGenerator().nextLong());
             int targetId = generator.nextInt(0, db.length - 1);
             NucleotideSequence target = db[targetId];
-            SequenceBuilder<NucleotideSequence> queryBuilder = NucleotideSequence.ALPHABET.getBuilder();
+            SequenceBuilder<NucleotideSequence> queryBuilder = NucleotideSequence.ALPHABET.createBuilder();
             if (generator.nextUniform(0, 1) < parameters.boundaryInsertProbability)
                 queryBuilder.append(randomSequence(NucleotideSequence.ALPHABET, generator,
                         parameters.minIndelLength, parameters.maxIndelLength, true));
@@ -182,7 +182,7 @@ public final class ChallengeProvider implements OutputPort<Challenge> {
                                                            int minLength, int maxLength, boolean basicLettersOnly) {
         int length = minLength == maxLength ?
                 minLength : minLength + r.nextInt(maxLength - minLength + 1);
-        SequenceBuilder<S> builder = alphabet.getBuilder();
+        SequenceBuilder<S> builder = alphabet.createBuilder();
         for (int i = 0; i < length; ++i)
             builder.append((byte) r.nextInt(basicLettersOnly ? alphabet.basicSize() : alphabet.size()));
         return builder.createAndDestroy();

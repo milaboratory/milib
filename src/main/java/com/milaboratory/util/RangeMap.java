@@ -44,6 +44,10 @@ public final class RangeMap<T> implements java.io.Serializable {
         map.put(range, value);
     }
 
+    public Set<Entry<Range, T>> entrySet() {
+        return map.entrySet();
+    }
+
     public T remove(Range range) {
         return map.remove(range);
     }

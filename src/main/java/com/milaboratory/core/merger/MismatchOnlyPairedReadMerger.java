@@ -32,7 +32,7 @@ import static java.lang.Math.*;
 
 public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead, PairedReadMergingResult>,
         java.io.Serializable {
-    public static final int MIN_SCORE_VALUE = 3; // 50-50
+    public static final int MIN_SCORE_VALUE = 0;
     final int minOverlap;
     final double maxMismatchesPart;
     final int maxScoreValue;
@@ -184,7 +184,7 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
                         max(seq1.size(), seq2.size() + offset) // offset is negative here
                 );
 
-        SequenceBuilder<NucleotideSequence> seqBuilder = NucleotideSequence.ALPHABET.getBuilder()
+        SequenceBuilder<NucleotideSequence> seqBuilder = NucleotideSequence.ALPHABET.createBuilder()
                 .ensureCapacity(length);
         SequenceQualityBuilder qualBuilder = new SequenceQualityBuilder().ensureCapacity(length);
 
@@ -206,13 +206,21 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
             if (position >= 0 && position < seq2.size()) {
                 l = seq2.getSequence().codeAt(position);
                 q = seq2.getQuality().value(position);
-                if (letter == -1) {
+                if (letter == -1) { // Letter not initialized
                     letter = l;
                     quality = q;
-                } else if (letter == l)
-                    quality = (byte) min(maxScoreValue, quality + q);
-                else
+                } else if (letter == l) // Same letter in both reads
                     switch (qualityMergingAlgorithm) {
+                        case SumSubtraction:
+                        case SumMax:
+                            quality = (byte) min(maxScoreValue, quality + q);
+                        case MaxSubtraction:
+                        case MaxMax:
+                            quality = (byte) max(quality, q);
+                    }
+                else // Different letter
+                    switch (qualityMergingAlgorithm) {
+                        case MaxSubtraction:
                         case SumSubtraction:
                             if (q > quality) {
                                 letter = l;
@@ -220,6 +228,7 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
                             } else
                                 quality = (byte) max(MIN_SCORE_VALUE, quality - q);
                             break;
+                        case MaxMax:
                         case SumMax:
                             if (q > quality) {
                                 letter = l;

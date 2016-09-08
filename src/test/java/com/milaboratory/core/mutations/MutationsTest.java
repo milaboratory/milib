@@ -15,9 +15,14 @@
  */
 package com.milaboratory.core.mutations;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
+import com.milaboratory.core.alignment.BLASTMatrix;
 import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
 import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.mutations.generator.MutationModels;
@@ -332,7 +337,130 @@ public class MutationsTest {
         Mutations<NucleotideSequence> m1 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2).getAbsoluteMutations(),
                 m2 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq2, seq3).getAbsoluteMutations();
 
+        TestUtil.assertJson(m1, TypeFactory.defaultInstance().constructParametricType(Mutations.class, NucleotideSequence.class));
+        TestUtil.assertJson(m2, TypeFactory.defaultInstance().constructParametricType(Mutations.class, NucleotideSequence.class));
         TestUtil.assertJson(m1);
         TestUtil.assertJson(m2);
+    }
+
+    @Test
+    public void testSerializeField1() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
+                seq2 = new NucleotideSequence("CATTACCA"),
+                seq3 = new NucleotideSequence("CATAGCCA");
+
+        Mutations<NucleotideSequence> m1 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2).getAbsoluteMutations(),
+                m2 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq2, seq3).getAbsoluteMutations();
+
+        TestNClass t1 = new TestNClass(m1), t2 = new TestNClass(m2), t3 = new TestNClass(null);
+        TestXClass x1 = new TestXClass(m1), x2 = new TestXClass(m2), x3 = new TestXClass(null);
+
+        TestUtil.assertJson(t1);
+        TestUtil.assertJson(t2);
+        TestUtil.assertJson(t3);
+        TestUtil.assertJson(x1);
+        TestUtil.assertJson(x2);
+        TestUtil.assertJson(x3);
+    }
+
+    @Test
+    public void testSerializeField2() throws Exception {
+        AminoAcidSequence seq1 = new AminoAcidSequence("CASSLAPGATNEAKFL"),
+                seq2 = new AminoAcidSequence("CASSGAPTNEAKFL"),
+                seq3 = new AminoAcidSequence("CASLAPGATNAKRL");
+
+        Mutations<AminoAcidSequence> m1 = Aligner.alignGlobal(LinearGapAlignmentScoring.getAminoAcidBLASTScoring(BLASTMatrix.BLOSUM62), seq1, seq2).getAbsoluteMutations(),
+                m2 = Aligner.alignGlobal(LinearGapAlignmentScoring.getAminoAcidBLASTScoring(BLASTMatrix.BLOSUM62), seq2, seq3).getAbsoluteMutations();
+
+        TestAAClass t1 = new TestAAClass(m1), t2 = new TestAAClass(m2), t3 = new TestAAClass(null);
+        TestXClass x1 = new TestXClass(m1), x2 = new TestXClass(m2), x3 = new TestXClass(null);
+
+        TestUtil.assertJson(t1);
+        TestUtil.assertJson(t2);
+        TestUtil.assertJson(t3);
+        TestUtil.assertJson(x1);
+        TestUtil.assertJson(x2);
+        TestUtil.assertJson(x3);
+    }
+
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+            getterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static final class TestNClass {
+        final Mutations<NucleotideSequence> muts;
+
+        @JsonCreator
+        public TestNClass(@JsonProperty("muts") Mutations<NucleotideSequence> muts) {
+            this.muts = muts;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TestNClass)) return false;
+
+            TestNClass that = (TestNClass) o;
+
+            return muts != null ? muts.equals(that.muts) : that.muts == null;
+
+        }
+
+        @Override
+        public int hashCode() {
+            return muts != null ? muts.hashCode() : 0;
+        }
+    }
+
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+            getterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static final class TestAAClass {
+        final Mutations<AminoAcidSequence> muts;
+
+        @JsonCreator
+        public TestAAClass(@JsonProperty("muts") Mutations<AminoAcidSequence> muts) {
+            this.muts = muts;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TestAAClass)) return false;
+
+            TestAAClass that = (TestAAClass) o;
+
+            return muts != null ? muts.equals(that.muts) : that.muts == null;
+
+        }
+
+        @Override
+        public int hashCode() {
+            return muts != null ? muts.hashCode() : 0;
+        }
+    }
+
+    @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+            getterVisibility = JsonAutoDetect.Visibility.NONE)
+    public static final class TestXClass {
+        final Mutations<?> muts;
+
+        @JsonCreator
+        public TestXClass(@JsonProperty("muts") Mutations<?> muts) {
+            this.muts = muts;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TestXClass)) return false;
+
+            TestXClass that = (TestXClass) o;
+
+            return muts != null ? muts.equals(that.muts) : that.muts == null;
+
+        }
+
+        @Override
+        public int hashCode() {
+            return muts != null ? muts.hashCode() : 0;
+        }
     }
 }

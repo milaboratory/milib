@@ -302,4 +302,12 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         result = 31 * result + (score != +0.0f ? Float.floatToIntBits(score) : 0);
         return result;
     }
+
+    public static int aabs(int position) {
+        if (position == -1)
+            return -1;
+        if (position < 0)
+            return -2 - position;
+        return position;
+    }
 }

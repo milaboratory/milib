@@ -44,7 +44,7 @@ public final class MutationsUtil {
         int size = seq.size();
         int newSize = seq.size() + mutations.getLengthDelta();
         SequenceQualityBuilder qualityBuilder = new SequenceQualityBuilder().ensureCapacity(newSize);
-        SequenceBuilder<NucleotideSequence> sequenceBuilder = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(newSize);
+        SequenceBuilder<NucleotideSequence> sequenceBuilder = NucleotideSequence.ALPHABET.createBuilder().ensureCapacity(newSize);
         int pointer = 0;
         int mutPointer = 0;
         int mut;

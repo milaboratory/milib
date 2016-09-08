@@ -219,10 +219,15 @@ public class KAlignmentResult<P> implements AlignmentResult<KAlignmentHit<P>>,
         if (hits.isEmpty())
             return;
         minScore = Math.max(minScore, hits.get(0).getAlignment().getScore() * tolerance);
+
+        if (hits.size() > maxHits)
+            minScore = Math.max(minScore, hits.get(maxHits - 1).getAlignment().getScore());
+
         for (int i = hits.size() - 1; i >= 0; --i)
-            if (hits.get(i).getAlignment().getScore() < minScore
-                    || i >= maxHits)
+            if (hits.get(i).getAlignment().getScore() < minScore)
                 hits.remove(i);
+            else
+                break;
     }
 
     @Override

@@ -292,7 +292,7 @@ public class KMapper2Test {
                                             NucleotideSequence[] db) {
         int targetId = generator.nextInt(0, db.length - 1);
         NucleotideSequence target = db[targetId];
-        SequenceBuilder<NucleotideSequence> queryBuilder = NucleotideSequence.ALPHABET.getBuilder();
+        SequenceBuilder<NucleotideSequence> queryBuilder = NucleotideSequence.ALPHABET.createBuilder();
         if (generator.nextUniform(0, 1) < cp.boundaryInsertProbability)
             queryBuilder.append(TestUtil.randomSequence(NucleotideSequence.ALPHABET, generator, cp.minIndelLength, cp.maxIndelLength, true));
 

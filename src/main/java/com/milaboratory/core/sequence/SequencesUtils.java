@@ -124,7 +124,7 @@ public final class SequencesUtils {
      */
     public static <S extends Sequence<S>> S wildcardsToRandomBasic(S sequence, long seed) {
         Alphabet<S> alphabet = sequence.getAlphabet();
-        SequenceBuilder<S> sequenceBuilder = alphabet.getBuilder().ensureCapacity(sequence.size());
+        SequenceBuilder<S> sequenceBuilder = alphabet.createBuilder().ensureCapacity(sequence.size());
         for (int i = 0; i < sequence.size(); ++i) {
             byte code = sequence.codeAt(i);
             if (alphabet.isWildcard(code)) {
@@ -156,7 +156,7 @@ public final class SequencesUtils {
      * @return NucleotideSequence constructed from Bit2Array
      */
     public static NucleotideSequence convertBit2ArrayToNSequence(Bit2Array bar) {
-        SequenceBuilder<NucleotideSequence> seq = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(bar.size());
+        SequenceBuilder<NucleotideSequence> seq = NucleotideSequence.ALPHABET.createBuilder().ensureCapacity(bar.size());
         for (int i = 0; i < bar.size(); i++)
             seq.append((byte) bar.get(i));
         return seq.createAndDestroy();

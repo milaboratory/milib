@@ -15,9 +15,8 @@
  */
 package com.milaboratory.core.mutations;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.*;
 import com.milaboratory.primitivio.annotations.Serializable;
@@ -31,8 +30,8 @@ import static com.milaboratory.core.mutations.Mutation.*;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.NONE, isGetterVisibility = JsonAutoDetect.Visibility.NONE,
-        getterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonSerialize(using = IO.JsonMutationsSerializer.class)
+@JsonDeserialize(using = IO.JsonMutationsDeserializer.class)
 @Serializable(by = IO.MutationsSerializer.class)
 public final class Mutations<S extends Sequence<S>>
         implements java.io.Serializable {
@@ -43,9 +42,7 @@ public final class Mutations<S extends Sequence<S>>
         this(alphabet, mutations.toArray(), true);
     }
 
-    @JsonCreator
-    public Mutations(@JsonProperty("alphabet") Alphabet<S> alphabet,
-                     @JsonProperty("mutations") String encodedMutations) {
+    public Mutations(Alphabet<S> alphabet, String encodedMutations) {
         this(alphabet, MutationsUtil.decode(encodedMutations, alphabet), true);
     }
 
@@ -67,7 +64,6 @@ public final class Mutations<S extends Sequence<S>>
         return mutations.length;
     }
 
-    @JsonProperty("alphabet")
     public Alphabet<S> getAlphabet() {
         return alphabet;
     }
@@ -127,7 +123,7 @@ public final class Mutations<S extends Sequence<S>>
                     ++length;
                     break;
             }
-        SequenceBuilder<S> builder = alphabet.getBuilder().ensureCapacity(length);
+        SequenceBuilder<S> builder = alphabet.createBuilder().ensureCapacity(length);
         int pointer = 0;
         int mutPointer = 0;
         int mut;
@@ -599,7 +595,6 @@ public final class Mutations<S extends Sequence<S>>
         return builder.toString();
     }
 
-    @JsonProperty("mutations")
     public String encode() {
         return MutationsUtil.encode(mutations, alphabet);
     }

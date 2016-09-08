@@ -187,6 +187,7 @@ public class FastaReader<S extends Sequence<S>> implements CanReportProgress,
             line = reader.readLine();
             if (line == null)
                 break;
+            line = line.trim();
             if (!line.isEmpty() && line.charAt(0) == '>')
                 break;
             sequence.append(line);

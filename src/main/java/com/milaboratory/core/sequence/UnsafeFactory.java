@@ -39,7 +39,7 @@ public final class UnsafeFactory {
         long seed = id;
 
         // Creating builders for sequence and quality
-        SequenceBuilder<NucleotideSequence> sequence = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(length);
+        SequenceBuilder<NucleotideSequence> sequence = NucleotideSequence.ALPHABET.createBuilder().ensureCapacity(length);
         SequenceQualityBuilder quality = new SequenceQualityBuilder().ensureCapacity(length);
 
         byte qual, code;

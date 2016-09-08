@@ -272,7 +272,7 @@ public class SequenceTreeMap<S extends Sequence<S>, O>
         }
 
         public S getSequence() {
-            SequenceBuilder<S> builder = alphabet.getBuilder().ensureCapacity(pointer);
+            SequenceBuilder<S> builder = alphabet.createBuilder().ensureCapacity(pointer);
             for (int i = 0; i < pointer; ++i)
                 builder.append(wrappers[i].position);
             return builder.createAndDestroy();

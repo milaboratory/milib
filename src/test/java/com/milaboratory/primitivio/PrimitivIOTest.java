@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.milaboratory.primitivio.test.TestEnum1.*;
 
@@ -267,5 +268,55 @@ public class PrimitivIOTest {
         PrimitivI pi = new PrimitivI(bis);
         for (int i = 0; i < cc; ++i)
             Assert.assertArrayEquals(objs, pi.readObject(TestJsonClass1[].class));
+    }
+
+    @Test
+    public void testInts() throws Exception {
+        int[] values = new int[10000];
+        values[0] = 0;
+        values[1] = Integer.MIN_VALUE;
+        values[2] = Integer.MAX_VALUE;
+        for (int i = 3; i < values.length; i++)
+            values[i] = ThreadLocalRandom.current().nextInt();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO po = new PrimitivO(bos);
+        for (int value : values) {
+            po.writeInt(value);
+            po.writeVarInt(value);
+            po.writeVarIntZigZag(value);
+        }
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI pi = new PrimitivI(bis);
+        for (int value : values) {
+            Assert.assertEquals(value, pi.readInt());
+            Assert.assertEquals(value, pi.readVarInt());
+            Assert.assertEquals(value, pi.readVarIntZigZag());
+        }
+    }
+
+    @Test
+    public void testLongs() throws Exception {
+        long[] values = new long[10000];
+        values[0] = 0;
+        values[1] = Long.MIN_VALUE;
+        values[2] = Long.MAX_VALUE;
+        for (int i = 3; i < values.length; i++)
+            values[i] = ThreadLocalRandom.current().nextLong();
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO po = new PrimitivO(bos);
+        for (long value : values) {
+            po.writeLong(value);
+            po.writeVarLong(value);
+            po.writeVarLongZigZag(value);
+        }
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI pi = new PrimitivI(bis);
+        for (long value : values) {
+            Assert.assertEquals(value, pi.readLong());
+            Assert.assertEquals(value, pi.readVarLong());
+            Assert.assertEquals(value, pi.readVarLongZigZag());
+        }
     }
 }

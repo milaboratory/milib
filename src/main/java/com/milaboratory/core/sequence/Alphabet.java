@@ -270,7 +270,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      *
      * @return sequence builder for corresponding sequence type
      */
-    public abstract SequenceBuilder<S> getBuilder();
+    public abstract SequenceBuilder<S> createBuilder();
 
     /**
      * Returns empty sequence singleton
@@ -281,7 +281,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
         if (empty == null)
             synchronized (this) {
                 if (empty == null)
-                    empty = getBuilder().createAndDestroy();
+                    empty = createBuilder().createAndDestroy();
             }
         return empty;
     }
@@ -315,7 +315,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      * @return sequence
      */
     public final S parse(String string) {
-        SequenceBuilder<S> builder = getBuilder().ensureCapacity(string.length());
+        SequenceBuilder<S> builder = createBuilder().ensureCapacity(string.length());
         for (int i = 0; i < string.length(); ++i) {
             byte code = symbolToCode(string.charAt(i));
             if (code == -1)

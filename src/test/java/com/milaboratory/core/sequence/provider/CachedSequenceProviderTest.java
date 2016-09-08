@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.util;
+package com.milaboratory.core.sequence.provider;
 
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.Alphabet;
@@ -28,15 +28,15 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FragmentedSequenceCacheTest {
+public class CachedSequenceProviderTest {
     @Test
     public void test1() throws Exception {
         final NucleotideSequence sequence = new NucleotideSequence("ATTAGACAGCTGCATAGTGCTCGCTCGGCGATGACTGCGCGGCGCGC" +
                 "ATGGATCGACTAGCTCTATCGAGCTTCTCTGAAGCGTATCGAT");
         final List<Range> requests = new ArrayList<>();
 
-        FragmentedSequenceCache<NucleotideSequence> cache = new FragmentedSequenceCache<>(NucleotideSequence.ALPHABET,
-                new FragmentedSequenceCache.SequenceProvider<NucleotideSequence>() {
+        CachedSequenceProvider<NucleotideSequence> cache = new CachedSequenceProvider<>(NucleotideSequence.ALPHABET,
+                new SequenceProvider<NucleotideSequence>() {
                     @Override
                     public NucleotideSequence getRegion(Range range) {
                         requests.add(range);
@@ -71,7 +71,6 @@ public class FragmentedSequenceCacheTest {
                 10, 45);
     }
 
-
     @Test
     public void test2() throws Exception {
         test2i(NucleotideSequence.ALPHABET);
@@ -83,8 +82,8 @@ public class FragmentedSequenceCacheTest {
         for (int i = 0; i < 100; i++) {
             final S sequence = TestUtil.randomSequence(alphabet, 1000, 2000);
 
-            FragmentedSequenceCache<S> cache = new FragmentedSequenceCache<>(alphabet,
-                    new FragmentedSequenceCache.SequenceProvider<S>() {
+            CachedSequenceProvider<S> cache = new CachedSequenceProvider<>(alphabet,
+                    new SequenceProvider<S>() {
                         @Override
                         public S getRegion(Range range) {
                             return sequence.getRange(range);
@@ -112,7 +111,7 @@ public class FragmentedSequenceCacheTest {
         for (int i = 0; i < 100; i++) {
             final S sequence = TestUtil.randomSequence(alphabet, 1000, 2000);
 
-            FragmentedSequenceCache<S> cache = new FragmentedSequenceCache<>(alphabet);
+            CachedSequenceProvider<S> cache = new CachedSequenceProvider<>(alphabet);
 
             List<Range> ranges = new ArrayList<>();
 
@@ -123,7 +122,7 @@ public class FragmentedSequenceCacheTest {
                 if (r.isEmpty())
                     continue;
                 ranges.add(r);
-                cache.addRange(r, sequence.getRange(r));
+                cache.setRegion(r, sequence.getRange(r));
                 Assert.assertFalse(cache.sequences.isOverFragmented());
                 for (Range rr : ranges)
                     Assert.assertEquals(sequence.getRange(rr), cache.getRegion(rr));

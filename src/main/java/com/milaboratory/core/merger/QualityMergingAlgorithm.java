@@ -16,16 +16,12 @@
 package com.milaboratory.core.merger;
 
 public enum QualityMergingAlgorithm {
-    SumMax("max"), SumSubtraction("sub");
-    public final String cliName;
-
-    QualityMergingAlgorithm(String cliName) {
-        this.cliName = cliName;
-    }
+    SumMax, SumSubtraction,
+    MaxSubtraction, MaxMax;
 
     public static QualityMergingAlgorithm getFromCLIName(String cliName) {
         for (QualityMergingAlgorithm qma : values())
-            if (qma.cliName.equals(cliName))
+            if (qma.name().equalsIgnoreCase(cliName))
                 return qma;
         return null;
     }

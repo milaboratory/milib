@@ -17,6 +17,7 @@ package com.milaboratory.core.alignment.kaligner2;
 
 import cc.redberry.pipe.CUtils;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.util.BitArray;
 import com.milaboratory.util.IntArrayList;
 import com.milaboratory.util.IntCombinations;
 import com.milaboratory.util.RandomUtil;
@@ -140,6 +141,12 @@ public final class KMapper2 implements java.io.Serializable {
     private volatile boolean built = false;
     private int maxReferenceLength = 0, minReferenceLength = Integer.MAX_VALUE;
     private int sequencesInBase = 0;
+
+    /**
+     * Length = sequencesInBase, all bits set
+     */
+    private BitArray allFilter;
+
     /**
      * Cache to prevent excessive memory allocation
      */
@@ -370,6 +377,10 @@ public final class KMapper2 implements java.io.Serializable {
                             } else
                                 base[holeMask][kMer] = zero;
                     }
+
+                    allFilter = new BitArray(sequencesInBase);
+                    allFilter.setAll();
+
                     built = true;
                 }
             }
@@ -400,7 +411,26 @@ public final class KMapper2 implements java.io.Serializable {
      * @return a list of hits found in the target sequence
      */
     public KMappingResult2 align(final NucleotideSequence sequence, final int from, final int to) {
+        return align(sequence, from, to, null);
+    }
+
+    /**
+     * Performs an alignment for a part of the target sequence.
+     *
+     * <p>This methods is thread-safe and can be concurrently used by several threads if no new sequences added after
+     * its first invocation.</p>
+     *
+     * @param sequence target sequence
+     * @param from     first nucleotide to align (inclusive)
+     * @param to       last nucleotide to align (exclusive)
+     * @param filter   record filter (align only records with filter[id] == true)
+     * @return a list of hits found in the target sequence
+     */
+    public KMappingResult2 align(final NucleotideSequence sequence, final int from, final int to, BitArray filter) {
         ensureBuilt();
+
+        if (filter == null)
+            filter = allFilter;
 
         ThreadLocalCache cache = memoryCache.get();
         cache.reset();
@@ -483,6 +513,11 @@ public final class KMapper2 implements java.io.Serializable {
 
                 // Id of target sequence, where the kMer was found
                 id = index(record);
+
+                // Apply filter
+                if (!filter.get(id))
+                    continue;
+
                 // Position of the kMer in target sequence
                 positionInTarget = offset(record);
 

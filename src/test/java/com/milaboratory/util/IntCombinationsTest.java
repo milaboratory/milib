@@ -25,8 +25,8 @@ import java.util.Arrays;
  */
 public class IntCombinationsTest {
     @Test
-    public void testфывфыв() throws Exception {
-        IntCombinations combinations = new IntCombinations(3,2);
+    public void test1() throws Exception {
+        IntCombinations combinations = new IntCombinations(3, 2);
         for (int[] ints : CUtils.it(combinations)) {
             System.out.println(Arrays.toString(ints));
         }

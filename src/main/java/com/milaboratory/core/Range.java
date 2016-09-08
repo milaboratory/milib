@@ -33,7 +33,7 @@ import java.util.Comparator;
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = RangeSerializer.class)
-public final class Range implements java.io.Serializable {
+public final class Range implements java.io.Serializable, Comparable<Range> {
     static final long serialVersionUID = 1L;
 
     private final int lower;
@@ -319,6 +319,18 @@ public final class Range implements java.io.Serializable {
             return upper - relativePosition;
         else
             return relativePosition + lower;
+    }
+
+    @Override
+    public int compareTo(Range o) {
+        int cmp;
+        if ((cmp = Integer.compare(getLower(), o.getLower())) != 0)
+            return cmp;
+
+        if ((cmp = Integer.compare(getUpper(), o.getUpper())) != 0)
+            return cmp;
+
+        return Boolean.compare(isReverse(), o.isReverse());
     }
 
     @Override

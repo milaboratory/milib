@@ -97,7 +97,7 @@ public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> imp
 
     @Override
     public SequenceBuilder<S> getBuilder() {
-        return getAlphabet().getBuilder();
+        return getAlphabet().createBuilder();
     }
 
     @Override
@@ -154,5 +154,26 @@ public abstract class Sequence<S extends Sequence<S>> extends AbstractSeq<S> imp
                     return 1;
         }
         return 0;
+    }
+
+    /**
+     * Tests whether this sequence contains {@code subSequence} and returns position of the first matched letter in
+     * this sequence or -1 if it does not contain {@code subSequence}.
+     *
+     * @param subSequence subsequence
+     * @return position of the first matched letter in this sequence or -1 if it does not contain {@code subSequence}
+     */
+    public int indexOf(S subSequence) {
+        if (subSequence.size() == 0)
+            return -1;
+        int limit = size() - subSequence.size();
+        next:
+        for (int i = 0; i <= limit; i++) {
+            for (int j = 0; j < subSequence.size(); j++)
+                if (subSequence.codeAt(j) != codeAt(i + j))
+                    continue next;
+            return i;
+        }
+        return -1;
     }
 }

@@ -41,12 +41,30 @@ public final class FastaWriter<S extends Sequence<S>> implements AutoCloseable {
     /**
      * Creates FASTA writer
      *
+     * @param file output file
+     */
+    public FastaWriter(File file) throws FileNotFoundException {
+        this(file, DEFAULT_MAX_LENGTH);
+    }
+
+    /**
+     * Creates FASTA writer
+     *
      * @param file      output file
      * @param maxLength line length limit after which sequence will be split into several lines
      */
     public FastaWriter(File file, int maxLength) throws FileNotFoundException {
         this.outputStream = new BufferedOutputStream(new FileOutputStream(file));
         this.maxLength = maxLength;
+    }
+
+    /**
+     * Creates FASTA writer
+     *
+     * @param outputStream output stream
+     */
+    public FastaWriter(OutputStream outputStream) {
+        this(outputStream, DEFAULT_MAX_LENGTH);
     }
 
     /**
@@ -73,16 +91,14 @@ public final class FastaWriter<S extends Sequence<S>> implements AutoCloseable {
 
             byte[] seq = sequence.toString().getBytes();
             int pointer = 0;
-            while (true) {
-                if (seq.length - pointer <= maxLength) {
+            do {
+                if (seq.length - pointer <= maxLength)
                     outputStream.write(seq, pointer, seq.length - pointer);
-                    break;
-                } else {
+                else
                     outputStream.write(seq, pointer, maxLength);
-                    pointer += maxLength;
-                }
-            }
-            outputStream.write('\n');
+                pointer += maxLength;
+                outputStream.write('\n');
+            } while (seq.length > pointer);
         } catch (IOException e) {
             e.printStackTrace();
         }

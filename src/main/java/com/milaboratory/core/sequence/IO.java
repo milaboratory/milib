@@ -64,7 +64,7 @@ final class IO {
         @Override
         public Sequence read(PrimitivI input) {
             Alphabet alphabet = input.readObject(Alphabet.class);
-            return alphabet.getBuilder().append(input.readObject(byte[].class)).createAndDestroy();
+            return alphabet.createBuilder().append(input.readObject(byte[].class)).createAndDestroy();
         }
 
         @Override

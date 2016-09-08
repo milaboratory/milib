@@ -57,6 +57,8 @@ abstract class AbstractArraySequence<S extends AbstractArraySequence<S>> extends
 
     @Override
     public S getRange(int from, int to) {
+        if (from == 0 && to == data.length)
+            return (S) this;
         return getAlphabet().createUnsafe(Arrays.copyOfRange(data, from, to));
     }
 

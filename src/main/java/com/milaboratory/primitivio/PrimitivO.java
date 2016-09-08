@@ -22,6 +22,9 @@ import gnu.trove.strategy.IdentityHashingStrategy;
 import java.io.*;
 import java.util.ArrayList;
 
+import static com.milaboratory.primitivio.Util.zigZagEncodeInt;
+import static com.milaboratory.primitivio.Util.zigZagEncodeLong;
+
 public final class PrimitivO implements DataOutput, AutoCloseable {
     static final int NULL_ID = 0;
     static final int NEW_OBJECT_ID = 1;
@@ -147,9 +150,21 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         writeVarInt(value + ID_OFFSET);
     }
 
+    public void writeVarIntZigZag(int value) {
+        writeVarInt(zigZagEncodeInt(value));
+    }
+
     public void writeVarInt(int value) {
+        writeVarLong(0xFFFFFFFFL & value);
+    }
+
+    public void writeVarLongZigZag(long value) {
+        writeVarLong(zigZagEncodeLong(value));
+    }
+
+    public void writeVarLong(long value) {
         do {
-            int toWrite = value & 0x7F;
+            int toWrite = (int) (value & 0x7F);
             value >>>= 7;
             if (value != 0)
                 toWrite |= 0x80;

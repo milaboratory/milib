@@ -70,6 +70,20 @@ public final class Alphabets {
     }
 
     /**
+     * Searches for instance of {@code Alphabet} using first letter of it's name
+     *
+     * @param letter first letter of alphabet's name
+     * @return instance of {@code Alphabet}
+     */
+    public static Alphabet getByFirstLetterOfName(char letter) {
+        letter = Character.toLowerCase(letter);
+        for (Alphabet alphabet : alphabetsByName.values())
+            if (alphabet.getAlphabetName().charAt(0) == letter)
+                return alphabet;
+        throw new IllegalArgumentException("No alphabet starting with letter: " + letter);
+    }
+
+    /**
      * Returns instance of {@code Alphabet} from its byte id.
      *
      * @param id byte id of alphabet

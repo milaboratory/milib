@@ -26,7 +26,7 @@ abstract class AbstractArrayAlphabet<S extends AbstractArraySequence<S>> extends
     }
 
     @Override
-    public SequenceBuilder<S> getBuilder() {
+    public SequenceBuilder<S> createBuilder() {
         return new ArraySequenceBuilder<>(this);
     }
 

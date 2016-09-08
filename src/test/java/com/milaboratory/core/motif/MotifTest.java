@@ -65,7 +65,7 @@ public class MotifTest {
             for (int i = 0; i < motifSize; ++i)
                 builder.append(wildcard.getSymbol());
             Motif<NucleotideSequence> motif = new NucleotideSequence(builder.toString()).toMotif();
-            SequenceBuilder<NucleotideSequence> seqBuilder = NucleotideSequence.ALPHABET.getBuilder().ensureCapacity(seqLength);
+            SequenceBuilder<NucleotideSequence> seqBuilder = NucleotideSequence.ALPHABET.createBuilder().ensureCapacity(seqLength);
             for (int i = 0; i < seqLength; ++i)
                 seqBuilder.append(wildcard.getUniformlyDistributedBasicCode(rg.nextLong()));
             NucleotideSequence seq = seqBuilder.createAndDestroy();

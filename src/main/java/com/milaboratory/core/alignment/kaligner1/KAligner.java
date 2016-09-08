@@ -19,8 +19,11 @@ import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.Processor;
 import cc.redberry.pipe.blocks.ParallelProcessor;
+import cc.redberry.primitives.Filter;
 import com.milaboratory.core.alignment.batch.*;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.util.BitArray;
+import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.ArrayList;
@@ -33,13 +36,13 @@ import java.util.List;
  * int, int)}
  * method from which preliminary hits are obtained and used by {@link #align(com.milaboratory.core.sequence.NucleotideSequence)},
  * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int)},
- * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)}
+ * {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean, BitArray)}
  * methods.</p>
  *
  * <p>All settings are stored in {@link #parameters} property.</p>
  */
 public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence, P, KAlignmentHit<P>>,
-        BatchAlignerWithBase<NucleotideSequence, P, KAlignmentHit<P>>,
+        BatchAlignerWithBaseWithFilter<NucleotideSequence, P, KAlignmentHit<P>>,
         java.io.Serializable {
     /**
      * Link to KMapper
@@ -73,7 +76,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * <p>Sets {@link #lazyResults} flag to {@code false}, which means that all alignments inside {@link
      * KAlignmentResult}
      * obtained by {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
-     * int, int, boolean)} method
+     * int, int, boolean, BitArray)} method
      * will be loaded immediately.
      * </p>
      *
@@ -89,7 +92,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * @param parameters  parameters from which new KAligner needs to be created
      * @param lazyResults {@code true} if all alignments inside {@link KAlignmentResult}
      *                    obtained by {@link KAligner#align(com.milaboratory.core.sequence.NucleotideSequence,
-     *                    int, int, boolean)} method
+     *                    int, int, boolean, BitArray)} method
      *                    need to be loaded at first request
      */
     public KAligner(KAlignerParameters parameters, boolean lazyResults) {
@@ -117,6 +120,18 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      */
     public int addReference(NucleotideSequence sequence) {
         return addReference(sequence, 0, sequence.size());
+    }
+
+    @Override
+    public BitArray createFilter(Filter<P> filter) {
+        BitArray ret = new BitArray(sequences.size());
+        TIntObjectIterator<P> it = payloads.iterator();
+        while (it.hasNext()) {
+            it.advance();
+            if (filter.accept(it.value()))
+                ret.set(it.key());
+        }
+        return ret;
     }
 
     /**
@@ -161,7 +176,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * </li>
      * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
      * KAlignmentResult}
-     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
+     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean, BitArray)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
      * </li>
@@ -186,7 +201,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * </li>
      * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
      * KAlignmentResult}
-     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
+     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean, BitArray)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
      * </li>
@@ -199,7 +214,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      */
     @Override
     public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to) {
-        return align(sequence, from, to, true);
+        return align(sequence, from, to, true, null);
     }
 
     /**
@@ -214,7 +229,7 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      * </li>
      * <li>2. Using {@link KMappingResult} from step 1, obtaining {@link
      * KAlignmentResult}
-     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean)} method,
+     * by {@link #align(com.milaboratory.core.sequence.NucleotideSequence, int, int, boolean, BitArray)} method,
      * where all hit alignments may be loaded lazily (at first request) or immediately (depends on {@link #lazyResults}
      * flag value)
      * </li>
@@ -230,8 +245,8 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      *                        restricted by the same range ({@code from} - {@code to})
      * @return a list of hits found in target sequence
      */
-    public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to, boolean restrictToRange) {
-        KMappingResult kResult = mapper.align(sequence, from, to);
+    public KAlignmentResult<P> align(NucleotideSequence sequence, int from, int to, boolean restrictToRange, BitArray filter) {
+        KMappingResult kResult = mapper.align(sequence, from, to, filter);
 
         KAlignmentResult<P> result;
         if (restrictToRange)
@@ -245,6 +260,11 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
             result.sortAccordingToMapperScores();
 
         return result;
+    }
+
+    @Override
+    public AlignmentResult<KAlignmentHit<P>> align(NucleotideSequence sequence, int from, int to, BitArray filter) {
+        return align(sequence, from, to, true, filter);
     }
 
     @Override

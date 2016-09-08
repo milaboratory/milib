@@ -23,7 +23,7 @@ public class NSequenceWithQualityBuilder implements SeqBuilder<NSequenceWithQual
     final SequenceQualityBuilder qBuilder;
 
     public NSequenceWithQualityBuilder() {
-        this(NucleotideSequence.ALPHABET.getBuilder(), new SequenceQualityBuilder());
+        this(NucleotideSequence.ALPHABET.createBuilder(), new SequenceQualityBuilder());
     }
 
     NSequenceWithQualityBuilder(SequenceBuilder<NucleotideSequence> sBuilder, SequenceQualityBuilder qBuilder) {

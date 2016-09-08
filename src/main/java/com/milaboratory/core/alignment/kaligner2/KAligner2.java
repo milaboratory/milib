@@ -1,13 +1,16 @@
 package com.milaboratory.core.alignment.kaligner2;
 
+import cc.redberry.primitives.Filter;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.alignment.*;
-import com.milaboratory.core.alignment.batch.BatchAlignerWithBase;
+import com.milaboratory.core.alignment.batch.BatchAlignerWithBaseWithFilter;
 import com.milaboratory.core.alignment.kaligner2.KMapper2.ArrList;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.util.BitArray;
 import com.milaboratory.util.IntArrayList;
+import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.ArrayList;
@@ -19,7 +22,7 @@ import java.util.List;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public class KAligner2<P> implements BatchAlignerWithBase<NucleotideSequence, P, KAlignmentHit2<P>> {
+public class KAligner2<P> implements BatchAlignerWithBaseWithFilter<NucleotideSequence, P, KAlignmentHit2<P>> {
     /**
      * Link to KMapper
      */
@@ -66,6 +69,18 @@ public class KAligner2<P> implements BatchAlignerWithBase<NucleotideSequence, P,
         return id;
     }
 
+    @Override
+    public BitArray createFilter(Filter<P> filter) {
+        BitArray ret = new BitArray(sequences.size());
+        TIntObjectIterator<P> it = payloads.iterator();
+        while (it.hasNext()) {
+            it.advance();
+            if (filter.accept(it.value()))
+                ret.set(it.key());
+        }
+        return ret;
+    }
+
     /**
      * Returns sequence by its id (order number) in a base.
      *
@@ -87,7 +102,12 @@ public class KAligner2<P> implements BatchAlignerWithBase<NucleotideSequence, P,
     }
 
     @Override
-    public KAlignmentResult2<P> align(final NucleotideSequence query, final int from, final int to) {
+    public KAlignmentResult2<P> align(NucleotideSequence sequence, int from, int to) {
+        return align(sequence, from, to, null);
+    }
+
+    @Override
+    public KAlignmentResult2<P> align(final NucleotideSequence query, final int from, final int to, BitArray filter) {
         if (stat != null)
             stat.nextQuery();
 
@@ -96,7 +116,7 @@ public class KAligner2<P> implements BatchAlignerWithBase<NucleotideSequence, P,
         final AffineGapAlignmentScoring<NucleotideSequence> scoring = parameters.getScoring();
 
         // Saving to local variables for performance
-        final KMappingResult2 mapping = mapper.align(query, from, to);
+        final KMappingResult2 mapping = mapper.align(query, from, to, filter);
         final IntArrayList seeds = mapping.seeds;
 
         ArrList<KAlignmentHit2<P>> hits = new ArrList<>();
@@ -273,14 +293,4 @@ public class KAligner2<P> implements BatchAlignerWithBase<NucleotideSequence, P,
             return Double.compare(o2.alignment.getScore(), o1.alignment.getScore());
         }
     };
-
-    //@Override
-    //public <Q> OutputPort<? extends PipedAlignmentResult<KAlignmentHit2<P>, Q>> align(OutputPort<Q> input, SequenceExtractor<Q, NucleotideSequence> extractor) {
-    //    return null;
-    //}
-    //
-    //@Override
-    //public <Q extends HasSequence<NucleotideSequence>> OutputPort<? extends PipedAlignmentResult<KAlignmentHit2<P>, Q>> align(OutputPort<Q> input) {
-    //    return null;
-    //}
 }

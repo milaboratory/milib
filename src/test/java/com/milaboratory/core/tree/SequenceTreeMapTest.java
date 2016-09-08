@@ -508,7 +508,7 @@ public class SequenceTreeMapTest {
             case 0: //Mismatch
                 if (sequence.getAlphabet() == NucleotideSequence.ALPHABET)
                     return introduceNucleotideMismatch((NucleotideSequence) sequence);
-                builder = sequence.getAlphabet().getBuilder().ensureCapacity(sequence.size());
+                builder = sequence.getAlphabet().createBuilder().ensureCapacity(sequence.size());
                 builder.append(sequence);
                 position = random.nextInt(sequence.size());
                 builder.set(position,
@@ -517,7 +517,7 @@ public class SequenceTreeMapTest {
                 return (Sequence) builder.createAndDestroy();
 
             case 1: //Deletion
-                builder = sequence.getAlphabet().getBuilder().ensureCapacity(sequence.size() - 1);
+                builder = sequence.getAlphabet().createBuilder().ensureCapacity(sequence.size() - 1);
                 position = random.nextInt(sequence.size());
                 for (i = 0; i < position; ++i)
                     builder.append(sequence.codeAt(i));
@@ -527,7 +527,7 @@ public class SequenceTreeMapTest {
                 return (Sequence) builder.createAndDestroy();
 
             case 2: //Insertion
-                builder = sequence.getAlphabet().getBuilder().ensureCapacity(sequence.size() + 1);
+                builder = sequence.getAlphabet().createBuilder().ensureCapacity(sequence.size() + 1);
                 position = random.nextInt(sequence.size() + 1);
                 for (i = 0; i < position; ++i)
                     builder.append(sequence.codeAt(i));

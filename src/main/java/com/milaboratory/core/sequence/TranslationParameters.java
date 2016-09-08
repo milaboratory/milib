@@ -40,6 +40,18 @@ public final class TranslationParameters {
         this.includeIncomplete = includeIncomplete;
     }
 
+    public byte getFrame() {
+        return frame;
+    }
+
+    public Boolean getFromLeft() {
+        return fromLeft;
+    }
+
+    public boolean isIncludeIncomplete() {
+        return includeIncomplete;
+    }
+
     private static final TranslationParameters Frame1W = new TranslationParameters((byte) 1, Boolean.TRUE, true);
     private static final TranslationParameters Frame2W = new TranslationParameters((byte) 2, Boolean.TRUE, true);
     private static final TranslationParameters Frame1WO = new TranslationParameters((byte) 1, Boolean.TRUE, false);

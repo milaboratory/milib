@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment.kaligner1;
 
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.util.BitArray;
 import com.milaboratory.util.IntArrayList;
 import com.milaboratory.util.RandomUtil;
 import org.apache.commons.math3.random.Well19937c;
@@ -114,6 +115,11 @@ public final class KMapper implements java.io.Serializable {
     private int[] refFrom = new int[10], refLength = new int[10];
     private int maxReferenceLength = 0, minReferenceLength = Integer.MAX_VALUE;
     private int sequencesInBase = 0;
+
+    /**
+     * Length = sequencesInBase, all bits set
+     */
+    private BitArray allFilter;
 
     /**
      * Creates new KMer mapper.
@@ -320,6 +326,8 @@ public final class KMapper implements java.io.Serializable {
                         base[i] = copyOf(base[i], lengths[i]);
                     refLength = copyOf(refLength, sequencesInBase);
                     refFrom = copyOf(refFrom, sequencesInBase);
+                    allFilter = new BitArray(sequencesInBase);
+                    allFilter.setAll();
                     built = true;
                 }
             }
@@ -355,7 +363,7 @@ public final class KMapper implements java.io.Serializable {
      * @return a list of hits found in the target sequence
      */
     public KMappingResult align(NucleotideSequence sequence) {
-        return align(sequence, 0, sequence.size());
+        return align(sequence, 0, sequence.size(), null);
     }
 
     /**
@@ -370,7 +378,26 @@ public final class KMapper implements java.io.Serializable {
      * @return a list of hits found in the target sequence
      */
     public KMappingResult align(NucleotideSequence sequence, int from, int to) {
+        return align(sequence, from, to, null);
+    }
+
+    /**
+     * Performs an alignment for a part of the target sequence.
+     *
+     * <p>This methods is thread-safe and can be concurrently used by several threads if no new sequences added after
+     * its first invocation.</p>
+     *
+     * @param sequence target sequence
+     * @param from     first nucleotide to align (inclusive)
+     * @param to       last nucleotide to align (exclusive)
+     * @param filter   record filter (align only records with filter[id] == true)
+     * @return a list of hits found in the target sequence
+     */
+    public KMappingResult align(NucleotideSequence sequence, int from, int to, BitArray filter) {
         ensureBuilt();
+
+        if (filter == null)
+            filter = allFilter;
 
         ArrayList<KMappingHit> result = new ArrayList<>();
 
@@ -407,6 +434,11 @@ public final class KMapper implements java.io.Serializable {
 
             for (int record : base[kmer]) {
                 id = record >>> bitsForOffset;
+
+                // Apply filter
+                if (!filter.get(id))
+                    continue;
+
                 offset = record & offsetMask;
 
                 if (candidates[id] == null)
@@ -420,14 +452,10 @@ public final class KMapper implements java.io.Serializable {
         //int resultId = 0;
         Info info = new Info();
         int cFrom, cTo, siFrom, siTo;
-        int maxRawScore = 0, j, i;
+        int j, i;
         double preScore;
-        double maxScore = Float.MIN_VALUE;
         for (i = candidates.length - 1; i >= 0; --i) {
-            //TODO reconsider conditions:
-            if (candidates[i] != null &&
-                    candidates[i].size() >= ((minAlignmentLength - kValue + 1) / maxDistance) &&
-                    candidates[i].size() * matchScore >= maxScore * relativeMinScore) {
+            if (candidates[i] != null && candidates[i].size() >= ((minAlignmentLength - kValue + 1) / maxDistance)) {
 
                 //Sorting (important)
                 candidates[i].sort();
@@ -459,15 +487,8 @@ public final class KMapper implements java.io.Serializable {
                 preScore = matchScore * info.score; //+ max(siTo - siFrom - info.score, 0) * mismatchScore;
 
                 //Selecting candidates
-                if (preScore >= absoluteMinScore) {
+                if (preScore >= absoluteMinScore)
                     result.add(new KMappingHit(info.offset, i, (float) preScore, siFrom, siTo));
-
-                    if (maxRawScore < info.score)
-                        maxRawScore = info.score;
-
-                    if (maxScore < preScore)
-                        maxScore = preScore;
-                }
             }
         }
 
@@ -476,7 +497,7 @@ public final class KMapper implements java.io.Serializable {
         float score;
 
         KMappingHit hit;
-        maxScore = 0.0;
+        double maxScore = 0.0;
         for (j = result.size() - 1; j >= 0; --j) {
             hit = result.get(j);
 

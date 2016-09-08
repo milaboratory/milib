@@ -27,6 +27,7 @@ import java.io.InputStream;
  */
 public final class CountingInputStream extends FilterInputStream {
     private long bytesRead;
+    private volatile boolean closed = false;
 
     public CountingInputStream(final InputStream in) {
         super(in);
@@ -55,6 +56,12 @@ public final class CountingInputStream extends FilterInputStream {
         return r;
     }
 
+    @Override
+    public void close() throws IOException {
+        closed = true;
+        super.close();
+    }
+
     /**
      * Increments the counter of already read bytes. Doesn't increment if the EOF has been hit (read == -1)
      *
@@ -73,5 +80,19 @@ public final class CountingInputStream extends FilterInputStream {
      */
     public long getBytesRead() {
         return bytesRead;
+    }
+
+    public CanReportProgress getProgressReporter(final long totalSize) {
+        return new CanReportProgress() {
+            @Override
+            public double getProgress() {
+                return 1.0 * bytesRead / totalSize;
+            }
+
+            @Override
+            public boolean isFinished() {
+                return bytesRead == totalSize || closed;
+            }
+        };
     }
 }

@@ -60,5 +60,10 @@ public class MultiAlignmentHelperTest {
         System.out.println();
         System.out.println(MultiAlignmentHelper.build(MultiAlignmentHelper.DOT_MATCH_SETTINGS, new Range(0, seq0.size()),
                 alignments));
+
+        System.out.println();
+        System.out.println(MultiAlignmentHelper.build(MultiAlignmentHelper.DOT_MATCH_SETTINGS, new Range(0, seq0.size()),
+                seq0,
+                new Alignment[0]).addSubjectQuality("", seq0qual));
     }
 }

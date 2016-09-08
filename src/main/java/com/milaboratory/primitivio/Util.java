@@ -134,4 +134,20 @@ public final class Util {
         }
         return map;
     }
+
+    public static long zigZagEncodeLong(long value) {
+        return (value << 1) ^ (value >> 63);
+    }
+
+    public static long zigZagDecodeLong(long value) {
+        return (value >>> 1) ^ ((value << 63) >> 63);
+    }
+
+    public static int zigZagEncodeInt(int value) {
+        return (value << 1) ^ (value >> 31);
+    }
+
+    public static int zigZagDecodeInt(int value) {
+        return (value >>> 1) ^ ((value << 31) >> 31);
+    }
 }

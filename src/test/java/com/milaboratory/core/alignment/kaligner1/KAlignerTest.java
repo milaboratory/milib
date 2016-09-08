@@ -140,7 +140,7 @@ public class KAlignerTest extends AlignmentTest {
         result.calculateAllAlignments();
         Assert.assertEquals(new Range(5, 26), result.getBestHit().getAlignment().getSequence2Range());
 
-        result = aligner.align(target, 5, 40, false);
+        result = aligner.align(target, 5, 40, false, null);
         result.calculateAllAlignments();
         Assert.assertEquals(new Range(0, 26), result.getBestHit().getAlignment().getSequence2Range());
     }
