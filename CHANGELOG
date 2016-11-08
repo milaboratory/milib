@@ -1,4 +1,11 @@
 
+MiLib 1.5.1 ( 8 Nov 2016)
+========================
+
+-- Additional sequence id extractor in RandomAccessFastaIndex
+-- Redberry pipe -> 0.9.6
+
+
 MiLib 1.5 ( 8 Sep 2016)
 ========================
 

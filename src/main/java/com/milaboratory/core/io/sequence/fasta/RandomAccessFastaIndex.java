@@ -207,7 +207,8 @@ public final class RandomAccessFastaIndex {
     private static final Pattern[] specialIds = new Pattern[]{
             Pattern.compile("(lcl|bbs|gi|gb|emb|dbj|sp|pdb|pat|gnl|ref)\\|[^\\|]+"),
             Pattern.compile("(gb|emb|dbj|sp|pdb|pat|gnl|ref)\\|[^\\|]+\\|[^\\|]+"),
-            Pattern.compile("(pir|prf)\\|\\|[^\\|]+")
+            Pattern.compile("(pir|prf)\\|\\|[^\\|]+"),
+            Pattern.compile("^\\S+")
     };
 
     private static void extractIds(String descriptionLine, Set<String> ids) {
