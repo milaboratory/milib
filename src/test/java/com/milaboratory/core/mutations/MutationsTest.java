@@ -20,10 +20,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.milaboratory.core.Range;
-import com.milaboratory.core.alignment.Aligner;
-import com.milaboratory.core.alignment.Alignment;
-import com.milaboratory.core.alignment.BLASTMatrix;
-import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
+import com.milaboratory.core.alignment.*;
 import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.MutationsGenerator;
@@ -32,6 +29,7 @@ import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.test.TestUtil;
+import com.milaboratory.util.IntArrayList;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -191,6 +189,102 @@ public class MutationsTest {
 
         Mutations<NucleotideSequence> extracted = m1.removeMutationsInRanges(new Range(3, 5), new Range(5, 6));
         Assert.assertEquals(decode("I3G SA5C", NucleotideSequence.ALPHABET), extracted);
+    }
+
+    @Test
+    public void testConvert1() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGGCCTAGAATCGCGATCGTTGATCACA"),
+                seq2 = new NucleotideSequence("ATTAGGATCTGCCGTAGAAATCGTAGCTTGATCACA");
+
+        String p1s = "012345     67 890123456789012    345678901";
+        //          0 attagg-----cc-tagaaTCGCGatcgt----tgatcaca 30
+        //          0 attaggATCTGccGtagaa-----atcgtAGCTtgatcaca 35
+        String p2s = "0123456789012345678     901234567890123456";
+
+        int[] p1 = psToP(p1s, p2s);
+        int[] p2 = psToP(p2s, p1s);
+
+        Assert.assertEquals(seq1.size(), p2.length - 1);
+        Assert.assertEquals(seq2.size(), p1.length - 1);
+
+        Alignment<NucleotideSequence> a = Aligner.alignGlobal(AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                seq1, seq2);
+        //System.out.println(a);
+        Mutations<NucleotideSequence> m = a.getAbsoluteMutations();
+        for (int i = 0; i <= seq2.size(); i++)
+            assertEquals("Position = " + i, p1[i], m.convertToSeq1Position(i));
+
+        for (int i = 0; i <= seq1.size(); i++)
+            assertEquals("Position = " + i, p2[i], m.convertToSeq2Position(i));
+    }
+
+    @Test
+    public void testConvert2() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("TTAATTAGGCCTAGAATCGCGATCGTTGATCACA"),
+                seq2 = new NucleotideSequence("ATTAGGATCTGCCGTAGAAATCGTAGCTTGATCACATT");
+
+        String p1s = "XXX012345     67 890123456789012    34567890  1";
+        //          0 TTAattagg-----cc-tagaaTCGCGatcgt----tgatcaca-- 34
+        //          0 ---attaggATCTGccGtagaa-----atcgtAGCTtgatcacaTT 37
+        String p2s = "   0123456789012345678     90123456789012345678";
+
+        int[] p1 = psToP(p1s, p2s);
+        int[] p2 = psToP(p2s, p1s);
+
+        Assert.assertEquals(seq1.size(), p2.length - 1);
+        Assert.assertEquals(seq2.size(), p1.length - 1);
+
+        Alignment<NucleotideSequence> a = Aligner.alignGlobal(AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                seq1, seq2);
+        //System.out.println(a);
+        Mutations<NucleotideSequence> m = a.getAbsoluteMutations();
+        for (int i = 0; i <= seq2.size(); i++)
+            assertEquals("Position = " + i, p1[i], m.convertToSeq1Position(i));
+
+        for (int i = 0; i <= seq1.size(); i++)
+            assertEquals("Position = " + i, p2[i], m.convertToSeq2Position(i));
+    }
+
+    @Test
+    public void testConvert3() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGGCCTAGAATCGCGATCGTTGATCACATT"),
+                seq2 = new NucleotideSequence("GACATTAGGATCTGCCGTAGAAATCGTAGCTTGATCACA");
+
+        String p1s = "   012345     67 890123456789012    34567890123";
+        //          0 ---attagg-----cc-tagaaTCGCGatcgt----tgatcacaTT 32
+        //          0 GACattaggATCTGccGtagaa-----atcgtAGCTtgatcaca-- 39
+        String p2s = "XXX0123456789012345678     90123456789012345  6";
+
+        int[] p1 = psToP(p1s, p2s);
+        int[] p2 = psToP(p2s, p1s);
+
+        Assert.assertEquals(seq1.size(), p2.length - 1);
+        Assert.assertEquals(seq2.size(), p1.length - 1);
+
+        Alignment<NucleotideSequence> a = Aligner.alignGlobal(AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                seq1, seq2);
+        //System.out.println(a);
+        Mutations<NucleotideSequence> m = a.getAbsoluteMutations();
+        for (int i = 0; i <= seq2.size(); i++)
+            assertEquals("Position = " + i, p1[i], m.convertToSeq1Position(i));
+
+        for (int i = 0; i <= seq1.size(); i++)
+            assertEquals("Position = " + i, p2[i], m.convertToSeq2Position(i));
+    }
+
+    public int[] psToP(String ps1, String ps2) {
+        IntArrayList result = new IntArrayList();
+        int u = -1;
+        int v;
+        for (int i = 0; i < ps1.length(); i++) {
+            if (ps1.charAt(i) == ' ')
+                v = -2 - u;
+            else
+                v = ++u;
+            if (ps2.charAt(i) != ' ')
+                result.add(v);
+        }
+        return result.toArray();
     }
 
     @Test

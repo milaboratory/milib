@@ -16,17 +16,25 @@
 package com.milaboratory.core.alignment;
 
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutations;
+import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
+import com.milaboratory.core.mutations.generator.MutationsGenerator;
+import com.milaboratory.core.mutations.generator.SubstitutionModels;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.util.RandomUtil;
+import org.apache.commons.math3.random.RandomDataGenerator;
+import org.apache.commons.math3.random.Well19937c;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+
+import static com.milaboratory.test.TestUtil.randomSequence;
 
 public class AlignmentTest {
 
@@ -50,8 +58,8 @@ public class AlignmentTest {
         NucleotideSequence sequence2 = new NucleotideSequence("CCTCAT");
         Alignment<NucleotideSequence> alignment = Aligner.alignLocal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
                 sequence1, sequence2);
-        Assert.assertEquals(3, alignment.convertPosition(6));
-        Assert.assertEquals(0, alignment.convertPosition(2));
+        Assert.assertEquals(3, alignment.convertToSeq2Position(6));
+        Assert.assertEquals(0, alignment.convertToSeq2Position(2));
     }
 
     @Test
@@ -70,6 +78,60 @@ public class AlignmentTest {
         Assert.assertEquals(alignment.getSequence2Range().getFrom(), helper.getSequence2PositionAt(0));
         Assert.assertEquals(alignment.getSequence2Range().getTo() - 1,
                 helper.getSequence2PositionAt(helper.size() - 1));
+    }
+
+    @Test
+    public void testConvertPosition() throws Exception {
+        Well19937c rand = new Well19937c();
+        RandomDataGenerator rdi = new RandomDataGenerator(rand);
+
+        GenericNucleotideMutationModel model = new GenericNucleotideMutationModel(
+                SubstitutionModels.getUniformNucleotideSubstitutionModel(.2), .2, .2);
+
+        model.reseed(rand.nextLong());
+
+        for (int i = 0; i < 2000; i++) {
+            NucleotideSequence sequence = randomSequence(NucleotideSequence.ALPHABET, rand, 100, 300);
+
+            int length = rdi.nextInt(20, 40);
+            int from = rdi.nextInt(0, sequence.size() - length - 1);
+            Range seq1Range = new Range(from, from + length);
+            int seq2From = rdi.nextInt(200, 400);
+
+            NucleotideSequence subsequence = sequence.getRange(seq1Range);
+
+            Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(subsequence, model);
+
+            Range seq2Range = new Range(seq2From, seq2From + subsequence.size() + mut.getLengthDelta());
+
+            Alignment<NucleotideSequence> al = new Alignment<>(sequence, mut.move(from),
+                    seq1Range, seq2Range,
+                    0);
+
+            for (int seq1Position = from; seq1Position < from + length; seq1Position++) {
+                int seq2Position = al.convertToSeq2Position(seq1Position);
+
+                if (seq2Position >= 0) {
+                    int seq1PositionC = al.convertToSeq1Position(seq2Position);
+                    Assert.assertEquals(seq1Position, seq1PositionC);
+                } else {
+                    int seq1PositionC = al.convertToSeq1Position(Alignment.aabs(seq2Position));
+                    Assert.assertTrue(seq1PositionC > seq1Position);
+                }
+            }
+
+            for (int seq2Position = seq2Range.getFrom(); seq2Position < seq2Range.getTo(); seq2Position++) {
+                int seq1Position = al.convertToSeq1Position(seq2Position);
+                if (seq1Position >= 0) {
+                    int seq2PositionC = al.convertToSeq2Position(seq1Position);
+                    Assert.assertEquals(seq2Position, seq2PositionC);
+                } else {
+                    int seq2PositionC = al.convertToSeq2Position(Alignment.aabs(seq1Position));
+                    Assert.assertTrue(seq2PositionC > seq2Position);
+                }
+            }
+
+        }
     }
 
     @Test

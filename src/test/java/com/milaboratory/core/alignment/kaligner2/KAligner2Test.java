@@ -163,8 +163,8 @@ public class KAligner2Test {
             int to = from + b + r.nextInt(b);
             Mutations<NucleotideSequence> muts = MutationsGenerator.generateMutations(ref, model);
             NucleotideSequence q = muts.mutate(ref);
-            from = muts.convertPosition(from);
-            to = muts.convertPosition(to);
+            from = muts.convertToSeq2Position(from);
+            to = muts.convertToSeq2Position(to);
             from = from < 0 ? ~from : from;
             to = to < 0 ? ~to + 1 : to;
 

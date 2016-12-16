@@ -146,7 +146,7 @@ public class AlignerTest {
 
         int[] v = {-1, -1, -1, -1, 0, 1, 2, 3, 4, 6, -8, 7};
         for (int i = 0; i < seq1.size(); ++i)
-            assertEquals(v[i], muts.convertPosition(i));
+            assertEquals(v[i], muts.convertToSeq2Position(i));
     }
 
     @Test
@@ -170,13 +170,13 @@ public class AlignerTest {
         Mutations<NucleotideSequence> muts = a.getAbsoluteMutations();
 
         assertEquals(seq2.getRange(
-                sAbs(muts.convertPosition(2)),
-                sAbs(muts.convertPosition(10))),
+                sAbs(muts.convertToSeq2Position(2)),
+                sAbs(muts.convertToSeq2Position(10))),
                 muts.extractMutationsForRange(2, 10).mutate(seq1.getRange(2, 10)));
 
         assertEquals(seq2.getRange(
-                sAbs(muts.convertPosition(2)),
-                sAbs(muts.convertPosition(11))),
+                sAbs(muts.convertToSeq2Position(2)),
+                sAbs(muts.convertToSeq2Position(11))),
                 muts.extractMutationsForRange(2, 11).mutate(seq1.getRange(2, 11)));
     }
 
@@ -259,8 +259,8 @@ public class AlignerTest {
             for (z = 0; z < 100; ++z) {
                 int from = random.nextInt(0, seq1.size() - 1);
                 int to = random.nextInt(0, seq1.size() - from) + from;
-                int from2 = m1.convertPosition(from);
-                int to2 = m1.convertPosition(to);
+                int from2 = m1.convertToSeq2Position(from);
+                int to2 = m1.convertToSeq2Position(to);
                 if (from2 >= 0 && to2 >= 0) {
                     //++to2;
 
@@ -274,7 +274,7 @@ public class AlignerTest {
                 }
             }
 
-            //Testing convertPosition
+            //Testing convertToSeq2Position
             TIntHashSet positions = new TIntHashSet();
             for (int j = 0; j < seq1.size(); ++j)
                 positions.add(j);
@@ -285,7 +285,7 @@ public class AlignerTest {
             while (it.hasNext()) {
                 position = it.next();
                 assertEquals(seq1.codeAt(position),
-                        seq2.codeAt(m1.convertPosition(position)));
+                        seq2.codeAt(m1.convertToSeq2Position(position)));
             }
         }
 

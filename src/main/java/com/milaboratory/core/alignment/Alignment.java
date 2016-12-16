@@ -82,7 +82,7 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
             if (!mutations.isCompatibleWith(sequence1)
                     || !sequence1Range.contains(mutations.getMutatedRange())
                     || sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
-                throw new IllegalArgumentException("Not compatible arguments: muts: " + mutations + " range1: " + sequence1Range + " range2: " + sequence2Range );
+                throw new IllegalArgumentException("Not compatible arguments: muts: " + mutations + " range1: " + sequence1Range + " range2: " + sequence2Range);
         } else if (sequence1Range.length() != sequence2Range.length())
             throw new IllegalArgumentException("Not compatible arguments.");
 
@@ -139,23 +139,52 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
     }
 
     /**
-     * Converts specified position from sequence1 coordinates to sequence2 coordinates. If position out of aligned
-     * range of sequence1 range, returns -1. If letter at specified position in sequence1 is removed in sequence2, than
+     * Converts specified position from sequence1 coordinates to sequence2 coordinates. If position is out of aligned
+     * range of sequence1, returns -1. If letter at specified position in sequence1 is removed in sequence2, than
      * returns {@code -2 - p}, where {@code p} is a position of previous letter in sequence2.
      *
-     * @param position position in sequence1
+     * @param positionInSeq1 position in sequence1
      * @return position in coordinates of sequence2, or -1 if specified position is out of aligned range of sequence1,
-     * or if
-     * letter at specified position in sequence1 is removed in sequence2  --- {@code -2 - p} where {@code p} is a
-     * position of previous letter in sequence2
+     * or if letter at specified position in sequence1 is removed in sequence2 --- {@code -2 - p} where {@code p} is a
+     * position of next letter in sequence2
      */
-    public int convertPosition(int position) {
-        if (!sequence1Range.containsBoundary(position))
+    public int convertToSeq2Position(int positionInSeq1) {
+        if (!sequence1Range.containsBoundary(positionInSeq1))
             return -1;
-        int p = mutations.convertPosition(position);
+        int p = mutations.convertToSeq2Position(positionInSeq1);
         if (p < 0)
             return -2 - (~p + sequence2Range.getFrom() - sequence1Range.getFrom());
         return p + sequence2Range.getFrom() - sequence1Range.getFrom();
+    }
+
+    /**
+     * Converts specified position from sequence2 coordinates to sequence1 coordinates. If position is out of aligned
+     * range of sequence2, returns -1. If letter at specified position in sequence2 is removed in sequence1, than
+     * returns {@code -2 - p}, where {@code p} is a position of previous letter in sequence2.
+     *
+     * @param positionInSeq2 position in sequence2
+     * @return position in coordinates of sequence1, or -1 if specified position is out of aligned range of sequence2,
+     * or if letter at specified position in sequence2 is removed in sequence2 --- {@code -2 - p} where {@code p} is a
+     * position of next letter in sequence1
+     */
+    public int convertToSeq1Position(int positionInSeq2) {
+        if (!sequence2Range.containsBoundary(positionInSeq2))
+            return -1;
+
+        // 100
+        // |
+        // ATTAGACA
+        //          -> ST102G
+        // ATGAGACA
+        // |
+        // 350
+        //
+        // 352
+
+        positionInSeq2 += -sequence2Range.getFrom() + sequence1Range.getFrom();
+
+        int p = mutations.convertToSeq1Position(positionInSeq2);
+        return p < 0 ? -2 - ~p : p;
     }
 
     public float getScore() {

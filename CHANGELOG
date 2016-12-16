@@ -1,4 +1,13 @@
 
+MiLib 1.6 (16 Dec 2016)
+========================
+
+-- ConvertPosition in Mutations and Alignments classes renamed to convertToSeq2Position 
+   **[migrate]**
+-- Introduced new method for reverse position conversion in alignments convertToSeq1Position (in 
+   Mutations and Alignments classes)
+
+
 MiLib 1.5.1 ( 8 Nov 2016)
 ========================
 

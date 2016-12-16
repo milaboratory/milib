@@ -304,7 +304,7 @@ public final class MutationsUtil {
         for (int aaP1 = 0; aaP1 <= aaSeq1.size(); aaP1++) {
             if (aaP1 != aaSeq1.size()) {
                 ntP1 = AminoAcidSequence.convertAAPositionToNt(aaP1, seq1.size(), translationParameters);
-                ntP2 = mutations.convertPosition(ntP1);
+                ntP2 = mutations.convertToSeq2Position(ntP1);
                 if (ntP2 < 0)
                     ntP2 = -ntP2 - 2;
 
