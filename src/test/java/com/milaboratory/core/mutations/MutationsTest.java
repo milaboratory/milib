@@ -107,13 +107,13 @@ public class MutationsTest {
 
         Mutations<NucleotideSequence> m1 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2).getAbsoluteMutations();
 
-        Mutations<NucleotideSequence> extracted = m1.extractMutationsForRange(0, seq1.size());
+        Mutations<NucleotideSequence> extracted = m1.extractRelativeMutationsForRange(0, seq1.size());
 
         Assert.assertEquals(m1, extracted);
         Assert.assertTrue(extracted == m1);
 
         for (int i = 0; i < m1.size(); i++) {
-            extracted = m1.extractMutationsForRange(i, i);
+            extracted = m1.extractRelativeMutationsForRange(i, i);
             Assert.assertEquals(decode("", NucleotideSequence.ALPHABET), extracted);
         }
     }
@@ -125,14 +125,14 @@ public class MutationsTest {
 
         Mutations<NucleotideSequence> m1 = Aligner.alignGlobal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq1, seq2).getAbsoluteMutations();
 
-        Mutations<NucleotideSequence> extracted = m1.extractMutationsForRange(3, seq1.size());
+        Mutations<NucleotideSequence> extracted = m1.extractRelativeMutationsForRange(3, seq1.size());
         Assert.assertEquals(decode("DG1 SA5C", NucleotideSequence.ALPHABET), extracted);
 
-        extracted = m1.extractMutationsForRange(2, seq1.size());
+        extracted = m1.extractRelativeMutationsForRange(2, seq1.size());
         Assert.assertEquals(decode("I1G DG2 SA6C", NucleotideSequence.ALPHABET), extracted);
 
         for (int i = 0; i < m1.size(); i++) {
-            extracted = m1.extractMutationsForRange(i, i);
+            extracted = m1.extractRelativeMutationsForRange(i, i);
             Assert.assertEquals(decode("", NucleotideSequence.ALPHABET), extracted);
         }
     }
@@ -386,7 +386,7 @@ public class MutationsTest {
             Mutations<NucleotideSequence> muts = MutationsGenerator.generateMutations(seq0, model);
             int from = getThreadLocalRandom().nextInt(seq0.size());
             int to = (from == seq0.size() - 1) ? from : from + getThreadLocalRandom().nextInt(seq0.size() - from);
-            Mutations<NucleotideSequence> inRangeMuts = muts.extractMutationsForRange(from, to);
+            Mutations<NucleotideSequence> inRangeMuts = muts.extractRelativeMutationsForRange(from, to);
             Mutations<NucleotideSequence> outOfRangeMuts = muts.removeMutationsInRange(from, to);
             NucleotideSequence inRangeSeq = seq0.getRange(from, to);
             NucleotideSequence outOfRangeSeq = seq0.getRange(0, from).concatenate(seq0.getRange(to, seq0.size()));

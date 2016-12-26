@@ -267,7 +267,7 @@ public class KAligner2<P> implements BatchAlignerWithBaseWithFilter<NucleotideSe
                     new Alignment<>(target, muts,
                             new Range(seq1From, seq1To),
                             new Range(seq2From, seq2To),
-                            AlignmentUtils.calculateScore(parameters.getScoring(), seq1To - seq1From, muts)),
+                            parameters.getScoring()),
                     payloads.get(mappingHit.id)));
         }
 

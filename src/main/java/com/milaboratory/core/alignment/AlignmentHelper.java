@@ -44,7 +44,7 @@ public final class AlignmentHelper implements java.io.Serializable {
         this.seq1Position = seq1Position;
         this.seq2Position = seq2Position;
         this.match = match;
-        this.offset = Math.max(Math.max(("" + a(seq2Position[0])).length(), ("" + a(seq1Position[0])).length()), offset);
+        this.offset = Math.max(Math.max(("" + aL(seq2Position[0])).length(), ("" + aL(seq1Position[0])).length()), offset);
 
         char[] chars = new char[match.size()];
         Arrays.fill(chars, ' ');
@@ -125,17 +125,17 @@ public final class AlignmentHelper implements java.io.Serializable {
      * Gets the first line of formatted alignment (query sequence)
      */
     public String getLine1() {
-        String startPosition = String.valueOf(a(seq1Position[0]));
+        String startPosition = String.valueOf(aL(seq1Position[0]));
         int spaces = offset - startPosition.length();
         return spaces(spaces) + startPosition + " " + seq1String +
-                " " + a(seq1Position[seq1Position.length - 1]);
+                " " + aR(seq1Position[seq1Position.length - 1]);
     }
 
     public String getLine1Compact() {
-        String startPosition = String.valueOf(a(seq1Position[0]));
+        String startPosition = String.valueOf(aL(seq1Position[0]));
         int spaces = offset - startPosition.length();
         return spaces(spaces) + startPosition + " " + toCompact(seq1String) +
-                " " + a(seq1Position[seq1Position.length - 1]);
+                " " + aR(seq1Position[seq1Position.length - 1]);
     }
 
     /**
@@ -149,10 +149,10 @@ public final class AlignmentHelper implements java.io.Serializable {
      * Gets the third line of formatted alignment (subject sequence)
      */
     public String getLine3() {
-        String startPosition = String.valueOf(a(seq2Position[0]));
+        String startPosition = String.valueOf(aL(seq2Position[0]));
         int spaces = offset - startPosition.length();
         return spaces(spaces) + startPosition + " " + seq2String +
-                " " + a(seq2Position[seq2Position.length - 1]);
+                " " + aR(seq2Position[seq2Position.length - 1]);
     }
 
     public String toStringWithSeq2Quality(SequenceQuality quality) {
@@ -163,10 +163,10 @@ public final class AlignmentHelper implements java.io.Serializable {
     }
 
     public String getLine3Compact() {
-        String startPosition = String.valueOf(a(seq2Position[0]));
+        String startPosition = String.valueOf(aL(seq2Position[0]));
         int spaces = offset - startPosition.length();
         return spaces(spaces) + startPosition + " " + toCompact(seq2String) +
-                " " + a(seq2Position[seq2Position.length - 1]);
+                " " + aR(seq2Position[seq2Position.length - 1]);
     }
 
     private String toCompact(String seqString) {
@@ -189,9 +189,11 @@ public final class AlignmentHelper implements java.io.Serializable {
         return getLine1Compact() + "\n" + getLine3Compact();
     }
 
-    private static int a(int f) {
-        if (f < 0)
-            return ~f;
-        return f;
+    private static int aL(int f) {
+        return f < 0 ? ~f : f;
+    }
+
+    private static int aR(int f) {
+        return f < 0 ? ~f - 1 : f;
     }
 }

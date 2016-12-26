@@ -211,9 +211,9 @@ public final class AminoAcidSequence extends AbstractArraySequence<AminoAcidSequ
             if (!translationParameters.includeIncomplete && aa >= ntSequenceLength / 3)
                 return null;
             return new AminoAcidSequencePosition(aa, ntPosition % 3);
-        } else {
-            return convertNtPositionToAA(ntPosition, ntSequenceLength, translationParameters.convertToLeftBound(ntSequenceLength));
-        }
+        } else
+            return convertNtPositionToAA(ntPosition, ntSequenceLength,
+                    translationParameters.convertToLeftBound(ntSequenceLength));
     }
 
     /**

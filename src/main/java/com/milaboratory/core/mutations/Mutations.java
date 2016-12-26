@@ -353,11 +353,11 @@ public final class Mutations<S extends Sequence<S>>
      * @param range range
      * @return mutations for a range of positions
      */
-    public Mutations<S> extractMutationsForRange(Range range) {
+    public Mutations<S> extractRelativeMutationsForRange(Range range) {
         if (range.isReverse())
             throw new IllegalArgumentException("Reverse ranges are not supported by this method.");
 
-        return extractMutationsForRange(range.getFrom(), range.getTo());
+        return extractRelativeMutationsForRange(range.getFrom(), range.getTo());
     }
 
     /**
@@ -368,14 +368,14 @@ public final class Mutations<S extends Sequence<S>>
      *
      * <p>
      * <b>Important:</b> to extract leftmost insertions (trailing insertions) use {@code from = -1}. E.g.
-     * {@code extractMutationsForRange(mut, -1, seqLength) == mut}.
+     * {@code extractRelativeMutationsForRange(mut, -1, seqLength) == mut}.
      * </p>
      *
      * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.
      * @param to   right bound of range, exclusive
      * @return mutations for a range of positions
      */
-    public Mutations<S> extractMutationsForRange(int from, int to) {
+    public Mutations<S> extractRelativeMutationsForRange(int from, int to) {
         if (to < from)
             throw new IllegalArgumentException("Reversed ranges are not supported.");
 
@@ -408,6 +408,55 @@ public final class Mutations<S extends Sequence<S>>
             result[i] = mutations[j] + offset;
 
         return new Mutations<>(alphabet, result, true);
+    }
+
+    /**
+     * Extracts mutations for a range of positions in the original sequence.
+     *
+     * <p>Insertions before {@code from} excluded. Insertions after {@code (to - 1)} included.</p>
+     *
+     * <p><b>Important:</b> to extract leftmost insertions (trailing insertions) use range with {@code from = -1}.</p>
+     *
+     * @param range target range in original sequence
+     * @return mutations for a range of positions in original sequence
+     */
+    public Mutations<S> extractAbsoluteMutationsForRange(Range range) {
+        return extractAbsoluteMutationsForRange(range.getFrom(), range.getTo());
+    }
+
+    /**
+     * Extracts mutations for a range of positions in the original sequence.
+     *
+     * <p>Insertions before {@code from} excluded. Insertions after {@code (to - 1)} included.</p>
+     *
+     * <p>
+     * <b>Important:</b> to extract leftmost insertions (trailing insertions) use {@code from = -1}. E.g.
+     * {@code extractAbsoluteMutationsForRange(mut, -1, seqLength) == mut}.
+     * </p>
+     *
+     * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.
+     * @param to   right bound of range, exclusive
+     * @return mutations for a range of positions in original sequence
+     */
+    public Mutations<S> extractAbsoluteMutationsForRange(int from, int to) {
+        if (to < from)
+            throw new IllegalArgumentException("Reversed ranges are not supported.");
+
+        long indexRange = getIndexRange(from, to);
+
+        // If range size is 0 return empty array
+        if (indexRange == 0)
+            return empty(alphabet);
+
+        // Unpacking
+        int fromIndex = (int) (indexRange >>> 32),
+                toIndex = (int) (indexRange & 0xFFFFFFFF);
+
+        // Don't create new object if result will be equal to this
+        if (from == 0 && fromIndex == 0 && toIndex == mutations.length)
+            return this;
+
+        return new Mutations<>(alphabet, Arrays.copyOfRange(mutations, fromIndex, toIndex), true);
     }
 
     /**
@@ -450,7 +499,7 @@ public final class Mutations<S extends Sequence<S>>
      *
      * <p>
      * <b>Important:</b> to remove leftmost insertions (left trailing insertions) use {@code from = -1}. E.g.
-     * {@code extractMutationsForRange(mut, -1, seqLength) == mut}.
+     * {@code extractRelativeMutationsForRange(mut, -1, seqLength) == mut}.
      * </p>
      *
      * @param from left bound of range, inclusive. Use -1 to extract leftmost insertions.
@@ -645,6 +694,10 @@ public final class Mutations<S extends Sequence<S>>
 
     public String encode() {
         return MutationsUtil.encode(mutations, alphabet);
+    }
+
+    public String encode(String separator) {
+        return MutationsUtil.encode(mutations, alphabet, separator);
     }
 
     public String encodeFixed() {

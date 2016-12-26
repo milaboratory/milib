@@ -15,7 +15,6 @@ import org.junit.Test;
 import java.util.Arrays;
 
 import static com.milaboratory.core.alignment.BandedAffineAligner.semiLocalLeft;
-import static com.milaboratory.core.alignment.BandedAffineAligner.semiLocalRight;
 import static com.milaboratory.test.TestUtil.its;
 import static com.milaboratory.test.TestUtil.randomSequence;
 import static org.junit.Assert.assertEquals;
@@ -185,7 +184,6 @@ public class BandedAffineAlignerTest {
         //System.out.println(new Alignment<>(a, mutations.createAndDestroy(), new Range(0, a.size()), new Range(0, b.size()), 100));
     }
 
-
     @Test
     public void testSemiGlobalRightRandom1() throws Exception {
         AffineGapAlignmentScoring<NucleotideSequence> scoring = new AffineGapAlignmentScoring<>(
@@ -215,8 +213,8 @@ public class BandedAffineAlignerTest {
             assertTrue(la.getSequence2Range().getTo() >= offset2 + length2 - added2);
 
             assertAlignment(la, seq2);
-            int score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-            assertEquals(score, (int) la.score);
+            //int score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+            assertEquals(la.calculateScore(scoring), (int) la.score);
         }
     }
 
@@ -249,8 +247,8 @@ public class BandedAffineAlignerTest {
 
             assertAlignment(la, seq2);
 
-            int score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-            assertEquals(score, (int) la.score);
+            //int score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+            assertEquals(la.calculateScore(scoring), (int) la.score);
         }
     }
 
@@ -288,7 +286,10 @@ public class BandedAffineAlignerTest {
                 Alignment<NucleotideSequence> la;
 
                 la = BandedAffineAligner.align(scoring, s1, s2, 0, s1.size(), 0, s2.size(), 0);
-                int score = AlignmentUtils.calculateScore(scoring, s1.size(), la.mutations);
+                int score = AlignmentUtils.calculateScore(s1, la.mutations, scoring);
+                if ((int) la.score != score) {
+                    System.out.println(la.getAlignmentHelper());
+                }
                 Assert.assertEquals((int) la.score, score);
                 assertAlignment(la, s2);
 
@@ -296,32 +297,32 @@ public class BandedAffineAlignerTest {
                         0, s1.size(), 10,
                         0, s2.size(), 10,
                         10);
-                score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-                Assert.assertEquals((int) la.score, score);
+                //score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+                Assert.assertEquals((int) la.score, la.calculateScore(scoring));
                 assertAlignment(la, s2);
 
                 la = semiLocalLeft(scoring, s1, s2,
                         0, s1.size(),
                         0, s2.size(),
                         10);
-                score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-                Assert.assertEquals((int) la.score, score);
+                //score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+                Assert.assertEquals((int) la.score, la.calculateScore(scoring));
                 assertAlignment(la, s2);
 
                 la = BandedAffineAligner.semiGlobalRight(scoring, s1, s2,
                         0, s1.size(), 10,
                         0, s2.size(), 10,
                         10);
-                score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-                Assert.assertEquals((int) la.score, score);
+                //score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+                Assert.assertEquals((int) la.score, la.calculateScore(scoring));
                 assertAlignment(la, s2);
 
                 la = BandedAffineAligner.semiLocalRight(scoring, s1, s2,
                         0, s1.size(),
                         0, s2.size(),
                         10);
-                score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
-                Assert.assertEquals((int) la.score, score);
+                //score = AlignmentUtils.calculateScore(scoring, la.getSequence1Range().length(), la.mutations);
+                Assert.assertEquals((int) la.score, la.calculateScore(scoring));
                 assertAlignment(la, s2);
             }
         }

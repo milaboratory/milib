@@ -38,6 +38,10 @@ public final class RandomUtil {
     //Used to generate individual seeds for each thread-local random generator
     private static final AtomicLong seedCounter = new AtomicLong(641L);
 
+    public static void setGlobalInitialSeed(final long seed) {
+        seedCounter.set(seed);
+    }
+
     public static long reseedThreadLocal() {
         return reseedThreadLocal(getThreadLocalRandom().nextLong());
     }

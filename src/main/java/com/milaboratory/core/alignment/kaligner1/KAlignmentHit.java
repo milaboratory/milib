@@ -132,15 +132,16 @@ public final class KAlignmentHit<P> implements java.io.Serializable, AlignmentHi
                     refAdded = refLength;
             }
 
+            LinearGapAlignmentScoring<NucleotideSequence> scoring = parameters.getScoring();
             if (parameters.isFloatingLeftBound()) {
-                br = BandedLinearAligner.alignSemiLocalRight0(parameters.getScoring(), reference, target,
+                br = BandedLinearAligner.alignSemiLocalRight0(scoring, reference, target,
                         refFrom, refLength, seqFrom, seqLength,
                         maxIndels, parameters.getAlignmentStopPenalty(), mutations, array);
 
                 gRefFrom = br.sequence1Stop;
                 gSeqFrom = br.sequence2Stop;
             } else {
-                br = BandedLinearAligner.alignLeftAdded0(parameters.getScoring(), reference, target,
+                br = BandedLinearAligner.alignLeftAdded0(scoring, reference, target,
                         refFrom, refLength, refAdded, seqFrom, seqLength, seqAdded,
                         maxIndels, mutations, array);
 
@@ -169,7 +170,7 @@ public final class KAlignmentHit<P> implements java.io.Serializable, AlignmentHi
                         }
 
                         if (refLength > 0 || seqLength > 0)
-                            BandedLinearAligner.align0(parameters.getScoring(), reference, target,
+                            BandedLinearAligner.align0(scoring, reference, target,
                                     refFrom, refLength, seqFrom, seqLength, parameters.getMaxAdjacentIndels(), mutations, array);
 
                         gSeqTo = currentSeedPosition + kValue;
@@ -208,13 +209,13 @@ public final class KAlignmentHit<P> implements java.io.Serializable, AlignmentHi
             }
 
             if (parameters.isFloatingRightBound()) {
-                br = BandedLinearAligner.alignSemiLocalLeft0(parameters.getScoring(), reference, target,
+                br = BandedLinearAligner.alignSemiLocalLeft0(scoring, reference, target,
                         refFrom, refLength, seqFrom, seqLength,
                         maxIndels, parameters.getAlignmentStopPenalty(), mutations, array);
                 gRefTo = br.sequence1Stop + 1;
                 gSeqTo = br.sequence2Stop + 1;
             } else {
-                br = BandedLinearAligner.alignRightAdded0(parameters.getScoring(), reference, target,
+                br = BandedLinearAligner.alignRightAdded0(scoring, reference, target,
                         refFrom, refLength, refAdded, seqFrom, seqLength, seqAdded,
                         maxIndels, mutations, array);
                 gRefTo = br.sequence1Stop + 1;
@@ -248,9 +249,16 @@ public final class KAlignmentHit<P> implements java.io.Serializable, AlignmentHi
             //    }
 
             Mutations<NucleotideSequence> muts = mutations.createAndDestroy();
-            alignment = new Alignment<>(
-                    reference, muts, new Range(gRefFrom, gRefTo), new Range(gSeqFrom, gSeqTo),
-                    AlignmentUtils.calculateScore(parameters.getScoring(), gRefTo - gRefFrom, muts));
+            Alignment<NucleotideSequence> al = new Alignment<>(
+                    reference, muts, new Range(gRefFrom, gRefTo), new Range(gSeqFrom, gSeqTo), scoring);
+
+            if (parameters.isFloatingRightBound())
+                al = AlignmentTrimmer.rightTrimAlignment(al, scoring);
+
+            if (parameters.isFloatingLeftBound())
+                al = AlignmentTrimmer.leftTrimAlignment(al, scoring);
+
+            alignment = al;
         } finally {
             AlignmentCache.release();
         }

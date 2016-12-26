@@ -31,6 +31,7 @@ public final class Mutation {
             POSITION_OFFSET = 12,
             MAX_POSITION_VALUE = 0xFFFFF,
             NON_MUTATION = 0,
+            NON_MUTATION_1 = 1,
             MUTATION_TYPE_OFFSET = 5;
 
     private Mutation() {
@@ -78,8 +79,16 @@ public final class Mutation {
         return (byte) ((code >> FROM_OFFSET) & LETTER_MASK);
     }
 
+    public static char getFromSymbol(int code, Alphabet alphabet) {
+        return alphabet.codeToSymbol((byte) ((code >> FROM_OFFSET) & LETTER_MASK));
+    }
+
     public static byte getTo(int code) {
         return (byte) (code & LETTER_MASK);
+    }
+
+    public static char getToSymbol(int code, Alphabet alphabet) {
+        return alphabet.codeToSymbol((byte) (code & LETTER_MASK));
     }
 
     /**

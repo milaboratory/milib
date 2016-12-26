@@ -1,4 +1,17 @@
 
+MiLib 1.7 (26 Dec 2016)
+========================
+
+-- Comprehansive set of methods to convert nucleotide mutations to amino-acid (e.g. 
+   `nt2aaWithMapping`, `nt2aaDetailed`, etc...)
+-- Encode method for mutations with separator
+-- Mutations#extractMutationsForRange renamed to extractRelativeMutationsForRange
+-- Addded Mutations#extractAbsoluteMutationsForRange
+-- Added AlignmentIterator
+-- minor: Added com.milaboratory.cli.ActionHelpProvider#printDefaultHelp
+-- minor: Fix for toString of empty mutations
+
+
 MiLib 1.6 (16 Dec 2016)
 ========================
 

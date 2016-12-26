@@ -2,11 +2,8 @@ package com.milaboratory.core.alignment.kaligner2;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
-import com.milaboratory.core.alignment.kaligner1.KAlignmentHit;
+import com.milaboratory.core.alignment.kaligner1.*;
 import com.milaboratory.core.alignment.batch.BatchAlignerWithBaseParameters;
-import com.milaboratory.core.alignment.kaligner1.KAligner;
-import com.milaboratory.core.alignment.kaligner1.KAlignmentResult;
-import com.milaboratory.core.alignment.kaligner1.KMapper;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.util.GlobalObjectMappers;
 
@@ -14,7 +11,7 @@ import com.milaboratory.util.GlobalObjectMappers;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public final class KAlignerParameters2 implements BatchAlignerWithBaseParameters, Cloneable, java.io.Serializable {
+public final class KAlignerParameters2 implements AbstractKAlignerParameters, Cloneable, java.io.Serializable {
     private static final long serialVersionUID = 1L;
 
     /* MAPPER PARAMETERS BEGIN */
@@ -513,6 +510,7 @@ public final class KAlignerParameters2 implements BatchAlignerWithBaseParameters
      *
      * @return {@code true} if left bound of alignment is floating
      */
+    @Override
     public boolean isFloatingLeftBound() {
         return floatingLeftBound;
     }
@@ -533,6 +531,7 @@ public final class KAlignerParameters2 implements BatchAlignerWithBaseParameters
      *
      * @return {@code true} if right bound of alignment is floating
      */
+    @Override
     public boolean isFloatingRightBound() {
         return floatingRightBound;
     }
@@ -610,6 +609,7 @@ public final class KAlignerParameters2 implements BatchAlignerWithBaseParameters
      *
      * @return maximal number of stored hits
      */
+    @Override
     public int getMaxHits() {
         return maxHits;
     }

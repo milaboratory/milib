@@ -15,9 +15,8 @@
  */
 package com.milaboratory.cli;
 
-/**
- * Created by dbolotin on 28/08/14.
- */
 public interface ActionHelpProvider {
+    boolean printDefaultHelp();
+
     void printHelp(StringBuilder builder);
 }

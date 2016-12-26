@@ -33,6 +33,8 @@ import com.milaboratory.primitivio.annotations.Serializable;
 @Serializable(by = IO.NSequenceWithQualitySerializer.class)
 public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSequence>
         implements NSeq<NSequenceWithQuality> {
+    public static final NSequenceWithQuality EMPTY = new NSequenceWithQuality(NucleotideSequence.EMPTY, SequenceQuality.EMPTY);
+
     /**
      * Creates nucleotide sequence with its quality
      *

@@ -173,9 +173,13 @@ public class JCommanderBasedMain implements ActionHelper {
 
     protected void printActionHelp(JCommander commander, Action action) {
         StringBuilder builder = new StringBuilder();
-        if (action instanceof ActionHelpProvider)
+        if (action instanceof ActionHelpProvider) {
+            if (((ActionHelpProvider) action).printDefaultHelp()) {
+                commander.usage(action.command(), builder);
+                builder.append("\n");
+            }
             ((ActionHelpProvider) action).printHelp(builder);
-        else
+        } else
             commander.usage(action.command(), builder);
         outputStream.print(builder);
     }

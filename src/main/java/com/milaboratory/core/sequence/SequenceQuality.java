@@ -36,6 +36,7 @@ import java.util.Arrays;
 @Serializable(by = IO.SequenceQualitySerializer.class)
 public final class SequenceQuality extends AbstractSeq<SequenceQuality>
         implements java.io.Serializable {
+    public static final SequenceQuality EMPTY = new SequenceQuality(new byte[0]);
     /**
      * Default value of good quality
      */

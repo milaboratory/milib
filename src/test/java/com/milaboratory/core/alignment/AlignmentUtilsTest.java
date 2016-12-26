@@ -18,11 +18,8 @@ package com.milaboratory.core.alignment;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.sequence.NucleotideSequence;
-import org.apache.commons.math3.random.RandomDataGenerator;
 import org.junit.Assert;
 import org.junit.Test;
-
-import static com.milaboratory.test.TestUtil.randomSequence;
 
 /**
  * @author Dmitry Bolotin
@@ -36,8 +33,9 @@ public class AlignmentUtilsTest {
         int[] mut = new int[2];
         mut[0] = Mutation.createInsertion(1, 1);
         mut[1] = Mutation.createSubstitution(3, 0, 1);
-        float score = AlignmentUtils.calculateScore(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                s1.size(), new Mutations(NucleotideSequence.ALPHABET, mut));
+        float score = AlignmentUtils.calculateScore(s1,
+                new Mutations(NucleotideSequence.ALPHABET, mut),
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring());
 
         //3 matches(15) - 1 mismatch(-4) - 1 insertion(-4);
         Assert.assertEquals(6, (int) score);
@@ -54,12 +52,11 @@ public class AlignmentUtilsTest {
         Alignment<NucleotideSequence> al = BandedAffineAligner.align(scoring, s1, s2, 0, s1.size(), 0, s2.size(), 0);
         Assert.assertEquals(168, (int) al.score);
 
-        int score = AlignmentUtils.calculateScore(scoring, s1.size(), al.mutations);
+        int score = AlignmentUtils.calculateScore(s1, al.mutations, scoring);
         Assert.assertEquals((int) al.score, score);
 
-
         al = BandedAffineAligner.align(scoring, s2, s1, 0, s2.size(), 0, s1.size(), 0);
-        score = AlignmentUtils.calculateScore(scoring, s2.size(), al.mutations);
+        score = AlignmentUtils.calculateScore(s2, al.mutations, scoring);
         Assert.assertEquals((int) al.score, score);
     }
 }

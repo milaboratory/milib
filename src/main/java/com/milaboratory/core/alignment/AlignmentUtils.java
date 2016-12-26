@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.sequence.Alphabet;
@@ -30,84 +31,131 @@ public final class AlignmentUtils {
     private AlignmentUtils() {
     }
 
-    public static int calculateScore(AlignmentScoring scoring, int initialLength, Mutations mutations) {
-        if (scoring instanceof AffineGapAlignmentScoring)
-            return calculateScore((AffineGapAlignmentScoring) scoring, initialLength, mutations);
-        else if (scoring instanceof LinearGapAlignmentScoring)
-            return calculateScore((LinearGapAlignmentScoring) scoring, initialLength, mutations);
+    /**
+     * Calculates score of alignment
+     *
+     * @param seq1      target sequence
+     * @param mutations mutations (alignment)
+     * @param scoring   scoring
+     * @param <S>       sequence type
+     * @return score
+     */
+    public static <S extends Sequence<S>> int calculateScore(S seq1, Mutations<S> mutations,
+                                                             AlignmentScoring<S> scoring) {
+        return calculateScore(seq1, new Range(0, seq1.size()), mutations, scoring);
+    }
+
+    /**
+     * Calculates score of alignment
+     *
+     * @param seq1      target sequence
+     * @param seq1Range aligned range
+     * @param mutations mutations (alignment)
+     * @param scoring   scoring
+     * @param <S>       sequence type
+     * @return score
+     */
+    public static <S extends Sequence<S>> int calculateScore(S seq1, Range seq1Range, Mutations<S> mutations,
+                                                             AlignmentScoring<S> scoring) {
+        if (scoring instanceof LinearGapAlignmentScoring)
+            return calculateScore(seq1, seq1Range, mutations, (LinearGapAlignmentScoring<S>) scoring);
+        else if (scoring instanceof AffineGapAlignmentScoring)
+            return calculateScore(seq1, seq1Range, mutations, (AffineGapAlignmentScoring<S>) scoring);
         else
             throw new IllegalArgumentException("Unknown scoring type");
     }
 
     /**
-     * Calculates score of alignments.
+     * Calculates score of alignment
      *
-     * @param scoring       scoring
-     * @param initialLength length of initial sequence (before mutations; upper line of alignment)
-     * @param mutations     array of mutations
-     * @return score of alignment
+     * @param seq1      target sequence
+     * @param seq1Range aligned range
+     * @param mutations mutations (alignment)
+     * @param scoring   scoring
+     * @param <S>       sequence type
+     * @return score
      */
-    public static int calculateScore(AffineGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
-        if (!scoring.uniformBasicMatchScore())
-            throw new IllegalArgumentException("Scoring with non-uniform match score is not supported.");
+    public static <S extends Sequence<S>> int calculateScore(S seq1, Range seq1Range, Mutations<S> mutations,
+                                                             LinearGapAlignmentScoring<S> scoring) {
+        if (!mutations.isEmpty() && mutations.getPositionByIndex(0) < seq1Range.getFrom() - 1)
+            throw new IllegalArgumentException();
 
-        int matchScore = scoring.getScore((byte) 0, (byte) 0);
-        int score = matchScore * initialLength;
-        int prevMutation = -1;
-        for (int i = 0; i < mutations.size(); ++i) {
-            int mutation = mutations.getMutation(i);
+        final AlignmentIteratorForward<S> iterator = new AlignmentIteratorForward<>(mutations, seq1Range);
 
-            if (scoring.getAlphabet().isWildcard(getFrom(mutation)) || scoring.getAlphabet().isWildcard(getTo(mutation)))
-                throw new IllegalArgumentException("Mutations with wildcards are not supported.");
+        int score = 0;
 
-            if (isDeletion(mutation)) {
-                if (i > 0 && isDeletion(prevMutation) && getPosition(mutation) - 1 == getPosition(prevMutation))
-                    score += scoring.getGapExtensionPenalty();
-                else
-                    score += scoring.getGapOpenPenalty();
-                score -= matchScore;
-            } else if (isInsertion(mutation)) {
-                if (i > 0 && isInsertion(prevMutation) && getPosition(mutation) == getPosition(prevMutation))
-                    score += scoring.getGapExtensionPenalty();
-                else
-                    score += scoring.getGapOpenPenalty();
-            } else {//Substitution
-                score += scoring.getScore(getFrom(mutation), getTo(mutation));
-                score -= matchScore;
+        while (iterator.advance()) {
+            final int mut = iterator.getCurrentMutation();
+            switch (Mutation.getRawTypeCode(mut)) {
+                case RAW_MUTATION_TYPE_SUBSTITUTION:
+                    score += scoring.getScore(Mutation.getFrom(mut), Mutation.getTo(mut));
+                    break;
+
+                case RAW_MUTATION_TYPE_DELETION:
+                case RAW_MUTATION_TYPE_INSERTION:
+                    score += scoring.getGapPenalty();
+                    break;
+
+                default:
+                    byte c = seq1.codeAt(iterator.getSeq1Position());
+                    score += scoring.getScore(c, c);
+                    break;
             }
-
-            prevMutation = mutation;
         }
+
         return score;
     }
 
     /**
-     * Calculates score of alignments.
+     * Calculates score of alignment
      *
-     * @param scoring       scoring
-     * @param initialLength length of initial sequence (before mutations; upper line of alignment)
-     * @param mutations     array of mutations
-     * @return score of alignment
+     * @param seq1      target sequence
+     * @param seq1Range aligned range
+     * @param mutations mutations (alignment)
+     * @param scoring   scoring
+     * @param <S>       sequence type
+     * @return score
      */
-    public static int calculateScore(LinearGapAlignmentScoring scoring, int initialLength, Mutations mutations) {
-        if (!scoring.uniformBasicMatchScore())
-            throw new IllegalArgumentException("Scoring with non-uniform match score is not supported.");
+    public static <S extends Sequence<S>> int calculateScore(S seq1, Range seq1Range, Mutations<S> mutations,
+                                                             AffineGapAlignmentScoring<S> scoring) {
+        if (!mutations.isEmpty() && mutations.getPositionByIndex(0) < seq1Range.getFrom() - 1)
+            throw new IllegalArgumentException();
 
-        int matchScore = scoring.getScore((byte) 0, (byte) 0);
-        int score = matchScore * initialLength;
-        for (int i = 0; i < mutations.size(); ++i) {
-            int mutation = mutations.getMutation(i);
+        final AlignmentIteratorForward<S> iterator = new AlignmentIteratorForward<>(mutations, seq1Range);
 
-            if (scoring.getAlphabet().isWildcard(getFrom(mutation)) || scoring.getAlphabet().isWildcard(getTo(mutation)))
-                throw new IllegalArgumentException("Mutations with wildcards are not supported.");
+        int score = 0;
 
-            if (isDeletion(mutation) || isInsertion(mutation))
-                score += scoring.getGapPenalty();
-            else //Substitution
-                score += scoring.getScore(getFrom(mutation), getTo(mutation));
-            if (isDeletion(mutation) || isSubstitution(mutation))
-                score -= matchScore;
+        int prevMut = NON_MUTATION;
+
+        while (iterator.advance()) {
+            final int mut = iterator.getCurrentMutation();
+            switch (Mutation.getRawTypeCode(mut)) {
+                case RAW_MUTATION_TYPE_SUBSTITUTION:
+                    score += scoring.getScore(Mutation.getFrom(mut), Mutation.getTo(mut));
+                    break;
+
+                case RAW_MUTATION_TYPE_DELETION:
+                    if (Mutation.isDeletion(prevMut) && Mutation.getPosition(prevMut) == iterator.getSeq1Position() - 1)
+                        score += scoring.getGapExtensionPenalty();
+                    else
+                        score += scoring.getGapOpenPenalty();
+                    break;
+
+                case RAW_MUTATION_TYPE_INSERTION:
+                    if (Mutation.isInsertion(prevMut) && Mutation.getPosition(prevMut) == iterator.getSeq1Position())
+                        score += scoring.getGapExtensionPenalty();
+                    else
+                        score += scoring.getGapOpenPenalty();
+                    break;
+
+                default:
+                    byte c = seq1.codeAt(iterator.getSeq1Position());
+                    score += scoring.getScore(c, c);
+                    break;
+            }
+            prevMut = mut;
         }
+
         return score;
     }
 

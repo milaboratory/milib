@@ -15,10 +15,13 @@
  */
 package com.milaboratory.core.mutations;
 
+import com.milaboratory.core.Range;
+import com.milaboratory.core.alignment.AlignmentIteratorForward;
 import com.milaboratory.core.sequence.*;
 import com.milaboratory.core.sequence.AminoAcidSequence.AminoAcidSequencePosition;
 import com.milaboratory.util.IntArrayList;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -197,9 +200,36 @@ public final class MutationsUtil {
      * @return mutations in a human-readable string
      */
     public static String encode(int[] mutations, Alphabet alphabet) {
+        return encode(mutations, alphabet, "");
+    }
+
+    /**
+     * Encodes mutations in compact human-readable string, that can be decoded by method {@link #decode(String,
+     * com.milaboratory.core.sequence.Alphabet)}.
+     *
+     * <p>For format see {@link com.milaboratory.core.mutations.Mutation#encode(int,
+     * com.milaboratory.core.sequence.Alphabet)}.</p>
+     *
+     * <p>Mutations are just concatenated with given separator. The following RegExp can be used for simple parsing of
+     * resulting string for
+     * nucleotide sequences: {@code ([SDI])([ATGC]?)(\d+)([ATGC]?)} .</p>
+     *
+     * @param mutations mutations to encode
+     * @param separator separator
+     * @return mutations in a human-readable string
+     */
+    public static String encode(int[] mutations, Alphabet alphabet, String separator) {
+        if (mutations.length == 0)
+            return "";
+
         StringBuilder builder = new StringBuilder();
+
         for (int mut : mutations)
-            builder.append(Mutation.encode(mut, alphabet));
+            builder.append(Mutation.encode(mut, alphabet))
+                    .append(separator);
+
+        builder.delete(builder.length() - separator.length(), builder.length());
+
         return builder.toString();
     }
 
@@ -347,5 +377,134 @@ public final class MutationsUtil {
             }
         }
         return result.createAndDestroy();
+    }
+
+    public static int[] nt2IndividualAA(NucleotideSequence seq1, Mutations<NucleotideSequence> mutations,
+                                        TranslationParameters translationParameters) {
+        int[] result = new int[mutations.size()];
+        for (int i = 0; i < mutations.size(); i++) {
+            if (mutations.getRawTypeByIndex(i) != RAW_MUTATION_TYPE_SUBSTITUTION)
+                result[i] = NON_MUTATION;
+            else {
+                Mutations<AminoAcidSequence> aaMuts
+                        = nt2aa(seq1, mutations.getRange(i, i + 1), translationParameters);
+                result[i] = aaMuts.size() == 0 ? NON_MUTATION : aaMuts.getMutation(0);
+            }
+        }
+        return result;
+    }
+
+    public static MutationsWitMapping nt2aaWithMapping(NucleotideSequence seq1, Mutations<NucleotideSequence> mutations,
+                                                       TranslationParameters translationParameters,
+                                                       int maxShiftedTriplets) {
+        Mutations<AminoAcidSequence> aaMutations = nt2aa(seq1, mutations, translationParameters, maxShiftedTriplets);
+
+        if (aaMutations == null)
+            return null;
+
+        int[] mapping = new int[mutations.size()];
+        Arrays.fill(mapping, -1);
+
+        // Already calculates in nt2aa()
+        AminoAcidSequence aaSeq1 = AminoAcidSequence.translate(seq1, translationParameters);
+        NucleotideSequence seq2 = mutations.mutate(seq1);
+        AminoAcidSequence aaSeq2 = AminoAcidSequence.translate(seq2, translationParameters);
+
+        AlignmentIteratorForward<NucleotideSequence> ntIterator = new AlignmentIteratorForward<>(mutations,
+                new Range(0, seq1.size()));
+
+        AlignmentIteratorForward<AminoAcidSequence> aaIterator = new AlignmentIteratorForward<>(aaMutations,
+                new Range(0, aaSeq2.size()));
+        boolean activeAAIterator = aaIterator.advance();
+
+        while (ntIterator.advance()) {
+            if (ntIterator.getCurrentMutation() == NON_MUTATION)
+                continue;
+
+            AminoAcidSequencePosition aaSeq1Position = AminoAcidSequence.convertNtPositionToAA(
+                    ntIterator.getSeq1Position(), seq1.size(), translationParameters);
+            AminoAcidSequencePosition aaSeq2Position = AminoAcidSequence.convertNtPositionToAA(
+                    ntIterator.getSeq2Position(), seq2.size(), translationParameters);
+
+            if (aaSeq1Position == null || aaSeq2Position == null)
+                continue;
+
+            if (activeAAIterator)
+                do {
+
+                    if (((aaSeq1Position.aminoAcidPosition == aaIterator.getSeq1Position() && aaSeq2Position.aminoAcidPosition <= aaIterator.getSeq2Position()) ||
+                            (aaSeq1Position.aminoAcidPosition <= aaIterator.getSeq1Position() && aaSeq2Position.aminoAcidPosition == aaIterator.getSeq2Position())
+                    ) && aaIterator.getCurrentMutation() != NON_MUTATION)
+                        mapping[ntIterator.getMutationsPointer()] = aaIterator.getMutationsPointer();
+
+                } while (!(aaSeq1Position.aminoAcidPosition <= aaIterator.getSeq1Position() &&
+                        aaSeq2Position.aminoAcidPosition <= aaIterator.getSeq2Position()) &&
+                        (activeAAIterator = aaIterator.advance()));
+        }
+
+        return new MutationsWitMapping(aaMutations, mapping);
+    }
+
+    /**
+     * Performs a comprehensive translation of mutations present in a nucleotide sequence to effective mutations in
+     * corresponding amino acid sequence.
+     *
+     * <p>The resulting array contains:</p>
+     *
+     * <ul>
+     * <li>the original nucleotide mutation</li>
+     * <li>"individual" amino acid mutation, i.e. an expected amino acid mutation given no other mutations have
+     * occurred</li>
+     * <li>"cumulative" amino acid mutation, i.e. the observed amino acid mutation combining effect from all other
+     * nucleotide mutations</li>
+     * </ul>
+     *
+     * @param seq1                  the reference nucleotide sequence
+     * @param mutations             nucleotide mutations in the reference nucleotide sequence
+     * @param translationParameters translation parameters
+     * @param maxShiftedTriplets    max number of shifted triplets for computing the cumulative effect from indels
+     * @return an array of nucleotide mutations with their amino acid translations
+     */
+    public static MutationNt2AADescriptor[] nt2aaDetailed(NucleotideSequence seq1, Mutations<NucleotideSequence> mutations,
+                                                          TranslationParameters translationParameters,
+                                                          int maxShiftedTriplets) {
+        MutationsWitMapping mutationsWitMapping = nt2aaWithMapping(seq1, mutations, translationParameters, maxShiftedTriplets);
+        int[] individualMutations = nt2IndividualAA(seq1, mutations, translationParameters);
+        MutationNt2AADescriptor[] result = new MutationNt2AADescriptor[mutations.size()];
+        for (int i = 0; i < mutations.size(); i++) {
+            result[i] = new MutationNt2AADescriptor(mutations.getMutation(i), individualMutations[i],
+                    mutationsWitMapping.mapping[i] == -1 ? NON_MUTATION :
+                            mutationsWitMapping.mutations.getMutation(mutationsWitMapping.mapping[i]));
+        }
+        return result;
+    }
+
+    public static final class MutationNt2AADescriptor {
+        public final int originalNtMutation,
+                individualAAMutation,
+                cumulativeAAMutation;
+
+        public MutationNt2AADescriptor(int originalNtMutation, int individualAAMutation, int cumulativeAAMutation) {
+            this.originalNtMutation = originalNtMutation;
+            this.individualAAMutation = individualAAMutation;
+            this.cumulativeAAMutation = cumulativeAAMutation;
+        }
+
+        @Override
+        public String toString() {
+            return Mutation.encode(originalNtMutation, NucleotideSequence.ALPHABET) + ":" +
+                    (individualAAMutation == NON_MUTATION ? "" : Mutation.encode(individualAAMutation, AminoAcidSequence.ALPHABET)) + ":" +
+                    (cumulativeAAMutation == NON_MUTATION ? "" : Mutation.encode(cumulativeAAMutation, AminoAcidSequence.ALPHABET));
+        }
+    }
+
+    public static final class MutationsWitMapping {
+        public final Mutations<AminoAcidSequence> mutations;
+        public final int[] mapping;
+
+        public MutationsWitMapping(Mutations<AminoAcidSequence> mutations, int[] mapping) {
+            this.mutations = mutations;
+            this.mapping = mapping;
+        }
     }
 }
