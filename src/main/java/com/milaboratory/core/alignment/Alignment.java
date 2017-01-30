@@ -218,6 +218,40 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
     }
 
     /**
+     * Converts range in sequence2 to range in sequence1, or returns null if input range is not fully covered by
+     * alignment
+     *
+     * @param rangeInSeq2 range in sequence 2
+     * @return range in sequence1 or null if rangeInSeq2 is not fully covered by alignment
+     */
+    public Range convertToSeq1Range(Range rangeInSeq2) {
+        int from = aabs(convertToSeq1Position(rangeInSeq2.getFrom()));
+        int to = aabs(convertToSeq1Position(rangeInSeq2.getTo()));
+
+        if (from == -1 || to == -1)
+            return null;
+
+        return new Range(from, to);
+    }
+
+    /**
+     * Converts range in sequence1 to range in sequence2, or returns null if input range is not fully covered by
+     * alignment
+     *
+     * @param rangeInSeq1 range in sequence 1
+     * @return range in sequence2 or null if rangeInSeq1 is not fully covered by alignment
+     */
+    public Range convertToSeq2Range(Range rangeInSeq1) {
+        int from = aabs(convertToSeq2Position(rangeInSeq1.getFrom()));
+        int to = aabs(convertToSeq2Position(rangeInSeq1.getTo()));
+
+        if (from == -1 || to == -1)
+            return null;
+
+        return new Range(from, to);
+    }
+
+    /**
      * Return alignment score
      *
      * @return alignment score

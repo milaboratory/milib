@@ -21,7 +21,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.io.binary.RangeSerializer;
 import com.milaboratory.primitivio.annotations.Serializable;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.List;
 
 /**
  * This class represents a range of positions in a sequence (e.g. sub-sequence). Range can be <b>reversed</b> ({@code
@@ -176,9 +179,9 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
      * @return {@code true} if range intersects with {@code other} range
      */
     public boolean intersectsWith(Range other) {
-        return (this.contains(other.lower) && !other.isEmpty())
-                || (other.contains(this.lower) && !this.isEmpty())
-                || (other.upper > upper && other.lower < lower);
+        return !other.isEmpty() && !this.isEmpty() &&
+                (this.contains(other.lower) || other.contains(this.lower)
+                        || (other.upper > upper && other.lower < lower));
     }
 
     /**
@@ -207,7 +210,7 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
-     * Returns intersection range with {@code other} range.
+     * Returns union range with {@code other} range.
      *
      * @param other other range
      * @return intersection range with {@code other} range or null if ranges not intersects ot touches
@@ -261,6 +264,27 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
             return upper - absolutePosition;
         else
             return absolutePosition - lower;
+    }
+
+    /**
+     * Subtract provided range and return list of ranges contained in current range and not intersecting with other
+     * range.
+     *
+     * @param range range to subtract
+     * @return list of ranges contained in current range and not intersecting with other range
+     */
+    @SuppressWarnings("unchecked")
+    public List<Range> without(Range range) {
+        if (!intersectsWith(range))
+            return Collections.singletonList(this);
+
+        if (upper <= range.upper)
+            return range.lower <= lower ? Collections.EMPTY_LIST : Collections.singletonList(new Range(lower, range.lower, reversed));
+
+        if (range.lower <= lower)
+            return Collections.singletonList(new Range(range.upper, upper, reversed));
+
+        return Arrays.asList(new Range(lower, range.lower, reversed), new Range(range.upper, upper, reversed));
     }
 
     public Range getRelativeRangeOf(Range range) {

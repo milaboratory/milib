@@ -51,6 +51,8 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     @JsonIgnore
     final boolean uniformBasicMatch;
 
+    private final int minimalMatchScore, maximalMatchScore, minimalMismatchScore, maximalMismatchScore;
+
     /**
      * Abstract class constructor. Used in deserialization.
      *
@@ -72,6 +74,27 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
                 break;
             }
         this.uniformBasicMatch = e;
+
+        int minimalMatchScore = getScore((byte) 0, (byte) 0), maximalMatchScore = minimalMatchScore,
+                minimalMismatchScore = getScore((byte) 0, (byte) 1), maximalMismatchScore = minimalMismatchScore;
+        for (byte c0 = 0; c0 < alphabet.size(); c0++) {
+            for (byte c1 = 0; c1 < alphabet.size(); c1++) {
+                int score = getScore(c0, c1);
+                if (c0 == c1) {
+                    minimalMatchScore = Math.min(minimalMatchScore, score);
+                    maximalMatchScore = Math.max(maximalMatchScore, score);
+                } else {
+                    minimalMismatchScore = Math.min(minimalMismatchScore, score);
+                    maximalMismatchScore = Math.max(maximalMismatchScore, score);
+                }
+            }
+        }
+
+        this.minimalMatchScore = minimalMatchScore;
+        this.maximalMatchScore = maximalMatchScore;
+        this.minimalMismatchScore = minimalMismatchScore;
+        this.maximalMismatchScore = maximalMismatchScore;
+
     }
 
     /**
@@ -101,6 +124,26 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
      */
     public boolean uniformBasicMatchScore() {
         return uniformBasicMatch;
+    }
+
+    @Override
+    public int getMinimalMatchScore() {
+        return minimalMatchScore;
+    }
+
+    @Override
+    public int getMaximalMatchScore() {
+        return maximalMatchScore;
+    }
+
+    @Override
+    public int getMinimalMismatchScore() {
+        return minimalMismatchScore;
+    }
+
+    @Override
+    public int getMaximalMismatchScore() {
+        return maximalMismatchScore;
     }
 
     @Override

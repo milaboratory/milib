@@ -15,9 +15,8 @@
  */
 package com.milaboratory.core.mutations;
 
-import com.milaboratory.core.sequence.*;
-import org.apache.commons.math3.random.RandomGenerator;
-import org.apache.commons.math3.random.Well44497a;
+import com.milaboratory.core.sequence.AminoAcidSequence;
+import com.milaboratory.core.sequence.NucleotideSequence;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -38,4 +37,9 @@ public class MutationTest {
                 getRawTypeCode(code));
     }
 
+    @Test
+    public void exportRegexps() throws Exception {
+        System.out.println(MutationsUtil.getMutationPatternStringForAlphabet(NucleotideSequence.ALPHABET));
+        System.out.println(MutationsUtil.getMutationPatternStringForAlphabet(AminoAcidSequence.ALPHABET));
+    }
 }

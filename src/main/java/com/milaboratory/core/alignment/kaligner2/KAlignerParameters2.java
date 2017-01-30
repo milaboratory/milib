@@ -3,7 +3,6 @@ package com.milaboratory.core.alignment.kaligner2;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
 import com.milaboratory.core.alignment.kaligner1.*;
-import com.milaboratory.core.alignment.batch.BatchAlignerWithBaseParameters;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.util.GlobalObjectMappers;
 
@@ -162,7 +161,7 @@ public final class KAlignerParameters2 implements AbstractKAlignerParameters, Cl
         this.maxHits = maxHits;
         this.scoring = scoring;
     }
-    
+
     @Override
     public <P> KAligner2<P> createAligner() {
         return new KAligner2<>(this);

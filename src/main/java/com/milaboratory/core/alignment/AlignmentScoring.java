@@ -35,4 +35,12 @@ public interface AlignmentScoring<S extends Sequence<S>> extends java.io.Seriali
     int getScore(byte from, byte to);
 
     Alphabet<S> getAlphabet();
+
+    int getMinimalMatchScore();
+
+    int getMaximalMatchScore();
+
+    int getMinimalMismatchScore();
+
+    int getMaximalMismatchScore();
 }

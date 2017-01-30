@@ -1,4 +1,15 @@
 
+MiLib 1.7.1 (30 Jan 2017)
+========================
+
+-- Added two methods `com.milaboratory.core.alignment.Alignment#convertToSeq1Range` and 
+   `com.milaboratory.core.alignment.Alignment#convertToSeq2Range`
+-- Added `without` method in `Range` class
+-- Added `getMinimalMatchScore`, `getMaximalMatchScore`, `getMinimalMismatchScore` and 
+   `getMaximalMismatchScore` method to AlignmentScoring
+-- Fix for noncommutativity of range `intersect` and `intersectsWith` methods
+
+
 MiLib 1.7 (26 Dec 2016)
 ========================
 
