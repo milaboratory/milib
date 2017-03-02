@@ -107,6 +107,14 @@ public class RangeTest {
     }
 
     @Test
+    public void testRelativeRangeBoundaryCases() throws Exception {
+        assertEquals(r(70, 70), r(30, 100).getRelativeRangeOf(r(100, 100)));
+        assertEquals(r(0, 0), r(30, 100).getRelativeRangeOf(r(30, 30)));
+        assertEquals(r(0, 0), r(100, 30).getRelativeRangeOf(r(100, 100)));
+        assertEquals(r(70, 70), r(100, 30).getRelativeRangeOf(r(30, 30)));
+    }
+
+    @Test
     public void test4() throws Exception {
         Range se = new Range(3, 5);
         IOTestUtil.assertJavaSerialization(se);
@@ -162,7 +170,7 @@ public class RangeTest {
 
         assertTrue(r0.intersectsWithOrTouches(r2));
         assertTrue(r2.intersectsWithOrTouches(r0));
-        
+
         assertFalse(r4.intersectsWithOrTouches(r2));
         assertFalse(r2.intersectsWithOrTouches(r4));
 

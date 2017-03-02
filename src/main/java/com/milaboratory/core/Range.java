@@ -100,6 +100,16 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
+     * Returns true if two ranges has the same direction. Always return true if any of ranges are empty.
+     *
+     * @param other other range to compare with
+     * @return true if two ranges has the same direction. Always return true if any of ranges are of zero length
+     */
+    public boolean hasSameDirection(Range other) {
+        return this.isEmpty() || other.isEmpty() || this.isReverse() == other.isReverse();
+    }
+
+    /**
      * Returns from value. This bound may be exclusive of inclusive depending on the range orientation (see main
      * contract in the class description).
      *
