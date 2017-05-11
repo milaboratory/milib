@@ -49,14 +49,13 @@ public final class Sorter<T> {
 
     void build() throws IOException {
         try(CountingOutputStream output = new CountingOutputStream(new BufferedOutputStream(new FileOutputStream(tempFile), 1024 * 1024))) {
-            CloseShieldOutputStream outputSafe = new CloseShieldOutputStream(output);
             OutputPort<Chunk<T>> chunked = CUtils.buffered(CUtils.chunked(initialSource, chunkSize), 1);
             Chunk<T> chunk;
             while ((chunk = chunked.take()) != null) {
                 Object[] data = chunk.toArray();
                 Arrays.sort(data, (Comparator) comparator);
                 chunkOffsets.add(output.getByteCount());
-                serializer.write((Collection) Arrays.asList(data), outputSafe);
+                serializer.write((Collection) Arrays.asList(data), new CloseShieldOutputStream(output));
                 lastChunkSize = data.length;
             }
         }
@@ -161,15 +160,4 @@ public final class Sorter<T> {
         }
     }
 
-    public interface ObjectSerializer<O> {
-        /**
-         * Implementation may close stream.
-         *
-         * @param data   objects
-         * @param stream output stream
-         */
-        void write(Collection<O> data, OutputStream stream);
-
-        OutputPort<O> read(InputStream stream);
-    }
 }

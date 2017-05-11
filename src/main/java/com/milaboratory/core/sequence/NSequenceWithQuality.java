@@ -32,7 +32,7 @@ import com.milaboratory.primitivio.annotations.Serializable;
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(by = IO.NSequenceWithQualitySerializer.class)
 public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSequence>
-        implements NSeq<NSequenceWithQuality> {
+        implements NSeq<NSequenceWithQuality>, MultiNSequenceWithQuality {
     public static final NSequenceWithQuality EMPTY = new NSequenceWithQuality(NucleotideSequence.EMPTY, SequenceQuality.EMPTY);
 
     /**
@@ -64,6 +64,18 @@ public final class NSequenceWithQuality extends SequenceWithQuality<NucleotideSe
     @Override
     public NSequenceWithQuality getReverseComplement() {
         return new NSequenceWithQuality(sequence.getReverseComplement(), quality.reverse());
+    }
+
+    @Override
+    public int numberOfSequences() {
+        return 1;
+    }
+
+    @Override
+    public NSequenceWithQuality get(int id) {
+        if (id != 0)
+            throw new IndexOutOfBoundsException();
+        return this;
     }
 
     @Override

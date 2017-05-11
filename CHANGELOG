@@ -1,4 +1,14 @@
 
+MiLib 1.7.2 ( 2 Mar 2017)
+========================
+
+-- Sorter for long streams of object, uses merge sort and temp file to store predsorted stream 
+   chunks (`com.milaboratory.util.Sorter`).
+-- Added `Range#hasSameDirection` method
+-- Added `SmartProgressReporter#extractProgress` for `CountingOutputPort`
+-- Minor corrections for `com.milaboratory.util.TempFileManager`
+
+
 MiLib 1.7.1 (30 Jan 2017)
 ========================
 

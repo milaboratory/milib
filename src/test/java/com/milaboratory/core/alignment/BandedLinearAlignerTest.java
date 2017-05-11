@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
@@ -254,6 +255,26 @@ public class BandedLinearAlignerTest {
         assertEquals(0, la.getSequence1Range().getFrom());
         assertEquals(2, la.getSequence2Range().getFrom());
         AlignerTest.assertAlignment(la, seq2);
+    }
+
+    @Test
+    public void testAddedLeft4() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
+                seq2 = new NucleotideSequence("TACAGACA");
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+                seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 2, 2);
+        assertEquals(0, la.getSequence1Range().getFrom());
+        assertEquals(1, la.getSequence2Range().getFrom());
+    }
+
+    @Test
+    public void testAddedLeft5() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
+                seq2 = new NucleotideSequence("ATTAGGACA");
+        Alignment<NucleotideSequence> la = BandedLinearAligner.alignLeftAdded(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+                seq1, seq2, 0, seq1.size(), 0, 0, seq2.size(), 1, 1);
+        assertEquals(0, la.getSequence1Range().getFrom());
+        assertEquals(new Range(0, 9), la.getSequence2Range());
     }
 
     @Test

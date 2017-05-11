@@ -25,6 +25,31 @@ import com.milaboratory.core.sequence.Sequence;
  * Collection of custom aligners
  */
 public class AlignerCustom {
+    /**
+     * Align two sequences from left to right; left edges of both sequences considered to be already aligned.
+     * Aligner optimize total alignment scoring using dynamic programing approach.
+     * Alignment is global in respect to seq1 if boundSeq1 = true.
+     * Alignment is global in respect to seq2 if boundSeq2 = true.
+     * This algorithm becomes pure Needleman–Wunsch algorithm if both boundSeq1 = true and boundSeq2 = true.
+     *
+     * @param scoring   alignment scoring
+     * @param seq1      first sequence (seq1)
+     * @param seq2      second sequence (seq2)
+     * @param offset1   position of first nucleotide to align in seq1 (this position is considered to be already aligned
+     *                  by the algorithm)
+     * @param length1   number of letters in seq1 to align (if boundSeq1 = true all length1 letters will be aligned,
+     *                  if boundSeq1 = false at most this many letters will be aligned)
+     * @param offset2   position of first nucleotide to align in seq2 (this position is considered to be already aligned
+     *                  by the algorithm)
+     * @param length2   number of letters in seq2 to align (if boundSeq2 = true all length2 letters will be aligned,
+     *                  if boundSeq2 = false at most this many letters will be aligned)
+     * @param boundSeq1 determines whether to build global (true) or local (false) alignment in respect to seq1
+     * @param boundSeq2 determines whether to build global (true) or local (false) alignment in respect to seq2
+     * @param alphabet  alphabet of the sequences
+     * @param cache     matrix cache
+     * @param <S>       sequence type
+     * @return alignment
+     */
     public static <S extends Sequence<S>> Alignment<S> alignLinearSemiLocalLeft0(LinearGapAlignmentScoring<S> scoring,
                                                                                  S seq1, S seq2,
                                                                                  int offset1, int length1,
@@ -310,7 +335,7 @@ public class AlignerCustom {
                     mutations.appendSubstitution(offset1 + i, c1, c2);
                 --i;
                 --j;
-            } else{
+            } else {
                 if (i == -1 && !boundSeq2)
                     break;
                 if (j == -1 && !boundSeq1)
@@ -349,7 +374,8 @@ public class AlignerCustom {
         }
     }
 
-    public interface MatrixCache {}
+    public interface MatrixCache {
+    }
 
     public static final class LinearMatrixCache implements MatrixCache {
         final CachedIntArray cache = new CachedIntArray();

@@ -51,7 +51,7 @@ public class AbstractAlignmentScoring<S extends Sequence<S>> implements Alignmen
     @JsonIgnore
     final boolean uniformBasicMatch;
 
-    private final int minimalMatchScore, maximalMatchScore, minimalMismatchScore, maximalMismatchScore;
+    private final transient int minimalMatchScore, maximalMatchScore, minimalMismatchScore, maximalMismatchScore;
 
     /**
      * Abstract class constructor. Used in deserialization.

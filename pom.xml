@@ -19,7 +19,7 @@
 
     <groupId>com.milaboratory</groupId>
     <artifactId>milib</artifactId>
-    <version>1.7.2-SNAPSHOT</version>
+    <version>1.7.3-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>MiLib</name>
     <url>https://milaboratory.com/</url>
@@ -47,7 +47,7 @@
         <dependency>
             <groupId>cc.redberry</groupId>
             <artifactId>pipe</artifactId>
-            <version>0.9.7-SNAPSHOT</version>
+            <version>0.9.7</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>

@@ -100,6 +100,16 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
+     * Returns true if two ranges has the same direction. Always return true if any of ranges are empty.
+     *
+     * @param other other range to compare with
+     * @return true if two ranges has the same direction. Always return true if any of ranges are of zero length
+     */
+    public boolean hasSameDirection(Range other) {
+        return this.isEmpty() || other.isEmpty() || this.isReverse() == other.isReverse();
+    }
+
+    /**
      * Returns from value. This bound may be exclusive of inclusive depending on the range orientation (see main
      * contract in the class description).
      *
@@ -185,10 +195,10 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
-     * Returns {@code true} if range intersects with {@code other} range.
+     * Returns {@code true} if range intersects with or touches {@code other} range.
      *
      * @param other other range
-     * @return {@code true} if range intersects with {@code other} range
+     * @return {@code true} if range intersects with or touches {@code other} range
      */
     public boolean intersectsWithOrTouches(Range other) {
         return contains(other.lower) || contains(other.upper - 1) || (other.upper > upper && other.lower < lower) ||
@@ -213,7 +223,7 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
      * Returns union range with {@code other} range.
      *
      * @param other other range
-     * @return intersection range with {@code other} range or null if ranges not intersects ot touches
+     * @return union range with {@code other} range or null if ranges not intersects ot touches
      */
     public Range tryMerge(Range other) {
         if (!intersectsWithOrTouches(other))

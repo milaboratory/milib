@@ -16,6 +16,7 @@
 package com.milaboratory.util;
 
 import cc.redberry.pipe.util.CountLimitingOutputPort;
+import cc.redberry.pipe.util.CountingOutputPort;
 
 import java.io.PrintStream;
 import java.text.DecimalFormat;
@@ -184,6 +185,20 @@ public class SmartProgressReporter implements Runnable {
 
     public static void startProgressReport(final String prefix, final CanReportProgress reporter, PrintStream stream) {
         startProgressReport(new SmartProgressReporter(prefix, reporter, stream));
+    }
+
+    public static CanReportProgress extractProgress(final CountingOutputPort<?> countingOutputPort, final long size) {
+        return new CanReportProgress() {
+            @Override
+            public double getProgress() {
+                return 1.0 * countingOutputPort.getCount() / size;
+            }
+
+            @Override
+            public boolean isFinished() {
+                return countingOutputPort.getCount() >= size;
+            }
+        };
     }
 
     public static CanReportProgress extractProgress(final CountLimitingOutputPort<?> countLimitingOutputPort) {
