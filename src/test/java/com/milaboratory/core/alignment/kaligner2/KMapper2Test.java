@@ -272,7 +272,7 @@ public class KMapper2Test {
                     "AGTCCTAACTTCCAGCTTTCGGAAGCCAAATTAAGTTCCCTACTAGCATTCAACTGTTTATGTACGACGAGATGGACATCTTCGACATTCTGCAATGTCGT" +
                     "CTGGTGAAGAACGGTTTACCCACGTACATTCTGTGGTCGGCCCCTTTC"));
 
-            System.out.println(result.getHits().get(0).score);
+            // System.out.println(result.getHits().get(0).score);
         }
     }
 

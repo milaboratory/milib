@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 MiLaboratory.com
+ * Copyright 2017 MiLaboratory.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.io.sequence;
+package com.milaboratory.core.sequence;
 
-import com.milaboratory.primitivio.annotations.Serializable;
+public interface MultiNSequenceWithQuality {
+    int numberOfSequences();
 
-/**
- * @author Dmitry Bolotin
- * @author Stanislav Poslavsky
- */
-@Serializable(by = IO.SequenceReadSerializer.class)
-public interface SequenceRead extends Iterable<SingleRead> {
-    int numberOfReads();
-
-    SingleRead getRead(int i);
-
-    long getId();
+    NSequenceWithQuality get(int id);
 }

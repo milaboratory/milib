@@ -16,14 +16,28 @@
 package com.milaboratory.core.sequence.provider;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.Sequence;
 
 public final class SequenceProviderUtils {
     private SequenceProviderUtils() {
     }
 
+    public static SequenceProvider<NucleotideSequence> reversedProvider(final SequenceProvider<NucleotideSequence> provider) {
+        return new SubSequenceProvider<>(new Range(provider.size(), 0), provider);
+    }
+
+    public static <S extends Sequence<S>> SequenceProvider<S> subProvider(final SequenceProvider<S> provider, final Range targetRange) {
+        return new SubSequenceProvider<>(targetRange, provider);
+    }
+
     public static <S extends Sequence<S>> SequenceProvider<S> fromSequence(final S sequence) {
         return new SequenceProvider<S>() {
+            @Override
+            public int size() {
+                return sequence.size();
+            }
+
             @Override
             public S getRegion(Range range) {
                 if (range.getUpper() > sequence.size())
@@ -34,18 +48,65 @@ public final class SequenceProviderUtils {
     }
 
     public static <S extends Sequence<S>> SequenceProvider<S> lazyProvider(final SequenceProviderFactory<S> factory) {
-        return new SequenceProvider<S>() {
-            volatile SequenceProvider<S> innerProvider = null;
+        return new LazySequenceProvider<>(factory);
+    }
 
-            @Override
-            public S getRegion(Range range) {
-                if (innerProvider == null)
-                    synchronized (this) {
-                        if (innerProvider == null)
-                            innerProvider = factory.create();
-                    }
-                return innerProvider.getRegion(range);
+    private static final class SubSequenceProvider<S extends Sequence<S>> implements SequenceProvider<S> {
+        final Range targetRange;
+        final SequenceProvider<S> provider;
+
+        public SubSequenceProvider(Range targetRange, SequenceProvider<S> provider) {
+            if (provider instanceof SubSequenceProvider) {
+                this.targetRange = ((SubSequenceProvider<S>) provider).targetRange.getAbsoluteRangeFor(targetRange);
+                this.provider = ((SubSequenceProvider<S>) provider).provider;
+            } else {
+                this.targetRange = targetRange;
+                this.provider = provider;
             }
-        };
+        }
+
+        @Override
+        public int size() {
+            return targetRange.length();
+        }
+
+        @Override
+        public S getRegion(Range range) {
+            return provider.getRegion(targetRange.getAbsoluteRangeFor(range));
+        }
+    }
+
+    public static class LazySequenceProvider<S extends Sequence<S>> implements SequenceProvider<S> {
+        private final SequenceProviderFactory<S> factory;
+        volatile SequenceProvider<S> innerProvider;
+
+        public LazySequenceProvider(SequenceProviderFactory<S> factory) {
+            this.factory = factory;
+            innerProvider = null;
+        }
+
+        public boolean isInitialized() {
+            return innerProvider != null;
+        }
+
+        void ensureProvider() {
+            if (innerProvider == null)
+                synchronized (this) {
+                    if (innerProvider == null)
+                        innerProvider = factory.create();
+                }
+        }
+
+        @Override
+        public int size() {
+            ensureProvider();
+            return innerProvider.size();
+        }
+
+        @Override
+        public S getRegion(Range range) {
+            ensureProvider();
+            return innerProvider.getRegion(range);
+        }
     }
 }

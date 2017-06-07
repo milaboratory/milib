@@ -44,6 +44,19 @@ public final class RangeMap<T> implements java.io.Serializable {
         map.put(range, value);
     }
 
+    public boolean isEmpty() {
+        return map.isEmpty();
+    }
+
+    /**
+     * Return range enclosing all range-keys of this container.
+     *
+     * @return range enclosing all range-keys of this container
+     */
+    public Range enclosingRange() {
+        return new Range(map.firstKey().getLower(), map.lastKey().getUpper());
+    }
+
     public Set<Entry<Range, T>> entrySet() {
         return map.entrySet();
     }

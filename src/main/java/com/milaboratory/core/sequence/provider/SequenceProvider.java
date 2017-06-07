@@ -18,6 +18,25 @@ package com.milaboratory.core.sequence.provider;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.Sequence;
 
+/**
+ * Provides access to the sequence that may be too big to be loaded to the memory. Such sequence may be stored remotely
+ * or in the file system.
+ *
+ * @param <S> type of the sequence
+ */
 public interface SequenceProvider<S extends Sequence<S>> {
+    /**
+     * Returns the length of the sequence this object represents.
+     *
+     * @return length of the sequence this object represents
+     */
+    int size();
+
+    /**
+     * Retrieves specified region of the sequence.
+     *
+     * @param range range of the sequence to be retrieved
+     * @return sequence
+     */
     S getRegion(Range range);
 }

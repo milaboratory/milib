@@ -95,7 +95,6 @@ public final class NucleotideAlphabet extends AbstractArrayAlphabet<NucleotideSe
      */
     public static final byte V = 14;
 
-
     /* Wildcards */
 
     /* Basic wildcards */

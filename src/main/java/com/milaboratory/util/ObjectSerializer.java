@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 MiLaboratory.com
+ * Copyright 2017 MiLaboratory.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,19 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.io.sequence;
+package com.milaboratory.util;
 
-import com.milaboratory.primitivio.annotations.Serializable;
+import cc.redberry.pipe.OutputPort;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Collection;
 
 /**
- * @author Dmitry Bolotin
- * @author Stanislav Poslavsky
+ * Created by dbolotin on 04/04/2017.
  */
-@Serializable(by = IO.SequenceReadSerializer.class)
-public interface SequenceRead extends Iterable<SingleRead> {
-    int numberOfReads();
+public interface ObjectSerializer<O> {
+    /**
+     * Implementation may close stream.
+     *
+     * @param data   objects
+     * @param stream output stream
+     */
+    void write(Collection<O> data, OutputStream stream);
 
-    SingleRead getRead(int i);
-
-    long getId();
+    OutputPort<O> read(InputStream stream);
 }

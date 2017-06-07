@@ -38,6 +38,11 @@ public class CachedSequenceProviderTest {
         CachedSequenceProvider<NucleotideSequence> cache = new CachedSequenceProvider<>(NucleotideSequence.ALPHABET,
                 new SequenceProvider<NucleotideSequence>() {
                     @Override
+                    public int size() {
+                        return sequence.size();
+                    }
+
+                    @Override
                     public NucleotideSequence getRegion(Range range) {
                         requests.add(range);
                         return sequence.getRange(range);
@@ -69,6 +74,8 @@ public class CachedSequenceProviderTest {
                 26, 40,
                 26, 45,
                 10, 45);
+
+        Assert.assertEquals(sequence.size(), cache.size());
     }
 
     @Test
@@ -82,13 +89,7 @@ public class CachedSequenceProviderTest {
         for (int i = 0; i < 100; i++) {
             final S sequence = TestUtil.randomSequence(alphabet, 1000, 2000);
 
-            CachedSequenceProvider<S> cache = new CachedSequenceProvider<>(alphabet,
-                    new SequenceProvider<S>() {
-                        @Override
-                        public S getRegion(Range range) {
-                            return sequence.getRange(range);
-                        }
-                    });
+            CachedSequenceProvider<S> cache = new CachedSequenceProvider<>(alphabet, SequenceProviderUtils.fromSequence(sequence));
 
             for (int j = 0; j < 1000; j++) {
                 int from = w.nextInt(sequence.size() - 1);
@@ -97,6 +98,8 @@ public class CachedSequenceProviderTest {
                 Assert.assertEquals(sequence.getRange(r), cache.getRegion(r));
                 Assert.assertFalse(cache.sequences.isOverFragmented());
             }
+
+            Assert.assertTrue(cache.size() <= sequence.size());
         }
     }
 
@@ -127,6 +130,8 @@ public class CachedSequenceProviderTest {
                 for (Range rr : ranges)
                     Assert.assertEquals(sequence.getRange(rr), cache.getRegion(rr));
             }
+
+            Assert.assertTrue(cache.size() <= sequence.size());
         }
     }
 

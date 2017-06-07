@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.io.sequence;
 
+import com.milaboratory.core.sequence.MultiNSequenceWithQuality;
 import com.milaboratory.util.ArrayIterator;
 
 import java.util.Arrays;

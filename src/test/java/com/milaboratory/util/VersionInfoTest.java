@@ -31,4 +31,10 @@ public class VersionInfoTest {
         VersionInfo versionInfo = VersionInfo.getVersionInfo("/util/asdafas");
         Assert.assertNull(versionInfo);
     }
+
+    @Test
+    public void test3() throws Exception {
+        VersionInfo versionInfo = VersionInfo.getVersionInfoForArtifact("milib");
+        System.out.println(versionInfo);
+    }
 }

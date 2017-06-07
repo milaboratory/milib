@@ -100,6 +100,15 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
+     * Return reversed range.
+     *
+     * @return reversed range
+     */
+    public Range reverse() {
+        return new Range(lower, upper, !reversed);
+    }
+
+    /**
      * Returns true if two ranges has the same direction. Always return true if any of ranges are empty.
      *
      * @param other other range to compare with
@@ -195,10 +204,10 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
-     * Returns {@code true} if range intersects with {@code other} range.
+     * Returns {@code true} if range intersects with or touches {@code other} range.
      *
      * @param other other range
-     * @return {@code true} if range intersects with {@code other} range
+     * @return {@code true} if range intersects with or touches {@code other} range
      */
     public boolean intersectsWithOrTouches(Range other) {
         return contains(other.lower) || contains(other.upper - 1) || (other.upper > upper && other.lower < lower) ||
@@ -223,7 +232,7 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
      * Returns union range with {@code other} range.
      *
      * @param other other range
-     * @return intersection range with {@code other} range or null if ranges not intersects ot touches
+     * @return union range with {@code other} range or null if ranges not intersects ot touches
      */
     public Range tryMerge(Range other) {
         if (!intersectsWithOrTouches(other))
@@ -297,9 +306,9 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
         return Arrays.asList(new Range(lower, range.lower, reversed), new Range(range.upper, upper, reversed));
     }
 
-    public Range getRelativeRangeOf(Range range) {
-        int from = convertBoundaryToRelativePosition(range.getFrom()),
-                to = convertBoundaryToRelativePosition(range.getTo());
+    public Range getRelativeRangeOf(Range absoluteRange) {
+        int from = convertBoundaryToRelativePosition(absoluteRange.getFrom()),
+                to = convertBoundaryToRelativePosition(absoluteRange.getTo());
         if (from == -1 || to == -1)
             return null;
         return new Range(from, to);
@@ -353,6 +362,20 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
             return upper - relativePosition;
         else
             return relativePosition + lower;
+    }
+
+    /**
+     * Reverse operation for {@link #getRelativeRangeOf(Range)}.
+     *
+     * A.getAbsoluteRangeFor(A.getRelativeRangeOf(B)) == B
+     *
+     * @param relativeRange range defined relative to this range
+     * @return absolute range
+     */
+    public Range getAbsoluteRangeFor(Range relativeRange) {
+        int from = convertBoundaryToAbsolutePosition(relativeRange.getFrom()),
+                to = convertBoundaryToAbsolutePosition(relativeRange.getTo());
+        return new Range(from, to);
     }
 
     @Override

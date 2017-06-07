@@ -30,7 +30,8 @@ public class JCommanderBasedMain implements ActionHelper {
     protected final String command;
     protected boolean printHelpOnError = false;
     protected boolean printStackTrace = false;
-    protected Runnable versionInfoCallback = null;
+    protected Runnable shortVersionInfoCallback = null;
+    protected Runnable fullVersionInfoCallback = null;
     protected PrintStream outputStream = System.err;
     protected String[] arguments;
 
@@ -102,8 +103,15 @@ public class JCommanderBasedMain implements ActionHelper {
 
                 // Print Version information if requested and exit.
                 if (mainParameters instanceof MainParametersWithVersion &&
-                        ((MainParametersWithVersion) mainParameters).version()) {
-                    versionInfoCallback.run();
+                        ((MainParametersWithVersion) mainParameters).shortVersion()) {
+                    shortVersionInfoCallback.run();
+                    return ProcessResult.Version;
+                }
+
+                // Print Version information if requested and exit.
+                if (mainParameters instanceof MainParametersWithVersion &&
+                        ((MainParametersWithVersion) mainParameters).fullVersion()) {
+                    fullVersionInfoCallback.run();
                     return ProcessResult.Version;
                 }
 
@@ -154,7 +162,7 @@ public class JCommanderBasedMain implements ActionHelper {
     }
 
     private MainParameters getMainParameters() {
-        return versionInfoCallback != null ?
+        return shortVersionInfoCallback != null ?
                 new MainParametersWithVersion() :
                 new MainParameters();
     }
@@ -202,13 +210,36 @@ public class JCommanderBasedMain implements ActionHelper {
      *
      * Sets callback that will be invoked if this option is specified by user.
      *
-     * {@literal null} disables -v parameter.
-     *
-     * @param versionInfoCallback callback to be will be invoked if user specified -v option. {@literal null} disables
-     *                            -v parameter.
+     * @param versionInfoCallback callback to be will be invoked if user specified -v option
      */
     public void setVersionInfoCallback(Runnable versionInfoCallback) {
-        this.versionInfoCallback = versionInfoCallback;
+        if (versionInfoCallback == null)
+            throw new NullPointerException();
+        this.shortVersionInfoCallback = versionInfoCallback;
+        this.fullVersionInfoCallback = versionInfoCallback;
+    }
+
+    /**
+     * Enables -v / --version parameter.
+     *
+     * Sets separate callbacks that will be invoked if -v or --version this option is specified by user.
+     *
+     * @param shortVersionInfoCallback callback to be will be invoked if user specified -v option
+     * @param fullVersionInfoCallback  callback to be will be invoked if user specified --version option
+     */
+    public void setVersionInfoCallback(Runnable shortVersionInfoCallback, Runnable fullVersionInfoCallback) {
+        if (shortVersionInfoCallback == null || fullVersionInfoCallback == null)
+            throw new NullPointerException();
+        this.shortVersionInfoCallback = shortVersionInfoCallback;
+        this.fullVersionInfoCallback = fullVersionInfoCallback;
+    }
+
+    /**
+     * Removes -v / --version option callbacks, and removes option by itself.
+     */
+    public void removeVersionInfoCallback() {
+        this.shortVersionInfoCallback = null;
+        this.fullVersionInfoCallback = null;
     }
 
     public static class MainParameters {
@@ -221,11 +252,18 @@ public class JCommanderBasedMain implements ActionHelper {
     }
 
     public static class MainParametersWithVersion extends MainParameters {
-        @Parameter(names = {"-v", "--version"}, help = true, description = "Output version information.")
-        public Boolean version;
+        @Parameter(names = {"-v"}, help = true, description = "Output short version information.")
+        public Boolean shortVersion;
 
-        public boolean version() {
-            return version != null && version;
+        @Parameter(names = {"--version"}, help = true, description = "Output full version information.")
+        public Boolean fullVersion;
+
+        public boolean shortVersion() {
+            return shortVersion != null && shortVersion;
+        }
+
+        public boolean fullVersion() {
+            return fullVersion != null && fullVersion;
         }
     }
 }

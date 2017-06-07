@@ -31,23 +31,55 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
     final RangeMap<S> sequences = new RangeMap<>();
     final SequenceProvider<S> provider;
 
+    /**
+     * Cached sequence provider wrapping specified sequence provider.
+     *
+     * @param alphabet alphabet
+     * @param provider provider to cache sequences from
+     */
     public CachedSequenceProvider(Alphabet<S> alphabet, SequenceProvider<S> provider) {
         this.alphabet = alphabet;
         this.provider = provider;
     }
 
-    public CachedSequenceProvider(Alphabet<S> alphabet, final String missingErrorMessage) {
-        this.alphabet = alphabet;
-        this.provider = new SequenceProvider<S>() {
-            @Override
-            public S getRegion(Range range) {
-                throw new RuntimeException(missingErrorMessage + " (range " + range + ")");
-            }
-        };
+    /**
+     * Cached sequence provider without underlying sequence provider, with automatically inferred provider size.
+     *
+     * @param alphabet            alphabet
+     * @param missingErrorMessage error message for missing sequence
+     */
+    public CachedSequenceProvider(Alphabet<S> alphabet, String missingErrorMessage) {
+        this(alphabet, new NoProvider<S>(-1, missingErrorMessage));
     }
 
+    /**
+     * Cached sequence provider without underlying sequence provider, with fixed provider size.
+     *
+     * @param alphabet            alphabet
+     * @param size                size
+     * @param missingErrorMessage error message for missing sequence
+     */
+    public CachedSequenceProvider(Alphabet<S> alphabet, int size, String missingErrorMessage) {
+        this(alphabet, new NoProvider<S>(size, missingErrorMessage));
+    }
+
+    /**
+     * Cached sequence provider without underlying sequence provider, with fixed provider size.
+     *
+     * @param alphabet alphabet
+     * @param size     size
+     */
+    public CachedSequenceProvider(Alphabet<S> alphabet, int size) {
+        this(alphabet, new NoProvider<S>(size));
+    }
+
+    /**
+     * Cached sequence provider without underlying sequence provider, with automatically inferred provider size.
+     *
+     * @param alphabet alphabet
+     */
     public CachedSequenceProvider(Alphabet<S> alphabet) {
-        this(alphabet, NO_PROVIDER);
+        this(alphabet, new NoProvider<S>(-1));
     }
 
     public Map.Entry<Range, S> ensureEntry(Range range) {
@@ -104,6 +136,26 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
         return sequences.entrySet();
     }
 
+    @Override
+    public int size() {
+        if (provider instanceof NoProvider) {
+            int s = provider.size();
+            if (s >= 0)
+                return s;
+            else // s == -1 => automatically infer size from rangeMap
+                if (sequences.isEmpty())
+                    throw new IllegalArgumentException(((NoProvider) provider).errorMessage);
+                else
+                    return sequences.enclosingRange().getUpper(); // last cached position
+        } else if (provider instanceof SequenceProviderUtils.LazySequenceProvider)
+            if (sequences.isEmpty())
+                return provider.size();
+            else
+                return sequences.enclosingRange().getUpper(); // last cached position
+        else
+            return provider.size();
+    }
+
     public S getRegion(Range range) {
         if (range.isEmpty())
             return alphabet.getEmptySequence();
@@ -112,6 +164,14 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
     }
 
     public void setRegion(Range range, S seq) {
+        if ((provider instanceof NoProvider && provider.size() > 0) ||
+                (provider instanceof SequenceProviderUtils.LazySequenceProvider && ((SequenceProviderUtils.LazySequenceProvider) provider).isInitialized()) ||
+                (!(provider instanceof NoProvider) && !(provider instanceof SequenceProviderUtils.LazySequenceProvider))) {
+            int providerSize = provider.size();
+            if (providerSize >= 0 && range.getUpper() > providerSize)
+                throw new IllegalArgumentException("Trying to set sequence outside available range.");
+        }
+
         Map.Entry<Range, S> containing = sequences.findContaining(range);
         if (containing != null) {
             for (int i = 0, j = range.getFrom() - containing.getKey().getFrom(); i < seq.size(); ++i, ++j)
@@ -171,10 +231,30 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
         sequences.put(range, seq);
     }
 
-    private static final SequenceProvider NO_PROVIDER = new SequenceProvider() {
-        @Override
-        public Sequence getRegion(Range range) {
-            throw new IndexOutOfBoundsException("No sequence provider.");
+    /**
+     * Internal
+     */
+    private static final class NoProvider<S extends Sequence<S>> implements SequenceProvider<S> {
+        final int size;
+        final String errorMessage;
+
+        public NoProvider(int size) {
+            this(size, "No sequence provider");
         }
-    };
+
+        public NoProvider(int size, String errorMessage) {
+            this.size = size;
+            this.errorMessage = errorMessage;
+        }
+
+        @Override
+        public int size() {
+            return size;
+        }
+
+        @Override
+        public S getRegion(Range range) {
+            throw new IndexOutOfBoundsException(errorMessage + " (query range = " + range + ")");
+        }
+    }
 }

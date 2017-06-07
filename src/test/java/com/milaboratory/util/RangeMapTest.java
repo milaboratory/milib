@@ -46,6 +46,8 @@ public class RangeMapTest {
         map.put(new Range(35, 48), 2);
         map.put(new Range(70, 80), 3);
 
+        assertEquals(new Range(10, 80), map.enclosingRange());
+
         assertEquals((Object) 1, map.findContaining(new Range(10, 20)).getValue());
         assertEquals((Object) 1, map.findContaining(new Range(11, 19)).getValue());
         Assert.assertNull(map.findContaining(new Range(9, 19)));
@@ -100,6 +102,8 @@ public class RangeMapTest {
         map.put(new Range(35, 48), 2);
         map.put(new Range(59, 61), 4);
         map.put(new Range(70, 80), 5);
+
+        assertEquals(new Range(10, 80), map.enclosingRange());
 
         assertRangeIntersectsWith(15, 15, map);
         assertRangeIntersectsWith(5, 7, map);

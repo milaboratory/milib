@@ -100,18 +100,24 @@ public class RangeTest {
 
     @Test
     public void testRelativeRange() throws Exception {
-        assertEquals(r(20, 40), r(0, 100).getRelativeRangeOf(r(20, 40)));
-        assertEquals(r(20, 40), r(50, 150).getRelativeRangeOf(r(70, 90)));
-        assertEquals(r(80, 90), r(100, 0).getRelativeRangeOf(r(20, 10)));
-        assertEquals(r(90, 80), r(100, 0).getRelativeRangeOf(r(10, 20)));
+        assertRelativeRange(r(20, 40), r(0, 100), r(20, 40));
+        assertRelativeRange(r(20, 40), r(50, 150), r(70, 90));
+        assertRelativeRange(r(80, 90), r(100, 0), r(20, 10));
+        assertRelativeRange(r(90, 80), r(100, 0), r(10, 20));
     }
 
     @Test
     public void testRelativeRangeBoundaryCases() throws Exception {
-        assertEquals(r(70, 70), r(30, 100).getRelativeRangeOf(r(100, 100)));
-        assertEquals(r(0, 0), r(30, 100).getRelativeRangeOf(r(30, 30)));
-        assertEquals(r(0, 0), r(100, 30).getRelativeRangeOf(r(100, 100)));
-        assertEquals(r(70, 70), r(100, 30).getRelativeRangeOf(r(30, 30)));
+        assertRelativeRange(r(70, 70), r(30, 100), r(100, 100));
+        assertRelativeRange(r(0, 0), r(30, 100), r(30, 30));
+        assertRelativeRange(r(0, 0), r(100, 30), r(100, 100));
+        assertRelativeRange(r(70, 70), r(100, 30), r(30, 30));
+    }
+
+    public void assertRelativeRange(Range expectedRelativeRange, Range baseRange, Range range) {
+        Range rel = baseRange.getRelativeRangeOf(range);
+        assertEquals(expectedRelativeRange, rel);
+        assertEquals(range, baseRange.getAbsoluteRangeFor(rel));
     }
 
     @Test

@@ -19,19 +19,17 @@ import java.io.InputStream;
 import java.util.Date;
 import java.util.Properties;
 
-/**
- * Created by dbolotin on 21/10/15.
- */
 public class VersionInfo {
-    final String version, revision, name, branch;
+    final String version, revision, name, branch, host;
     final Date timestamp;
 
-    public VersionInfo(String version, String revision, String name, String branch,
+    public VersionInfo(String version, String revision, String name, String branch, String host,
                        Date timestamp) {
         this.version = version;
         this.revision = revision;
         this.name = name;
         this.branch = branch;
+        this.host = host;
         this.timestamp = timestamp;
     }
 
@@ -51,6 +49,10 @@ public class VersionInfo {
         return branch;
     }
 
+    public String getHost() {
+        return host;
+    }
+
     public Date getTimestamp() {
         return timestamp;
     }
@@ -62,12 +64,24 @@ public class VersionInfo {
                 ", revision='" + revision + '\'' +
                 ", name='" + name + '\'' +
                 ", branch='" + branch + '\'' +
+                ", host='" + host + '\'' +
                 ", timestamp=" + timestamp +
                 '}';
     }
 
     public static VersionInfo getVersionInfoForArtifact(String artifactId) {
         return getVersionInfo("/" + artifactId + "-build.properties");
+    }
+
+    static String longest(String s1, String s2) {
+        if (s1 == null)
+            return s2;
+        else if (s2 == null)
+            return s1;
+        else if (s1.length() > s2.length())
+            return s1;
+        else
+            return s2;
     }
 
     static VersionInfo getVersionInfo(String resourceName) {
@@ -81,6 +95,7 @@ public class VersionInfo {
                 properties.getProperty("revision"),
                 properties.getProperty("name"),
                 properties.getProperty("branch"),
+                properties.getProperty("host"),
                 new Date(Long.parseLong(properties.getProperty("timestamp"))));
     }
 }

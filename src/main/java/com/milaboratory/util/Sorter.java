@@ -160,15 +160,4 @@ public final class Sorter<T> {
         }
     }
 
-    public interface ObjectSerializer<O> {
-        /**
-         * Implementation may close stream.
-         *
-         * @param data   objects
-         * @param stream output stream
-         */
-        void write(Collection<O> data, OutputStream stream);
-
-        OutputPort<O> read(InputStream stream);
-    }
 }

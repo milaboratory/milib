@@ -7,6 +7,7 @@ import org.apache.commons.math3.random.Well44497b;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,6 +37,10 @@ public class TempFileManager {
     }
 
     public static File getTempFile() {
+        return getTempFile(null);
+    }
+
+    public static File getTempFile(Path tmpDir) {
         try {
             ensureInitialized();
 
@@ -46,7 +51,7 @@ public class TempFileManager {
                 synchronized ( privateRandom ){
                     name = prefix + privateRandom.nextHexString(40);
                 }
-                file = Files.createTempFile(name, null).toFile();
+                file = tmpDir == null ? Files.createTempFile(name, null).toFile() : Files.createTempFile(tmpDir, name, null).toFile();
             } while (createdFiles.putIfAbsent(name, file) != null);
 
             if (file.length() != 0)

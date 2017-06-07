@@ -15,6 +15,9 @@
  */
 package com.milaboratory.core.motif;
 
+import com.milaboratory.core.alignment.Aligner;
+import com.milaboratory.core.alignment.Alignment;
+import com.milaboratory.core.alignment.LinearGapAlignmentScoring;
 import com.milaboratory.core.mutations.MutationType;
 import com.milaboratory.core.mutations.generator.UniformMutationsGenerator;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -73,6 +76,41 @@ public class BitapPatternTest {
             assertEquals(0, bp.exactSearch(seqR));
             assertEquals(0, bpR.exactSearch(seq));
             assertEquals(0, bpR.exactSearch(seqR));
+        }
+    }
+
+    @Test
+    public void ttt() throws Exception {
+        NucleotideSequence seq0 = new NucleotideSequence("ATTWCCGACA");
+        Motif<NucleotideSequence> motif = seq0.toMotif();
+        NucleotideSequence seq;
+        BitapMatcher bitapMatcher;
+
+        //                                                       |27
+        //                            |0        |10       |20       |30       |40       |50
+        // Exact                                          --------
+        seq = new NucleotideSequence("ATTAATGATCGAAGCTACGAATTTGACATCAGCTAGCAGCGATCAGCTGAGCTA".replace(" ", ""));
+        // ATTTGACA
+        // ATTWGACA
+
+        // ATTTGACAT
+        // ATTWGACA-
+
+        // ATTTGACAT
+        // ATTWGACA-
+
+        bitapMatcher = new BitapMatcherFilter(motif.getBitapPattern().substitutionAndIndelMatcherLast(1, seq));
+        Alignment<NucleotideSequence> alignment = Aligner.alignLocal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(), seq0, seq);
+        System.out.println(alignment.getAlignmentHelper());
+        System.out.println(alignment.getAbsoluteMutations());
+        System.out.println(alignment.convertToSeq2Position(6));
+        System.out.println(alignment.convertToSeq2Position(5));
+
+        int pos;
+        while ((pos = bitapMatcher.findNext()) > 0){
+            System.out.println(pos);
+            System.out.println(bitapMatcher.getNumberOfErrors());
+            System.out.println();
         }
     }
 

@@ -222,10 +222,14 @@ public final class BandedLinearAligner {
      * @param seq2              second sequence
      * @param offset1           offset in first sequence
      * @param length1           length of first sequence's part to be aligned
-     * @param addedNucleotides1 number of artificially added letters to the first sequence
+     * @param addedNucleotides1 number of artificially added letters to the first sequence;
+     *                          must be 0 if seq1 is a pattern to match and seq2 is target sequence
+     *                          where we search the pattern
      * @param offset2           offset in second sequence
      * @param length2           length of second sequence's part to be aligned
-     * @param addedNucleotides2 number of artificially added letters to the second sequence
+     * @param addedNucleotides2 number of artificially added letters to the second sequence;
+     *                          if seq2 is target sequence where we search the pattern, this parameter must be equal
+     *                          to maximum allowed number of indels (same as width parameter)
      * @param width             width of banded alignment matrix. In other terms max allowed number of indels
      * @param mutations         mutations array where all mutations will be kept
      * @param cachedArray       cached (created once) array to be used in {@link BandedMatrix}, which is compact

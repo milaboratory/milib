@@ -1,6 +1,7 @@
 package com.milaboratory.core.alignment.kaligner2;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -150,18 +151,19 @@ public class OffsetPacksAccumulatorTest {
     }
 
     @Test
+    @Ignore
     public void testScoreCorrection2() throws Exception {
         int data[] = {114690, 1245186, 1892354, 2056194, -49147, 1605637, 1744901, -40954, -122872,
                 -196598, -196597, -196596, -49139, -57330, -49137, -57328, -40944, 1597456, -40943,
                 1196050, 1318931, -229355, -229354, -229353, -229351, 1318937, -229350, -1687521, -425953,
                 1368095, -425952, -425951, -425949, -917468, -425948, -425947, 335909, -425946};
 
-        for (int i = 0; i < data.length; ++i)
-            System.out.println(i + "     " + index(data[i]) + "    " + offset(data[i]));
+        // for (int i = 0; i < data.length; ++i)
+        //     System.out.println(i + "     " + index(data[i]) + "    " + offset(data[i]));
 
         OffsetPacksAccumulator of = new OffsetPacksAccumulator(4, 3, 10, -7, -8, 15);
         of.calculateInitialPartitioning(data);
-        System.out.println(of);
+        // System.out.println(of);
         //assertClusters(of, new Cluster(0, 3, 32), new Cluster(4, 6, 20), new Cluster(10, 24, 60));
         /*
         0th cloud:

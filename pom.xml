@@ -19,7 +19,7 @@
 
     <groupId>com.milaboratory</groupId>
     <artifactId>milib</artifactId>
-    <version>1.7.2</version>
+    <version>1.8</version>
     <packaging>jar</packaging>
     <name>MiLib</name>
     <url>https://milaboratory.com/</url>
@@ -209,6 +209,32 @@
     <build>
         <plugins>
             <plugin>
+                <!-- Workaround maven not being able to set a property conditionally -->
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <exportAntProperties>true</exportAntProperties>
+                            <target>
+                                <exec executable="hostname" failonerror="false" outputproperty="hostname"/>
+                                <condition property="hostname" value="unknown">
+                                    <not>
+                                        <isset property="hostname"/>
+                                    </not>
+                                </condition>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
                 <version>1.4</version>
@@ -229,6 +255,7 @@
                         <configuration>
                             <properties>
                                 <branch>${scmBranch}</branch>
+                                <host>${hostname}</host>
                             </properties>
                         </configuration>
                     </execution>
