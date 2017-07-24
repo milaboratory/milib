@@ -16,7 +16,6 @@
 package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.sequence.*;
 
@@ -25,7 +24,6 @@ import java.io.ObjectStreamException;
 /**
  * LinearGapAlignmentScoring - scoring system which uses penalty for gap
  */
-@JsonIgnoreProperties({"minimalMatchScore", "maximalMatchScore", "minimalMismatchScore", "maximalMismatchScore"})
 public final class LinearGapAlignmentScoring<S extends Sequence<S>> extends AbstractAlignmentScoring<S>
         implements java.io.Serializable {
     /**

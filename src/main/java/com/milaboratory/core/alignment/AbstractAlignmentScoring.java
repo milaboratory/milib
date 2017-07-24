@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
@@ -27,6 +28,7 @@ import java.util.Arrays;
  *
  * @param <S> type of sequences to be aligned using scoring system
  */
+@JsonIgnoreProperties({"minimalMatchScore", "maximalMatchScore", "minimalMismatchScore", "maximalMismatchScore"})
 public class AbstractAlignmentScoring<S extends Sequence<S>> implements AlignmentScoring<S> {
     /**
      * Link to alphabet

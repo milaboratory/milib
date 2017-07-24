@@ -1,4 +1,4 @@
-[![Javadocs](http://www.javadoc.io/badge/com.milaboratory/milib.svg)](http://www.javadoc.io/doc/com.milaboratory/milib) [![Build Status](https://travis-ci.org/milaboratory/milib.png?branch=develop)](https://travis-ci.org/milaboratory/milib)
+[![Javadocs](http://www.javadoc.io/badge/com.milaboratory/milib.svg)](http://www.javadoc.io/doc/com.milaboratory/milib) [![Build Status](https://travis-ci.org/milaboratory/milib.svg)](https://travis-ci.org/milaboratory/milib)
 
 =====
 
