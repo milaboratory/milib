@@ -15,5 +15,8 @@
  */
 package com.milaboratory.core.io.sequence;
 
-public interface PairedSequenceWriter extends SequenceWriter<PairedRead> {
+public abstract class PairedSequenceWriter extends AbstractMultiWriter<PairedRead> {
+    public PairedSequenceWriter(SingleSequenceWriter writer1, SingleSequenceWriter writer2) {
+        super(writer1, writer2);
+    }
 }
