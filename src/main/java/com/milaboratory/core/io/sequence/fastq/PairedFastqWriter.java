@@ -16,16 +16,13 @@
 package com.milaboratory.core.io.sequence.fastq;
 
 import com.milaboratory.core.io.CompressionType;
-import com.milaboratory.core.io.sequence.PairedRead;
 import com.milaboratory.core.io.sequence.PairedSequenceWriter;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public final class PairedFastqWriter implements PairedSequenceWriter {
-    SingleFastqWriter[] writers;
-
+public final class PairedFastqWriter extends PairedSequenceWriter {
     public PairedFastqWriter(File file1, File file2) throws IOException {
         this(new SingleFastqWriter(file1), new SingleFastqWriter(file2));
     }
@@ -40,42 +37,6 @@ public final class PairedFastqWriter implements PairedSequenceWriter {
     }
 
     public PairedFastqWriter(SingleFastqWriter writer1, SingleFastqWriter writer2) {
-        this.writers = new SingleFastqWriter[]{writer1, writer2};
-    }
-
-    @Override
-    public void write(PairedRead read) {
-        writers[0].write(read.getR1());
-        writers[1].write(read.getR2());
-    }
-
-    @Override
-    public void flush() {
-        RuntimeException ex = null;
-
-        for (SingleFastqWriter writer : writers)
-            try {
-                writer.flush();
-            } catch (RuntimeException e) {
-                ex = e;
-            }
-
-        if (ex != null)
-            throw ex;
-    }
-
-    @Override
-    public void close() {
-        RuntimeException ex = null;
-
-        for (SingleFastqWriter writer : writers)
-            try {
-                writer.close();
-            } catch (RuntimeException e) {
-                ex = e;
-            }
-
-        if (ex != null)
-            throw ex;
+        super(writer1, writer2);
     }
 }
