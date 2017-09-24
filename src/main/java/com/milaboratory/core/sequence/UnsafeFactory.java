@@ -55,7 +55,9 @@ public final class UnsafeFactory {
                 if (buffer[pointerSeq - 1] == '.')
                     code = NucleotideAlphabet.N;
                 else
-                    throw new IllegalArgumentException("Unknown letter \"" + buffer[pointerSeq - 1] + "\"");
+                    throw new IllegalArgumentException("Unknown letter \"" + buffer[pointerSeq - 1] + "\"" +
+                            (buffer[pointerSeq - 1] == 13 ? ". FASTQ reader does not support Windows-style line breaks " +
+                                    "(CR+LF), please convert file to standard FASTQ (with Unix-like LF line breaks)." : ""));
             }
 
             if (replaceWildcards && NucleotideSequence.ALPHABET.isWildcard(code)) {
