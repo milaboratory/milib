@@ -57,7 +57,7 @@ public final class Wildcard {
     /**
      * Pure letter constructor
      *
-     * @param cSymbol uppercase symbol
+     * @param cSymbol character for this wildcard
      * @param code    code
      */
     Wildcard(char cSymbol, byte code) {
@@ -67,7 +67,7 @@ public final class Wildcard {
     /**
      * Wildcard constructor
      *
-     * @param cSymbol            uppercase symbol of wildcard
+     * @param cSymbol            character for this wildcard
      * @param code               code of wildcard
      * @param numberOfBasicCodes number of basic letters in matchingCodes array
      * @param matchingCodes      set of codes that this wildcards matches
