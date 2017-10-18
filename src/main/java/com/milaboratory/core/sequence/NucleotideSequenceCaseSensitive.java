@@ -131,4 +131,11 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
     private static boolean isWildcard(byte nucleotide) {
         return nucleotide >= 8;
     }
+
+    public NucleotideSequence toNucleotideSequence() {
+        byte[] caseInsensitiveData = new byte[data.length];
+        for (int i = 0; i < data.length; i++)
+            caseInsensitiveData[i] = NucleotideAlphabet.INSTANCE.symbolToCode(ALPHABET.codeToSymbol(data[i]));
+        return new NucleotideSequence(caseInsensitiveData);
+    }
 }
