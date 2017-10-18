@@ -45,6 +45,7 @@ import java.util.List;
  * @author Dmitriy Bolotin (bolotin.dmitriy@gmail.com)
  * @author Stanislav Poslavsky (stvlpos@mail.ru)
  * @author Mikhail Shugay (mikhail.shugay@gmail.com)
+ * @author Aleksandr Popov (alexander230r@gmail.com)
  * @see com.milaboratory.core.sequence.Sequence
  * @see com.milaboratory.core.sequence.SequenceBuilder
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
@@ -90,6 +91,10 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      */
     private final TCharByteHashMap symbolToCode;
     /**
+     * Case sensitive backward mapping
+     */
+    private final TCharByteHashMap symbolToCodeCaseSensitive;
+    /**
      * Wildcard for any letter (e.g. N for nucleotides, X for amino acids)
      */
     private final Wildcard wildcardForAnyLetter;
@@ -124,6 +129,8 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
         // -1 in constructor here is to simplify return of -1 for undefined symbols in symbolToCode
         symbolToCode = new TCharByteHashMap(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR,
                 (char) -1, (byte) -1);
+        symbolToCodeCaseSensitive = new TCharByteHashMap(Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR,
+                (char) -1, (byte) -1);
         this.basicMaskToWildcard = new TLongObjectHashMap<>();
 
         // Filling internal maps/arrays
@@ -136,6 +143,7 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
             codeToWildcard[wildcard.getCode()] = wildcard;
             symbolToCode.put(wildcard.getSymbol(), wildcard.getCode());
             symbolToCode.put(Character.toLowerCase(wildcard.getSymbol()), wildcard.getCode());
+            symbolToCodeCaseSensitive.put(wildcard.getSymbol(), wildcard.getCode());
             basicMaskToWildcard.put(wildcard.getBasicMask(), wildcard);
         }
 
@@ -190,13 +198,23 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
     }
 
     /**
-     * Returns a wildcard object for specified letter.
+     * Returns a wildcard object for specified letter (case insensitive).
      *
      * @param symbol symbol
      * @return wildcard object for specified letter
      */
     public final Wildcard symbolToWildcard(char symbol) {
         return codeToWildcard[symbolToCode.get(symbol)];
+    }
+
+    /**
+     * Returns a wildcard object for specified letter (case sensitive).
+     *
+     * @param symbol symbol
+     * @return wildcard object for specified letter
+     */
+    public final Wildcard symbolToWildcardCaseSensitive(char symbol) {
+        return codeToWildcard[symbolToCodeCaseSensitive.get(symbol)];
     }
 
     /**
@@ -248,6 +266,17 @@ public abstract class Alphabet<S extends Sequence<S>> implements java.io.Seriali
      */
     public byte symbolToCode(char symbol) {
         return symbolToCode.get(symbol);
+    }
+
+    /**
+     * Gets the binary code representing given symbol (case sensitive) or -1 if there
+     * is no such symbol in this alphabet
+     *
+     * @param symbol symbol to convert
+     * @return binary code of the symbol (case sensitive) or -1 if there is no such symbol in the alphabet
+     */
+    public byte symbolToCodeCaseSensitive(char symbol) {
+        return symbolToCodeCaseSensitive.get(symbol);
     }
 
     /**
