@@ -53,6 +53,10 @@ public final class Wildcard {
      * ((mask >>> i) & 1) == 1, if wildcard matches i-th code
      */
     final long mask;
+    /**
+     * Is this wildcard for case sensitive alphabet or not
+     */
+    final boolean caseSensitive;
 
     /**
      * Pure letter constructor
@@ -65,7 +69,7 @@ public final class Wildcard {
     }
 
     /**
-     * Wildcard constructor
+     * Case insensitive constructor
      *
      * @param cSymbol            character for this wildcard
      * @param code               code of wildcard
@@ -73,10 +77,22 @@ public final class Wildcard {
      * @param matchingCodes      set of codes that this wildcards matches
      */
     Wildcard(char cSymbol, byte code, int numberOfBasicCodes, byte[] matchingCodes) {
-        if (matchingCodes.length == 0 || Character.isLowerCase(cSymbol))
+        this(cSymbol, code, numberOfBasicCodes, matchingCodes, false);
+    }
+
+    /**
+     * Wildcard constructor
+     *
+     * @param cSymbol            character for this wildcard
+     * @param code               code of wildcard
+     * @param numberOfBasicCodes number of basic letters in matchingCodes array
+     * @param matchingCodes      set of codes that this wildcards matches
+     */
+    Wildcard(char cSymbol, byte code, int numberOfBasicCodes, byte[] matchingCodes, boolean caseSensitive) {
+        if (matchingCodes.length == 0 || (!caseSensitive && Character.isLowerCase(cSymbol)))
             throw new IllegalArgumentException();
 
-        this.cSymbol = Character.toUpperCase(cSymbol);
+        this.cSymbol = caseSensitive ? cSymbol : Character.toUpperCase(cSymbol);
         this.bSymbol = (byte) cSymbol;
         this.code = code;
         this.matchingCodes = matchingCodes.clone();
@@ -101,6 +117,7 @@ public final class Wildcard {
         }
         this.basicMask = basicMask;
         this.mask = mask;
+        this.caseSensitive = caseSensitive;
     }
 
     /**
@@ -153,7 +170,7 @@ public final class Wildcard {
      * letter and formally it is not a wildcard
      */
     public boolean isBasic() {
-        return basicSize == 1;
+        return basicSize == (caseSensitive ? 2 : 1);
     }
 
     /**
