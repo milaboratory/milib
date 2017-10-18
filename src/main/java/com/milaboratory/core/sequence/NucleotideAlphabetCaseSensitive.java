@@ -160,84 +160,124 @@ public final class NucleotideAlphabetCaseSensitive extends AbstractArrayAlphabet
     /**
      * Adenine byte representation
      */
-    public static final Wildcard A_WILDCARD = new Wildcard('A', A, 1, new byte[]{A, N, R, W, M, D, H, V});
-    public static final Wildcard a_WILDCARD = new Wildcard('a', a, 1, new byte[]{A, N, R, W, M, D, H, V});
+    public static final Wildcard A_WILDCARD = new Wildcard('A', A, 2,
+            new byte[]{A, a, N, n, R, r, W, w, M, m, D, d, H, h, V, v}, true);
+    public static final Wildcard a_WILDCARD = new Wildcard('a', a, 2,
+            new byte[]{A, a, N, n, R, r, W, w, M, m, D, d, H, h, V, v}, true);
     /**
      * Guanine byte representation
      */
-    public static final Wildcard G_WILDCARD = new Wildcard('G', G, 1, new byte[]{G, N, R, S, K, B, D, V});
-    public static final Wildcard g_WILDCARD = new Wildcard('g', g, 1, new byte[]{G, N, R, S, K, B, D, V});
+    public static final Wildcard G_WILDCARD = new Wildcard('G', G, 2,
+            new byte[]{G, g, N, n, R, r, S, s, K, k, B, b, D, d, V, v}, true);
+    public static final Wildcard g_WILDCARD = new Wildcard('g', g, 2,
+            new byte[]{G, g, N, n, R, r, S, s, K, k, B, b, D, d, V, v}, true);
     /**
      * Cytosine byte representation
      */
-    public static final Wildcard C_WILDCARD = new Wildcard('C', C, 1, new byte[]{C, N, Y, S, M, B, H, V});
-    public static final Wildcard c_WILDCARD = new Wildcard('c', c, 1, new byte[]{C, N, Y, S, M, B, H, V});
+    public static final Wildcard C_WILDCARD = new Wildcard('C', C, 2,
+            new byte[]{C, c, N, n, Y, y, S, s, M, m, B, b, H, h, V, v}, true);
+    public static final Wildcard c_WILDCARD = new Wildcard('c', c, 2,
+            new byte[]{C, c, N, n, Y, y, S, s, M, m, B, b, H, h, V, v}, true);
     /**
      * Thymine byte representation
      */
-    public static final Wildcard T_WILDCARD = new Wildcard('T', T, 1, new byte[]{T, N, Y, W, K, B, D, H});
-    public static final Wildcard t_WILDCARD = new Wildcard('t', t, 1, new byte[]{T, N, Y, W, K, B, D, H});
+    public static final Wildcard T_WILDCARD = new Wildcard('T', T, 2,
+            new byte[]{T, t, N, n, Y, y, W, w, K, k, B, b, D, d, H, h}, true);
+    public static final Wildcard t_WILDCARD = new Wildcard('t', t, 2,
+            new byte[]{T, t, N, n, Y, y, W, w, K, k, B, b, D, d, H, h}, true);
 
     /* N wildcard */
     /**
      * any Nucleotide
      */
-    public static final Wildcard N_WILDCARD = new Wildcard('N', N, 4, new byte[]{A, G, C, T, N, R, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard n_WILDCARD = new Wildcard('n', n, 4, new byte[]{A, G, C, T, N, R, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard N_WILDCARD = new Wildcard('N', N, 8,
+            new byte[]{A, a, G, g, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
+    public static final Wildcard n_WILDCARD = new Wildcard('n', n, 8,
+            new byte[]{A, a, G, g, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
 
     /* Two-letter wildcards */
     /**
      * puRine
      */
-    public static final Wildcard R_WILDCARD = new Wildcard('R', R, 2, new byte[]{A, G, N, R, S, W, K, M, B, D, H, V});
-    public static final Wildcard r_WILDCARD = new Wildcard('r', r, 2, new byte[]{A, G, N, R, S, W, K, M, B, D, H, V});
+    public static final Wildcard R_WILDCARD = new Wildcard('R', R, 4,
+            new byte[]{A, a, G, g, N, n, R, r, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard r_WILDCARD = new Wildcard('r', r, 4,
+            new byte[]{A, a, G, g, N, n, R, r, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
     /**
      * pYrimidine
      */
-    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y, 2, new byte[]{C, T, N, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard y_WILDCARD = new Wildcard('y', y, 2, new byte[]{C, T, N, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard Y_WILDCARD = new Wildcard('Y', Y, 4,
+            new byte[]{C, c, T, t, N, n, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard y_WILDCARD = new Wildcard('y', y, 4,
+            new byte[]{C, c, T, t, N, n, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
     /**
      * Strong
      */
-    public static final Wildcard S_WILDCARD = new Wildcard('S', S, 2, new byte[]{G, C, N, R, Y, S, K, M, B, D, H, V});
-    public static final Wildcard s_WILDCARD = new Wildcard('s', s, 2, new byte[]{G, C, N, R, Y, S, K, M, B, D, H, V});
+    public static final Wildcard S_WILDCARD = new Wildcard('S', S, 4,
+            new byte[]{G, g, C, c, N, n, R, r, Y, y, S, s, K, k, M, m, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard s_WILDCARD = new Wildcard('s', s, 4,
+            new byte[]{G, g, C, c, N, n, R, r, Y, y, S, s, K, k, M, m, B, b, D, d, H, h, V, v}, true);
     /**
      * Weak
      */
-    public static final Wildcard W_WILDCARD = new Wildcard('W', W, 2, new byte[]{A, T, N, R, Y, W, K, M, B, D, H, V});
-    public static final Wildcard w_WILDCARD = new Wildcard('w', w, 2, new byte[]{A, T, N, R, Y, W, K, M, B, D, H, V});
+    public static final Wildcard W_WILDCARD = new Wildcard('W', W, 4,
+            new byte[]{A, a, T, t, N, n, R, r, Y, y, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard w_WILDCARD = new Wildcard('w', w, 4,
+            new byte[]{A, a, T, t, N, n, R, r, Y, y, W, w, K, k, M, m, B, b, D, d, H, h, V, v}, true);
     /**
      * Keto
      */
-    public static final Wildcard K_WILDCARD = new Wildcard('K', K, 2, new byte[]{G, T, N, R, Y, S, W, K, B, D, H, V});
-    public static final Wildcard k_WILDCARD = new Wildcard('k', k, 2, new byte[]{G, T, N, R, Y, S, W, K, B, D, H, V});
+    public static final Wildcard K_WILDCARD = new Wildcard('K', K, 4,
+            new byte[]{G, g, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard k_WILDCARD = new Wildcard('k', k, 4,
+            new byte[]{G, g, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, B, b, D, d, H, h, V, v}, true);
     /**
      * aMino
      */
-    public static final Wildcard M_WILDCARD = new Wildcard('M', M, 2, new byte[]{A, C, N, R, Y, S, W, M, B, D, H, V});
-    public static final Wildcard m_WILDCARD = new Wildcard('m', m, 2, new byte[]{A, C, N, R, Y, S, W, M, B, D, H, V});
+    public static final Wildcard M_WILDCARD = new Wildcard('M', M, 4,
+            new byte[]{A, a, C, c, N, n, R, r, Y, y, S, s, W, w, M, m, B, b, D, d, H, h, V, v}, true);
+    public static final Wildcard m_WILDCARD = new Wildcard('m', m, 4,
+            new byte[]{A, a, C, c, N, n, R, r, Y, y, S, s, W, w, M, m, B, b, D, d, H, h, V, v}, true);
 
     /* Three-letter wildcards */
     /**
      * not A (B comes after A)
      */
-    public static final Wildcard B_WILDCARD = new Wildcard('B', B, 3, new byte[]{G, C, T, N, R, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard b_WILDCARD = new Wildcard('b', b, 3, new byte[]{G, C, T, N, R, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard B_WILDCARD = new Wildcard('B', B, 6,
+            new byte[]{G, g, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
+    public static final Wildcard b_WILDCARD = new Wildcard('b', b, 6,
+            new byte[]{G, g, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
     /**
      * not C (D comes after C)
      */
-    public static final Wildcard D_WILDCARD = new Wildcard('D', D, 3, new byte[]{A, G, T, N, R, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard d_WILDCARD = new Wildcard('d', d, 3, new byte[]{A, G, T, N, R, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard D_WILDCARD = new Wildcard('D', D, 6,
+            new byte[]{A, a, G, g, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
+    public static final Wildcard d_WILDCARD = new Wildcard('d', d, 6,
+            new byte[]{A, a, G, g, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
     /**
      * not G (H comes after G)
      */
-    public static final Wildcard H_WILDCARD = new Wildcard('H', H, 3, new byte[]{A, C, T, N, R, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard h_WILDCARD = new Wildcard('h', h, 3, new byte[]{A, C, T, N, R, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard H_WILDCARD = new Wildcard('H', H, 6,
+            new byte[]{A, a, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
+    public static final Wildcard h_WILDCARD = new Wildcard('h', h, 6,
+            new byte[]{A, a, C, c, T, t, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
     /**
      * not T (V comes after T and U)
      */
-    public static final Wildcard V_WILDCARD = new Wildcard('V', V, 3, new byte[]{A, G, C, N, R, Y, S, W, K, M, B, D, H, V});
-    public static final Wildcard v_WILDCARD = new Wildcard('v', v, 3, new byte[]{A, G, C, N, R, Y, S, W, K, M, B, D, H, V});
+    public static final Wildcard V_WILDCARD = new Wildcard('V', V, 6,
+            new byte[]{A, a, G, g, C, c, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
+    public static final Wildcard v_WILDCARD = new Wildcard('v', v, 6,
+            new byte[]{A, a, G, g, C, c, N, n, R, r, Y, y, S, s, W, w, K, k, M, m, B, b, D, d, H, h, V, v},
+            true);
 
     /**
      * All wildcards array. Each wildcard has index equals to its code.
