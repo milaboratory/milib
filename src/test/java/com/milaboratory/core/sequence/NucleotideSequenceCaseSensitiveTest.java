@@ -58,4 +58,12 @@ public class NucleotideSequenceCaseSensitiveTest {
     public void testUnknownSymbol2() throws Exception {
         new NucleotideSequenceCaseSensitive(new char[]{'a', 'n', 'q'});
     }
+
+    @Test
+    public void toNucleotideSequenceTest() throws Exception {
+        assertEquals("ATTAGACA",
+                new NucleotideSequenceCaseSensitive("AttAGacA").toNucleotideSequence().toString());
+        assertEquals(new NucleotideSequence("ATGCNWBD").hashCode(),
+                new NucleotideSequenceCaseSensitive("aTgcnWbd").toNucleotideSequence().hashCode());
+    }
 }
