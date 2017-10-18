@@ -74,7 +74,7 @@ public class WildcardTest {
                 if (wc1.intersectsWith(wc2)) {
                     Assert.assertTrue(wc1.matches(wc2.code));
                     Assert.assertTrue(wc2.matches(wc1.code));
-                }else {
+                } else {
                     Assert.assertFalse(wc1.matches(wc2.code));
                     Assert.assertFalse(wc2.matches(wc1.code));
                 }
