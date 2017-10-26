@@ -41,11 +41,11 @@ public final class AlignmentCache {
         }
     };
     /**
-     * Flag which is indicating whether AlignemntCache is on or off
+     * Flag which is indicating whether AlignmentCache is on or off
      */
     private static boolean enabled = false;
     /**
-     * Maximum number of CachedArrays in AlignemtnCache
+     * Maximum number of CachedArrays in AlignmentCache
      */
     private static int limit = 20;
 
@@ -57,7 +57,7 @@ public final class AlignmentCache {
     }
 
     /**
-     * Returns available CachedIntArray if AlignemntCache is on or creates new CachedIntArray otherwise
+     * Returns available CachedIntArray if AlignmentCache is on or creates new CachedIntArray otherwise
      *
      * @return CachedIntArray
      */
