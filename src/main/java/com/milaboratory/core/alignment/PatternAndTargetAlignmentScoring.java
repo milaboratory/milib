@@ -15,6 +15,8 @@
  */
 package com.milaboratory.core.alignment;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.milaboratory.core.sequence.NucleotideAlphabetCaseSensitive;
 import com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive;
 
@@ -55,6 +57,29 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         goodQuality = GOOD_QUALITY_VALUE;
         badQuality = BAD_QUALITY_VALUE;
         maxQualityPenalty = 0;
+    }
+
+    @JsonCreator
+    public PatternAndTargetAlignmentScoring(
+            @JsonProperty("alphabet") NucleotideAlphabetCaseSensitive alphabet,
+            @JsonProperty("gapNearUppercasePenalty") int gapNearUppercasePenalty,
+            @JsonProperty("matchScore") int matchScore,
+            @JsonProperty("mismatchScore") int mismatchScore,
+            @JsonProperty("gapPenalty") int gapPenalty,
+            @JsonProperty("usePatternLength") boolean usePatternLength,
+            @JsonProperty("goodQuality") byte goodQuality,
+            @JsonProperty("badQuality") byte badQuality,
+            @JsonProperty("maxQualityPenalty") int maxQualityPenalty) {
+        super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
+        if ((matchScore > 0) || (mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
+            throw new IllegalArgumentException();
+        this.matchScore = matchScore;
+        this.mismatchScore = mismatchScore;
+        this.gapPenalty = gapPenalty;
+        this.usePatternLength = usePatternLength;
+        this.goodQuality = goodQuality;
+        this.badQuality = badQuality;
+        this.maxQualityPenalty = maxQualityPenalty;
     }
 
     /**
@@ -155,11 +180,12 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     /* Internal methods for Java Serialization */
 
     protected Object writeReplace() throws ObjectStreamException {
-        return new SerializationObject(matchScore, mismatchScore, gapPenalty, usePatternLength,
+        return new SerializationObject(gapNearUppercasePenalty, matchScore, mismatchScore, gapPenalty, usePatternLength,
                 goodQuality, badQuality, maxQualityPenalty);
     }
 
     protected static class SerializationObject implements java.io.Serializable {
+        final int gapNearUppercasePenalty;
         final int matchScore;
         final int mismatchScore;
         final int gapPenalty;
@@ -169,11 +195,13 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         final int maxQualityPenalty;
 
         public SerializationObject() {
-            this(0, 0, 0, false, (byte)0, (byte)0, 0);
+            this(0, 0, 0, 0, false,
+                    (byte)0, (byte)0, 0);
         }
 
-        public SerializationObject(int matchScore, int mismatchScore, int gapPenalty, boolean usePatternLength,
-                                   byte goodQuality, byte badQuality, int maxQualityPenalty) {
+        public SerializationObject(int gapNearUppercasePenalty, int matchScore, int mismatchScore, int gapPenalty,
+                                   boolean usePatternLength, byte goodQuality, byte badQuality, int maxQualityPenalty) {
+            this.gapNearUppercasePenalty = gapNearUppercasePenalty;
             this.matchScore = matchScore;
             this.mismatchScore = mismatchScore;
             this.gapPenalty = gapPenalty;
@@ -186,7 +214,8 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         @SuppressWarnings("unchecked")
         private Object readResolve()
                 throws ObjectStreamException {
-            return new PatternAndTargetAlignmentScoring(matchScore, mismatchScore, gapPenalty, usePatternLength,
+            return new PatternAndTargetAlignmentScoring(NucleotideSequenceCaseSensitive.ALPHABET,
+                    gapNearUppercasePenalty, matchScore, mismatchScore, gapPenalty, usePatternLength,
                     goodQuality, badQuality, maxQualityPenalty);
         }
     }
