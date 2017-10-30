@@ -88,12 +88,12 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
     }
 
     /**
-     * Creates nucleotide sequence from specified byte array.
+     * Creates case sensitive nucleotide sequence from specified byte array.
      *
      * @param sequence byte array
      * @param offset   offset in {@code sequence}
      * @param length   length of resulting sequence
-     * @return nucleotide sequence
+     * @return case sensitive nucleotide sequence
      */
     public static NucleotideSequenceCaseSensitive fromSequence(byte[] sequence, int offset, int length) {
         byte[] storage = new byte[length];
@@ -102,6 +102,32 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
         return new NucleotideSequenceCaseSensitive(storage, true);
     }
 
+    /**
+     * Converts NucleotideSequence to NucleotideSequenceCaseSensitive.
+     *
+     * @param sequence nucleotide sequence
+     * @param lowercase if true, resulting sequence will be lowercase, otherwise uppercase
+     * @return case sensitive nucleotide sequence
+     */
+    public static NucleotideSequenceCaseSensitive fromNucleotideSequence(NucleotideSequence sequence,
+            boolean lowercase) {
+        if (lowercase)
+            return new NucleotideSequenceCaseSensitive(sequence.toString().toLowerCase());
+        else
+            return new NucleotideSequenceCaseSensitive(sequence.toString().toUpperCase());
+    }
+
+    /**
+     * Converts this NucleotideSequenceCaseSensitive to NucleotideSequence with losing information about case.
+     *
+     * @return nucleotide sequence
+     */
+    public NucleotideSequence toNucleotideSequence() {
+        byte[] caseInsensitiveData = new byte[data.length];
+        for (int i = 0; i < data.length; i++)
+            caseInsensitiveData[i] = NucleotideAlphabet.INSTANCE.symbolToCode(ALPHABET.codeToSymbol(data[i]));
+        return new NucleotideSequence(caseInsensitiveData);
+    }
     /**
      * Returns {@literal true} if sequence contains wildcards in specified region.
      *
@@ -130,12 +156,5 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
 
     private static boolean isWildcard(byte nucleotide) {
         return nucleotide >= 8;
-    }
-
-    public NucleotideSequence toNucleotideSequence() {
-        byte[] caseInsensitiveData = new byte[data.length];
-        for (int i = 0; i < data.length; i++)
-            caseInsensitiveData[i] = NucleotideAlphabet.INSTANCE.symbolToCode(ALPHABET.codeToSymbol(data[i]));
-        return new NucleotideSequence(caseInsensitiveData);
     }
 }
