@@ -133,8 +133,8 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
      * @return match score that includes correction based on target quality
      */
     public int getScore(byte from, byte to, byte quality) {
-        return getScore(from, to) + maxQualityPenalty * (Math.min(goodQuality, Math.max(badQuality, quality))
-                - badQuality) / Math.max(1, goodQuality - badQuality);
+        return getScore(from, to) + maxQualityPenalty * (goodQuality
+                - Math.min(goodQuality, Math.max(badQuality, quality))) / Math.max(1, goodQuality - badQuality);
     }
 
     /**
