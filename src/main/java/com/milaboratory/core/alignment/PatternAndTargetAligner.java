@@ -19,6 +19,8 @@ import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.*;
 
+import static com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive.fromNucleotideSequence;
+
 public final class PatternAndTargetAligner {
     private PatternAndTargetAligner() {
     }
@@ -41,7 +43,7 @@ public final class PatternAndTargetAligner {
         if (leftMatchPosition < 0) leftMatchPosition = 0;
         int patternSize = pattern.size();
         int targetPartSize = rightMatchPosition - leftMatchPosition + 1;
-        NucleotideSequence targetSequence = target.getSequence();
+        NucleotideSequenceCaseSensitive targetSequence = fromNucleotideSequence(target.getSequence(), true);
         SequenceQuality targetQuality = target.getQuality();
 
         try {
@@ -145,7 +147,8 @@ public final class PatternAndTargetAligner {
             NSequenceWithQuality targetPart) {
         int patternSize = pattern.size();
         int targetPartSize = targetPart.size();
-        NucleotideSequence targetPartSequence = targetPart.getSequence();
+        NucleotideSequenceCaseSensitive targetPartSequence = fromNucleotideSequence(targetPart.getSequence(),
+                true);
         SequenceQuality targetPartQuality = targetPart.getQuality();
         int matrixSize1 = patternSize + 1;
         int matrixSize2 = targetPartSize + 1;
@@ -181,7 +184,7 @@ public final class PatternAndTargetAligner {
                     matrix[(i1 + 1) * matrixSize2 + i2 + 1] == matrix[i1 * matrixSize2 + i2] + scoring.getScore(
                             pattern.codeAt(i1), targetPartSequence.codeAt(i2), targetPartQuality.value(i2))) {
                 if (pattern.codeAt(i1) != targetPartSequence.codeAt(i2))
-                    builder.appendSubstitution(i1, pattern.codeAt(i1), pattern.codeAt(i2));
+                    builder.appendSubstitution(i1, pattern.codeAt(i1), targetPartSequence.codeAt(i2));
                 i1--;
                 i2--;
                 gapPenalty = scoring.getGapPenalty(pattern, i1);
