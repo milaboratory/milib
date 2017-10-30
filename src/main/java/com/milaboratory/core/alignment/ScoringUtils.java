@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.sequence.Alphabet;
+import com.milaboratory.core.sequence.AlphabetCaseSensitive;
 import com.milaboratory.core.sequence.Wildcard;
 import gnu.trove.set.hash.TByteHashSet;
 
@@ -40,8 +41,16 @@ public final class ScoringUtils {
         int codes = alphabet.size();
         int[] matrix = new int[codes * codes];
         Arrays.fill(matrix, mismatch);
-        for (int i = 0; i < codes; ++i)
-            matrix[i + codes * i] = match;
+        if (alphabet instanceof AlphabetCaseSensitive)
+            for (byte i = 0; i < codes; ++i)
+                for (byte j = 0; j < codes; ++j) {
+                    if (Character.toLowerCase(alphabet.codeToSymbol(i))
+                            == Character.toLowerCase(alphabet.codeToSymbol(j)))
+                        matrix[i + codes * j] = match;
+                }
+        else
+            for (int i = 0; i < codes; ++i)
+                matrix[i + codes * i] = match;
         return fillWildcardScores(matrix, alphabet);
     }
 

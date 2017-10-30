@@ -26,7 +26,8 @@ package com.milaboratory.core.sequence;
  * @see com.milaboratory.core.sequence.NucleotideAlphabet
  * @see com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive
  */
-public final class NucleotideAlphabetCaseSensitive extends AbstractArrayAlphabet<NucleotideSequenceCaseSensitive> {
+public final class NucleotideAlphabetCaseSensitive extends AbstractArrayAlphabet<NucleotideSequenceCaseSensitive>
+        implements AlphabetCaseSensitive  {
     /**
      * Adenine byte representation, uppercase
      */
