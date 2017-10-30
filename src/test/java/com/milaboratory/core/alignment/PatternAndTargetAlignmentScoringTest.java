@@ -69,13 +69,12 @@ public class PatternAndTargetAlignmentScoringTest {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
                 -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
         NucleotideSequenceCaseSensitive pattern = new NucleotideSequenceCaseSensitive("aTTagaCA");
-        HashMap<Integer, Integer> expectedPenalties = new HashMap<Integer, Integer>() {{
-            put(-1, -10); put(0, -100000000); put(1, -100000000); put(2, -100000000);
-            put(3, -100000000); put(4, -10); put(5, -100000000); put(6, -100000000);
-            put(7, -100000000); put(8, -100000000);
-        }};
-        for (HashMap.Entry<Integer, Integer> expectedPenalty : expectedPenalties.entrySet())
-            assertEquals((int)expectedPenalty.getValue(), scoring.getGapPenalty(pattern, expectedPenalty.getKey()));
+        int expectedPenalties[] = new int[] {-10, -100000000, -100000000, -100000000, -100000000,
+                -10, -100000000, -100000000, -100000000, -100000000};
+        for (int i = -1; i <= 8; i++) {
+            int expectedPenalty = expectedPenalties[i + 1];
+            assertEquals(expectedPenalty, scoring.getGapPenalty(pattern, i));
+        }
     }
 
     @Test
