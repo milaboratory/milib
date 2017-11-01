@@ -21,7 +21,7 @@ public class PatternAndTargetAlignerTest {
     public void testGlobal() throws Exception {
         assertScore(-19, alignGlobal(simpleScoring,
                 new NucleotideSequenceCaseSensitive("ATTagaca"), new NSequenceWithQuality("ATTAAGA")).getScore());
-        assertScore(-100000009, alignGlobal(simpleScoring,
+        assertScore(-1000009, alignGlobal(simpleScoring,
                 new NucleotideSequenceCaseSensitive("ATTAGACA"), new NSequenceWithQuality("ATTAAGA")).getScore());
 
         NucleotideSequenceCaseSensitive seq1 = new NucleotideSequenceCaseSensitive("ATttTAtaCa");
