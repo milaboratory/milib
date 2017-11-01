@@ -6,8 +6,6 @@ import com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive;
 import com.milaboratory.util.GlobalObjectMappers;
 import org.junit.Test;
 
-import java.util.HashMap;
-
 import static com.milaboratory.core.sequence.SequenceQuality.BAD_QUALITY_VALUE;
 import static com.milaboratory.core.sequence.SequenceQuality.GOOD_QUALITY_VALUE;
 import static org.junit.Assert.*;
@@ -69,8 +67,8 @@ public class PatternAndTargetAlignmentScoringTest {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
                 -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
         NucleotideSequenceCaseSensitive pattern = new NucleotideSequenceCaseSensitive("aTTagaCA");
-        int expectedPenalties[] = new int[] {-10, -100000000, -100000000, -100000000, -100000000,
-                -10, -100000000, -100000000, -100000000, -100000000};
+        int expectedPenalties[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
+                -10, -1000000, -1000000, -1000000, -1000000};
         for (int i = -1; i <= 8; i++) {
             int expectedPenalty = expectedPenalties[i + 1];
             assertEquals(expectedPenalty, scoring.getGapPenalty(pattern, i));

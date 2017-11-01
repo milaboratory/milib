@@ -34,7 +34,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     /**
      * Penalty for gap near uppercase letter
      */
-    private final int gapNearUppercasePenalty = -100000000;
+    private final int gapNearUppercasePenalty = -1000000;
 
     private final int matchScore;
     private final int mismatchScore;
