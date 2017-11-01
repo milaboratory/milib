@@ -198,7 +198,7 @@ public class AlignerTest {
                 muts.extractRelativeMutationsForRange(2, 11).mutate(seq1.getRange(2, 11)));
     }
 
-    public int sAbs(int value) {
+    public static int sAbs(int value) {
         if (value < 0)
             return -value - 1;
         return value;
