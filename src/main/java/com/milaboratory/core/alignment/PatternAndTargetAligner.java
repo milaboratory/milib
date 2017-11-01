@@ -155,10 +155,11 @@ public final class PatternAndTargetAligner {
         int matrix[] = new int[matrixSize1 * matrixSize2];
         int i1, i2, match, delete, insert;
 
-        for (int i = 0; i < matrixSize2; i++)
-            matrix[i] = scoring.getGapPenalty(pattern, -1) * i;
-        for (int j = 1; j < matrixSize1; j++)
-            matrix[matrixSize2 * j] = scoring.getGapPenalty(pattern, j - 1) * j;
+        matrix[0] = 0;
+        for (i1 = 1; i1 < matrixSize1; i1++)
+            matrix[i1 * matrixSize2] = matrix[(i1 - 1) * matrixSize2] + scoring.getGapPenalty(pattern, i1 - 1);
+        for (i2 = 1; i2 < matrixSize2; i2++)
+            matrix[i2] = scoring.getGapPenalty(pattern, -1) * i2;
 
         for (i1 = 0; i1 < patternSize; i1++) {
             int gapPenalty = scoring.getGapPenalty(pattern, i1);
