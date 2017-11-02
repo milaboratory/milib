@@ -67,11 +67,15 @@ public class PatternAndTargetAlignmentScoringTest {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
                 -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
         NucleotideSequenceCaseSensitive pattern = new NucleotideSequenceCaseSensitive("aTTagaCA");
-        int expectedPenalties[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
+        int expectedPenaltiesWithLeft[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
                 -10, -1000000, -1000000, -1000000, -1000000};
+        int expectedPenaltiesWithoutLeft[] = new int[] {-10, -1000000, -1000000, -1000000, -10,
+                -10, -1000000, -1000000, -1000000, -10};
         for (int i = -1; i <= 8; i++) {
-            int expectedPenalty = expectedPenalties[i + 1];
-            assertEquals(expectedPenalty, scoring.getGapPenalty(pattern, i));
+            int expectedPenaltyWithLeft = expectedPenaltiesWithLeft[i + 1];
+            int expectedPenaltyWithoutLeft = expectedPenaltiesWithoutLeft[i + 1];
+            assertEquals(expectedPenaltyWithLeft, scoring.getGapPenalty(pattern, i, true));
+            assertEquals(expectedPenaltyWithoutLeft, scoring.getGapPenalty(pattern, i, false));
         }
     }
 

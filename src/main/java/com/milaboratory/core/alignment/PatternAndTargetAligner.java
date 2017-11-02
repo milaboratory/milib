@@ -55,23 +55,29 @@ public final class PatternAndTargetAligner {
             BandedMatrix matrix = new BandedMatrix(cachedArray, matrixSize1, matrixSize2, maxIndels);
             int i, j;
 
-            for (i = matrix.getRowFactor() - matrix.getColumnDelta(); i > 0; i--)
-                matrix.set(0, i, scoring.getGapPenalty(pattern, -1) * i);
-            for (i = matrix.getColumnDelta(); i > 0; i--)
-                matrix.set(i, 0, scoring.getGapPenalty(pattern, i - 1) * i);
             matrix.set(0, 0, 0);
+            int currentValue,
+                    previousValue = 0;
+            for (i = 1; i <= matrix.getColumnDelta(); i++) {
+                currentValue = scoring.getGapPenalty(pattern, i - 1, true) + previousValue;
+                matrix.set(i, 0, currentValue);
+                previousValue = currentValue;
+            }
+            for (j = 1; j <= matrix.getRowFactor() - matrix.getColumnDelta(); j++)
+                matrix.set(0, j, scoring.getGapPenalty(pattern, -1, false) * j);
 
-            int match, delete, insert, to, gapPenalty;
+            int match, delete, insert, to, gapPenaltyWithLeft, gapPenaltyWithoutLeft;
             for (i = 0; i < patternSize; i++) {
                 to = Math.min(i + matrix.getRowFactor() - matrix.getColumnDelta() + 1, targetPartSize);
-                gapPenalty = scoring.getGapPenalty(pattern, i);
+                gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i, true);
+                gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i, false);
                 for (j = Math.max(0, i - matrix.getColumnDelta()); j < to; j++) {
                     match = matrix.get(i, j) +
                             scoring.getScore(pattern.codeAt(patternSize - 1 - i),
                                     targetSequence.codeAt(rightMatchPosition - j),
                                     targetQuality.value(rightMatchPosition - j));
-                    delete = matrix.get(i, j + 1) + gapPenalty;
-                    insert = matrix.get(i + 1, j) + gapPenalty;
+                    delete = matrix.get(i, j + 1) + gapPenaltyWithLeft;
+                    insert = matrix.get(i + 1, j) + gapPenaltyWithoutLeft;
                     matrix.set(i + 1, j + 1, Math.max(match, Math.max(delete, insert)));
                 }
             }
@@ -96,7 +102,8 @@ public final class PatternAndTargetAligner {
 
             i = maxI - 1;
             j = maxJ - 1;
-            gapPenalty = scoring.getGapPenalty(pattern, i);
+            gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i, true);
+            gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i, false);
             byte c1, c2;
             while (i >= 0 || j >= 0) {
                 if (i >= 0 && j >= 0 &&
@@ -108,15 +115,17 @@ public final class PatternAndTargetAligner {
                         builder.appendSubstitution(patternSize - 1 - i, c1, c2);
                     i--;
                     j--;
-                    gapPenalty = scoring.getGapPenalty(pattern, i);
+                    gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i, true);
+                    gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i, false);
                 } else if (i >= 0 &&
-                        matrix.get(i + 1, j + 1) == matrix.get(i, j + 1) + gapPenalty) {
+                        matrix.get(i + 1, j + 1) == matrix.get(i, j + 1) + gapPenaltyWithLeft) {
                     builder.appendDeletion(patternSize - 1 - i,
                             pattern.codeAt(patternSize - 1 - i));
                     i--;
-                    gapPenalty = scoring.getGapPenalty(pattern, i);
+                    gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i, true);
+                    gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i, false);
                 } else if (j >= 0 &&
-                        matrix.get(i + 1, j + 1) == matrix.get(i + 1, j) + gapPenalty) {
+                        matrix.get(i + 1, j + 1) == matrix.get(i + 1, j) + gapPenaltyWithoutLeft) {
                     builder.appendInsertion(patternSize - 1 - i,
                             targetSequence.codeAt(rightMatchPosition - j));
                     j--;
@@ -157,17 +166,19 @@ public final class PatternAndTargetAligner {
 
         matrix[0] = 0;
         for (i1 = 1; i1 < matrixSize1; i1++)
-            matrix[i1 * matrixSize2] = matrix[(i1 - 1) * matrixSize2] + scoring.getGapPenalty(pattern, i1 - 1);
+            matrix[i1 * matrixSize2] = matrix[(i1 - 1) * matrixSize2]
+                    + scoring.getGapPenalty(pattern, i1 - 1, true);
         for (i2 = 1; i2 < matrixSize2; i2++)
-            matrix[i2] = scoring.getGapPenalty(pattern, -1) * i2;
+            matrix[i2] = scoring.getGapPenalty(pattern, -1, false) * i2;
 
         for (i1 = 0; i1 < patternSize; i1++) {
-            int gapPenalty = scoring.getGapPenalty(pattern, i1);
+            int gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i1, true);
+            int gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i1, false);
             for (i2 = 0; i2 < targetPartSize; i2++) {
                 match = matrix[i1 * matrixSize2 + i2] + scoring.getScore(
                         pattern.codeAt(i1), targetPartSequence.codeAt(i2), targetPartQuality.value(i2));
-                delete = matrix[i1 * matrixSize2 + i2 + 1] + gapPenalty;
-                insert = matrix[(i1 + 1) * matrixSize2 + i2] + gapPenalty;
+                delete = matrix[i1 * matrixSize2 + i2 + 1] + gapPenaltyWithLeft;
+                insert = matrix[(i1 + 1) * matrixSize2 + i2] + gapPenaltyWithoutLeft;
                 matrix[(i1 + 1) * matrixSize2 + i2 + 1] = Math.max(match, Math.max(delete, insert));
             }
         }
@@ -178,7 +189,8 @@ public final class PatternAndTargetAligner {
         i1 = patternSize - 1;
         i2 = targetPartSize - 1;
         int score = scoring.calculateAlignmentScore(matrix[(i1 + 1) * matrixSize2 + i2 + 1], patternSize);
-        int gapPenalty = scoring.getGapPenalty(pattern, i1);
+        int gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i1, true);
+        int gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i1, false);
 
         while (i1 >= 0 || i2 >= 0) {
             if (i1 >= 0 && i2 >= 0 &&
@@ -188,14 +200,18 @@ public final class PatternAndTargetAligner {
                     builder.appendSubstitution(i1, pattern.codeAt(i1), targetPartSequence.codeAt(i2));
                 i1--;
                 i2--;
-                gapPenalty = scoring.getGapPenalty(pattern, i1);
+                gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i1, true);
+                gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i1, false);
             } else if (i1 >= 0 &&
-                    matrix[(i1 + 1) * matrixSize2 + i2 + 1] == matrix[i1 * matrixSize2 + i2 + 1] + gapPenalty) {
+                    matrix[(i1 + 1) * matrixSize2 + i2 + 1] == matrix[i1 * matrixSize2 + i2 + 1]
+                            + gapPenaltyWithLeft) {
                 builder.appendDeletion(i1, pattern.codeAt(i1));
                 i1--;
-                gapPenalty = scoring.getGapPenalty(pattern, i1);
+                gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i1, true);
+                gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i1, false);
             } else if (i2 >= 0 &&
-                    matrix[(i1 + 1) * matrixSize2 + i2 + 1] == matrix[(i1 + 1) * matrixSize2 + i2] + gapPenalty) {
+                    matrix[(i1 + 1) * matrixSize2 + i2 + 1] == matrix[(i1 + 1) * matrixSize2 + i2]
+                            + gapPenaltyWithoutLeft) {
                 builder.appendInsertion(i1 + 1, targetPartSequence.codeAt(i2));
                 i2--;
             } else
