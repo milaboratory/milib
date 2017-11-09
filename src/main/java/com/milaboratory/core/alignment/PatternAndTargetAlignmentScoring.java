@@ -114,12 +114,16 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
      * @param x coordinate of the matrix cell to which we want to write result, in the pattern; it may be -1
      * @param checkLeftFromCurrent must be true to check if this pattern letter can be deleted, or false to check
      *                             if there can be inserted letter after this pattern letter
+     * @param checkRightFromCurrent must be true to check if this pattern letter can be deleted, or false to check
+     *                              if there can be inserted letter before this pattern letter
+     *                              (for right-to-left alignment)
      * @return gap penalty
      */
-    public int getGapPenalty(NucleotideSequenceCaseSensitive pattern, int x, boolean checkLeftFromCurrent) {
+    public int getGapPenalty(NucleotideSequenceCaseSensitive pattern, int x,
+                             boolean checkLeftFromCurrent, boolean checkRightFromCurrent) {
         NucleotideAlphabetCaseSensitive alphabet = NucleotideSequenceCaseSensitive.ALPHABET;
         int left = Math.max(0, checkLeftFromCurrent ? x - 1 : x);
-        int right = Math.min(pattern.size() - 1, x + 1);
+        int right = Math.min(pattern.size() - 1, checkRightFromCurrent ? x + 1 : x);
         for (int i = left; i <= right; i++)
             if (Character.isUpperCase(alphabet.codeToSymbol(pattern.codeAt(i))))
                 return gapNearUppercasePenalty;

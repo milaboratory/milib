@@ -227,7 +227,7 @@ public class PatternAndTargetAlignerTest {
         a = alignLeftAdded(smallGapPenaltyScoring, patterns[2], targets[0],
                 targets[0].size() - 1, 1);
         assertEquals(0, a.getSequence1Range().getFrom());
-        assertEquals(0, a.getSequence2Range().getFrom());
+        assertEquals(1, a.getSequence2Range().getFrom());
         assertAlignment(a, targets[0]);
 
         // CTTAGACA & CATTTAGACA
