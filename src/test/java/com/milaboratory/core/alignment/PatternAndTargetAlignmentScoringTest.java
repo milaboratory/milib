@@ -67,15 +67,22 @@ public class PatternAndTargetAlignmentScoringTest {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
                 -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
         NucleotideSequenceCaseSensitive pattern = new NucleotideSequenceCaseSensitive("aTTagaCA");
-        int expectedPenaltiesWithLeft[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
+        int expectedPenalties[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
                 -10, -1000000, -1000000, -1000000, -1000000};
         int expectedPenaltiesWithoutLeft[] = new int[] {-10, -1000000, -1000000, -1000000, -10,
                 -10, -1000000, -1000000, -1000000, -10};
+        int expectedPenaltiesWithoutRight[] = new int[] {-10, -10, -1000000, -1000000, -1000000,
+                -10, -10, -1000000, -1000000, -1000000};
         for (int i = -1; i <= 8; i++) {
-            int expectedPenaltyWithLeft = expectedPenaltiesWithLeft[i + 1];
+            int expectedPenalty = expectedPenalties[i + 1];
             int expectedPenaltyWithoutLeft = expectedPenaltiesWithoutLeft[i + 1];
-            assertEquals(expectedPenaltyWithLeft, scoring.getGapPenalty(pattern, i, true));
-            assertEquals(expectedPenaltyWithoutLeft, scoring.getGapPenalty(pattern, i, false));
+            int expectedPenaltyWithoutRight = expectedPenaltiesWithoutRight[i + 1];
+            assertEquals(expectedPenalty, scoring.getGapPenalty(pattern, i,
+                    true, true));
+            assertEquals(expectedPenaltyWithoutLeft, scoring.getGapPenalty(pattern, i,
+                    false, true));
+            assertEquals(expectedPenaltyWithoutRight, scoring.getGapPenalty(pattern, i,
+                    true, false));
         }
     }
 
