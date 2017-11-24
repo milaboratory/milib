@@ -111,10 +111,16 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
      */
     public static NucleotideSequenceCaseSensitive fromNucleotideSequence(NucleotideSequence sequence,
             boolean lowercase) {
+        int length = sequence.size();
+        byte[] storage = new byte[length];
         if (lowercase)
-            return new NucleotideSequenceCaseSensitive(sequence.toString().toLowerCase());
+            for (int i = 0; i < length; ++i)
+                storage[i] = ALPHABET.symbolToCodeCaseSensitive(Character.toLowerCase(sequence.symbolAt(i)));
         else
-            return new NucleotideSequenceCaseSensitive(sequence.toString().toUpperCase());
+            for (int i = 0; i < length; ++i)
+                storage[i] = ALPHABET.symbolToCodeCaseSensitive(Character.toUpperCase(sequence.symbolAt(i)));
+
+        return new NucleotideSequenceCaseSensitive(storage, true);
     }
 
     /**
@@ -128,6 +134,7 @@ public final class NucleotideSequenceCaseSensitive extends AbstractArraySequence
             caseInsensitiveData[i] = NucleotideAlphabet.INSTANCE.symbolToCode(ALPHABET.codeToSymbol(data[i]));
         return new NucleotideSequence(caseInsensitiveData);
     }
+
     /**
      * Returns {@literal true} if sequence contains wildcards in specified region.
      *
