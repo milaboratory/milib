@@ -15,6 +15,8 @@
  */
 package com.milaboratory.util;
 
+import java.util.Arrays;
+
 public final class ArraysUtils {
     private ArraysUtils() {
     }
@@ -46,5 +48,42 @@ public final class ArraysUtils {
             array[i] = array[array.length - i - 1];
             array[array.length - i - 1] = v;
         }
+    }
+
+    /**
+     * Sort array & return array with removed repetitive values.
+     *
+     * @param values input array (this method will quickSort this array)
+     * @return sorted array of distinct values
+     */
+    public static long[] getSortedDistinct(long[] values) {
+        if (values.length == 0)
+            return values;
+        Arrays.sort(values);
+        int shift = 0;
+        int i = 0;
+        while (i + shift + 1 < values.length)
+            if (values[i + shift] == values[i + shift + 1])
+                ++shift;
+            else {
+                values[i] = values[i + shift];
+                ++i;
+            }
+        values[i] = values[i + shift];
+        return Arrays.copyOf(values, i + 1);
+    }
+
+    public static int[] concatenate(int[] array1, int... array2) {
+        int[] r = new int[array1.length + array2.length];
+        System.arraycopy(array1, 0, r, 0, array1.length);
+        System.arraycopy(array2, 0, r, array1.length, array2.length);
+        return r;
+    }
+
+    public static long[] concatenate(long[] array1, long... array2) {
+        long[] r = new long[array1.length + array2.length];
+        System.arraycopy(array1, 0, r, 0, array1.length);
+        System.arraycopy(array2, 0, r, array1.length, array2.length);
+        return r;
     }
 }

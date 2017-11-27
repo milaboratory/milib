@@ -30,13 +30,6 @@ class IO {
                 SingleRead read = (SingleRead) object;
                 output.writeObject(read.getData());
                 output.writeObject(read.getDescription());
-            } else if (object instanceof PairedRead) {
-                output.writeByte(2);
-                for (int i = 0; i < 2; i++) {
-                    SingleRead read = object.getRead(i);
-                    output.writeObject(read.getData());
-                    output.writeObject(read.getDescription());
-                }
             } else {
                 output.writeByte(object.numberOfReads());
                 for (int i = 0; i < object.numberOfReads(); i++) {
@@ -55,13 +48,6 @@ class IO {
                 NSequenceWithQuality seq = input.readObject(NSequenceWithQuality.class);
                 String description = input.readObject(String.class);
                 return new SingleReadImpl(id, seq, description);
-            } else if (readsCount == 2) {
-                NSequenceWithQuality seq1 = input.readObject(NSequenceWithQuality.class);
-                String description1 = input.readObject(String.class);
-                NSequenceWithQuality seq2 = input.readObject(NSequenceWithQuality.class);
-                String description2 = input.readObject(String.class);
-                return new PairedRead(new SingleReadImpl(id, seq1, description1),
-                        new SingleReadImpl(id, seq2, description2));
             } else {
                 SingleRead[] reads = new SingleRead[readsCount];
                 for (int i = 0; i < readsCount; i++) {
@@ -69,6 +55,8 @@ class IO {
                     String description = input.readObject(String.class);
                     reads[i] = new SingleReadImpl(id, seq, description);
                 }
+                if (reads.length == 2)
+                    return new PairedRead(reads);
                 return new MultiRead(reads);
             }
         }
