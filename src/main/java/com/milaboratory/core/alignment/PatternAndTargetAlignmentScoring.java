@@ -81,7 +81,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     /**
      * Creates new PatternAndTargetAlignmentScoring.
      *
-     * @param matchScore match score <= 0
+     * @param matchScore match score
      * @param mismatchScore mismatch score < 0
      * @param gapPenalty gap penalty < 0
      * @param goodQuality this or better quality will not get score penalty
@@ -91,7 +91,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     public PatternAndTargetAlignmentScoring(int matchScore, int mismatchScore, int gapPenalty,
                                             byte goodQuality, byte badQuality, int maxQualityPenalty) {
         super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
-        if ((matchScore > 0) || (mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
+        if ((mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
             throw new IllegalArgumentException();
         this.matchScore = matchScore;
         this.mismatchScore = mismatchScore;
