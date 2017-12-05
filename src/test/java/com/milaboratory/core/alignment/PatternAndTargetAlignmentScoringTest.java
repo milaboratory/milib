@@ -14,7 +14,7 @@ public class PatternAndTargetAlignmentScoringTest {
     @Test
     public void serializationTest() throws Exception {
         PatternAndTargetAlignmentScoring expected = new PatternAndTargetAlignmentScoring(0, -1,
-                -1, true, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, -1);
+                -1, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, -1);
         String s = GlobalObjectMappers.PRETTY.writeValueAsString(expected);
         PatternAndTargetAlignmentScoring scoring = GlobalObjectMappers.ONE_LINE.readValue(s,
                 PatternAndTargetAlignmentScoring.class);
@@ -26,7 +26,7 @@ public class PatternAndTargetAlignmentScoringTest {
     @Test
     public void testWildcard() throws Exception {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
-                -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
+                -10, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
 
         assertEquals(0, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
                 NucleotideAlphabetCaseSensitive.A));
@@ -51,7 +51,7 @@ public class PatternAndTargetAlignmentScoringTest {
     @Test
     public void testScoreWithQuality() throws Exception {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
-                -10, false, (byte)12, (byte)2, -10);
+                -10, (byte)12, (byte)2, -10);
         assertEquals(0, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
                 NucleotideAlphabetCaseSensitive.A, (byte)20));
         assertEquals(-5, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
@@ -65,7 +65,7 @@ public class PatternAndTargetAlignmentScoringTest {
     @Test
     public void testGapPenalty() throws Exception {
         PatternAndTargetAlignmentScoring scoring = new PatternAndTargetAlignmentScoring(0, -5,
-                -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
+                -10, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
         NucleotideSequenceCaseSensitive pattern = new NucleotideSequenceCaseSensitive("aTTagaCA");
         int expectedPenalties[] = new int[] {-10, -1000000, -1000000, -1000000, -1000000,
                 -10, -1000000, -1000000, -1000000, -1000000};
@@ -84,18 +84,5 @@ public class PatternAndTargetAlignmentScoringTest {
             assertEquals(expectedPenaltyWithoutRight, scoring.getGapPenalty(pattern, i,
                     true, false));
         }
-    }
-
-    @Test
-    public void testAlignmentScore() throws Exception {
-        PatternAndTargetAlignmentScoring scoring1 = new PatternAndTargetAlignmentScoring(0, -5,
-                -10, false, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
-        PatternAndTargetAlignmentScoring scoring2 = new PatternAndTargetAlignmentScoring(0, -5,
-                -10, true, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
-        assertEquals(-100, scoring1.calculateAlignmentScore(-100, 10));
-        assertEquals(-15, scoring2.calculateAlignmentScore(-100, 100));
-        assertEquals(-28, scoring2.calculateAlignmentScore(-100, 10));
-        assertEquals(-50, scoring2.calculateAlignmentScore(-100, 3));
-        assertEquals(-100, scoring2.calculateAlignmentScore(-100, 1));
     }
 }
