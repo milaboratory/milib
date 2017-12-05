@@ -15,6 +15,7 @@
  */
 package com.milaboratory.util;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 public final class ArraysUtils {
@@ -82,6 +83,17 @@ public final class ArraysUtils {
 
     public static long[] concatenate(long[] array1, long... array2) {
         long[] r = new long[array1.length + array2.length];
+        System.arraycopy(array1, 0, r, 0, array1.length);
+        System.arraycopy(array2, 0, r, array1.length, array2.length);
+        return r;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> T[] concatenate(T[] array1, T... array2) {
+        Class<?> ct = array1.getClass().getComponentType();
+        if (!ct.equals(array2.getClass().getComponentType()))
+            throw new IllegalArgumentException("Different runtime types.");
+        T[] r = (T[]) Array.newInstance(ct, array1.length + array2.length);
         System.arraycopy(array1, 0, r, 0, array1.length);
         System.arraycopy(array2, 0, r, array1.length, array2.length);
         return r;

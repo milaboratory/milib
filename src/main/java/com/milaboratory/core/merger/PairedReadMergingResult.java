@@ -89,6 +89,10 @@ public class PairedReadMergingResult implements java.io.Serializable {
         return (overlap - errors) * MATCH_SCORE + errors * MISMATCH_SCORE;
     }
 
+    public boolean isReversed() {
+        return reversed;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
