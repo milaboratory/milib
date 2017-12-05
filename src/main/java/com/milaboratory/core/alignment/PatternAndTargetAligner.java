@@ -145,9 +145,8 @@ public final class PatternAndTargetAligner {
 
             int patternStop = patternSize - maxI;
             int targetStop = rightMatchPosition + 1 - maxJ;
-            int score = scoring.calculateAlignmentScore(maxScore, patternSize);
             return new Alignment<>(pattern, builder.createAndDestroy(),
-                    new Range(patternStop, patternSize), new Range(targetStop, rightMatchPosition + 1), score);
+                    new Range(patternStop, patternSize), new Range(targetStop, rightMatchPosition + 1), maxScore);
         } finally {
             AlignmentCache.release();
         }
@@ -200,7 +199,7 @@ public final class PatternAndTargetAligner {
 
         i1 = patternSize - 1;
         i2 = targetPartSize - 1;
-        int score = scoring.calculateAlignmentScore(matrix[(i1 + 1) * matrixSize2 + i2 + 1], patternSize);
+        int score = matrix[(i1 + 1) * matrixSize2 + i2 + 1];
         int gapPenaltyWithLeft = scoring.getGapPenalty(pattern, i1,
                 true, true);
         int gapPenaltyWithoutLeft = scoring.getGapPenalty(pattern, i1,
