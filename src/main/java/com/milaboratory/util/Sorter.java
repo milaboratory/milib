@@ -84,7 +84,7 @@ public final class Sorter<T> {
         }
     }
 
-    OutputPortCloseable<T> getSorted() throws IOException {
+    public OutputPortCloseable<T> getSorted() throws IOException {
         return new MergeSortingPort();
     }
 
