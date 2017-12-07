@@ -31,8 +31,8 @@ public final class Sorter<T> {
      */
     private long memoryBudget = -1;
 
-    Sorter(OutputPort<T> initialSource, Comparator<T> comparator, int chunkSize,
-           ObjectSerializer<T> serializer, File tempFile) {
+    public Sorter(OutputPort<T> initialSource, Comparator<T> comparator, int chunkSize,
+                  ObjectSerializer<T> serializer, File tempFile) {
         this.initialSource = initialSource;
         this.comparator = comparator;
         this.chunkSize = chunkSize;
