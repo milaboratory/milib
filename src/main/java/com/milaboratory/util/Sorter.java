@@ -64,7 +64,7 @@ public final class Sorter<T> {
         return sorter.getSorted();
     }
 
-    void build() throws IOException {
+    public void build() throws IOException {
         try (CountingOutputStream output = new CountingOutputStream(new BufferedOutputStream(new FileOutputStream(tempFile), 1024 * 1024))) {
             OutputPort<Chunk<T>> chunked = CUtils.buffered(CUtils.chunked(initialSource, chunkSize), 1);
             Chunk<T> chunk;
