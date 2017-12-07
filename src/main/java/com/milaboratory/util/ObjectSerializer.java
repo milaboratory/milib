@@ -16,7 +16,12 @@
 package com.milaboratory.util;
 
 import cc.redberry.pipe.OutputPort;
+import com.milaboratory.primitivio.PrimitivI;
+import com.milaboratory.primitivio.PrimitivO;
+import com.milaboratory.primitivio.SerializersManager;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
@@ -34,4 +39,38 @@ public interface ObjectSerializer<O> {
     void write(Collection<O> data, OutputStream stream);
 
     OutputPort<O> read(InputStream stream);
+
+    /**
+     * Implementation of ObjectSerializer for objects supporting PrimitivIO based serialization.
+     */
+    final class PrimitivIOObjectSerializer<O> implements ObjectSerializer<O> {
+        private Class<O> clazz;
+        /**
+         * Buffered serializers manager
+         */
+        private SerializersManager sm;
+
+        public PrimitivIOObjectSerializer(Class<O> clazz) {
+            this.clazz = clazz;
+            this.sm = new SerializersManager();
+        }
+
+        @Override
+        public void write(Collection<O> data, OutputStream stream) {
+            PrimitivO o = new PrimitivO(new DataOutputStream(stream), sm);
+            for (O datum : data)
+                o.writeObject(datum);
+        }
+
+        @Override
+        public OutputPort<O> read(InputStream stream) {
+            final PrimitivI i = new PrimitivI(new DataInputStream(stream), sm);
+            return new OutputPort<O>() {
+                @Override
+                public O take() {
+                    return i.readObject(clazz);
+                }
+            };
+        }
+    }
 }

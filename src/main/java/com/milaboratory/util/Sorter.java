@@ -40,6 +40,19 @@ public final class Sorter<T> {
         this.tempFile = tempFile;
     }
 
+    /**
+     * Sort objects supporting PrimitivIO serialization.
+     */
+    public static <T> OutputPortCloseable<T> sort(
+            OutputPort<T> initialSource,
+            Comparator<T> comparator,
+            int chunkSize,
+            Class<T> clazz,
+            File tempFile) throws IOException {
+        return sort(initialSource, comparator, chunkSize,
+                new ObjectSerializer.PrimitivIOObjectSerializer<>(clazz), tempFile);
+    }
+
     public static <T> OutputPortCloseable<T> sort(
             OutputPort<T> initialSource,
             Comparator<T> comparator,
