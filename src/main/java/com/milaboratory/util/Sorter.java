@@ -25,6 +25,7 @@ public final class Sorter<T> {
     private final File tempFile;
     private final TLongArrayList chunkOffsets = new TLongArrayList();
     private int lastChunkSize = -1;
+    private boolean inputIsEmpty = true;
     /**
      * Amount of memory that can be used during read stage. Determined automatically as maximal block size during block
      * sort procedure.
@@ -79,13 +80,14 @@ public final class Sorter<T> {
                 chunkOffsets.add(output.getByteCount());
                 serializer.write((Collection) Arrays.asList(data), new CloseShieldOutputStream(output));
                 lastChunkSize = data.length;
+                inputIsEmpty = false;
             }
             memoryBudget = maxBlockSize;
         }
     }
 
     public OutputPortCloseable<T> getSorted() throws IOException {
-        if (lastChunkSize == -1)
+        if ((lastChunkSize == -1) && !inputIsEmpty)
             throw new IllegalStateException();
         return new MergeSortingPort();
     }
@@ -98,7 +100,7 @@ public final class Sorter<T> {
             // chunkOffsets.size() separate buffered streams =>
             // consuming memoryBudget / chunkOffsets.size() bytes each, will give
             // ~ memoryBudget bytes consumed in total
-            int bufferSize = (int) Math.min(
+            int bufferSize = inputIsEmpty ? 0 : (int) Math.min(
                     Math.max(1024,
                             memoryBudget / chunkOffsets.size()),
                     Integer.MAX_VALUE);
