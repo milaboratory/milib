@@ -351,6 +351,15 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                 new BitArray(matches));
     }
 
+    /**
+     * Returns alignment with seq2range = seq2Range.move(offset), and everything else inherited from this alignment.
+     *
+     * @return alignment with seq2range = seq2Range.move(offset), and everything else inherited from this alignment
+     */
+    public Alignment<S> move(int offset) {
+        return new Alignment<>(sequence1, mutations, sequence1Range, sequence2Range.move(offset), score);
+    }
+
     @Override
     public String toString() {
         return getAlignmentHelper().toCompactString();

@@ -23,29 +23,32 @@ import com.milaboratory.util.GlobalObjectMappers;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static com.milaboratory.core.merger.MergerParameters.IdentityType.Unweighted;
+
 public class MergerParametersTest {
     @Test
     public void test1() throws Exception {
-        MergerParameters parameters = new MergerParameters(QualityMergingAlgorithm.SumMax, null, 15, 50, 0.8);
+        MergerParameters parameters = new MergerParameters(QualityMergingAlgorithm.SumMax, null, 15, 50, 0.8, Unweighted);
         TestUtil.assertJson(parameters);
     }
 
     @Test
     public void test2() throws Exception {
         MergerParameters parameters = new MergerParameters(QualityMergingAlgorithm.SumSubtraction,
-                PairedEndReadsLayout.Collinear, 15, 50, 0.8);
+                PairedEndReadsLayout.Collinear, 15, 50, 0.8, Unweighted);
         TestUtil.assertJson(parameters, true);
     }
 
     @Test
     public void test3() throws Exception {
         MergerParameters parameters = new MergerParameters(QualityMergingAlgorithm.SumSubtraction,
-                PairedEndReadsLayout.Collinear, 15, 50, 0.8);
+                PairedEndReadsLayout.Collinear, 15, 50, 0.8, Unweighted);
         String value = "{\n" +
                 "  \"qualityMergingAlgorithm\" : \"SumSubtraction\",\n" +
                 "  \"partsLayout\" : \"Collinear\",\n" +
                 "  \"minimalOverlap\" : 15,\n" +
-                "  \"minimalIdentity\" : 0.8\n" +
+                "  \"minimalIdentity\" : 0.8,\n" +
+                "  \"identityType\" : \"Unweighted\"\n" +
                 "}";
         MergerParameters deserialized = GlobalObjectMappers.PRETTY.readValue(value, MergerParameters.class);
         Assert.assertEquals(parameters, deserialized);

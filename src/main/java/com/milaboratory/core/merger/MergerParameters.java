@@ -35,6 +35,7 @@ public final class MergerParameters implements java.io.Serializable {
     final PairedEndReadsLayout partsLayout;
     final int minimalOverlap, maxQuality;
     final double minimalIdentity;
+    final IdentityType identityType;
 
     @JsonCreator
     public MergerParameters(
@@ -42,12 +43,14 @@ public final class MergerParameters implements java.io.Serializable {
             @JsonProperty("partsLayout") PairedEndReadsLayout partsLayout,
             @JsonProperty("minimalOverlap") int minimalOverlap,
             @JsonProperty("maxQuality") Integer maxQuality,
-            @JsonProperty("minimalIdentity") double minimalIdentity) {
+            @JsonProperty("minimalIdentity") double minimalIdentity,
+            @JsonProperty("identityType") IdentityType identityType) {
         this.qualityMergingAlgorithm = qualityMergingAlgorithm;
         this.partsLayout = partsLayout;
         this.minimalOverlap = minimalOverlap;
         this.minimalIdentity = minimalIdentity;
         this.maxQuality = maxQuality == null ? DEFAULT_MAX_QUALITY_VALUE : maxQuality;
+        this.identityType = identityType;
     }
 
     public int getMinimalOverlap() {
@@ -70,12 +73,16 @@ public final class MergerParameters implements java.io.Serializable {
         return partsLayout;
     }
 
+    public IdentityType getIdentityType() {
+        return identityType;
+    }
+
     public MergerParameters overrideReadsLayout(PairedEndReadsLayout partsLayout) {
-        return new MergerParameters(qualityMergingAlgorithm, partsLayout, minimalOverlap, maxQuality, minimalIdentity);
+        return new MergerParameters(qualityMergingAlgorithm, partsLayout, minimalOverlap, maxQuality, minimalIdentity, identityType);
     }
 
     public MergerParameters overrideMinimalIdentity(double newIdentity) {
-        return new MergerParameters(qualityMergingAlgorithm, partsLayout, minimalOverlap, maxQuality, newIdentity);
+        return new MergerParameters(qualityMergingAlgorithm, partsLayout, minimalOverlap, maxQuality, newIdentity, identityType);
     }
 
     @Override
@@ -89,8 +96,8 @@ public final class MergerParameters implements java.io.Serializable {
         if (maxQuality != that.maxQuality) return false;
         if (Double.compare(that.minimalIdentity, minimalIdentity) != 0) return false;
         if (qualityMergingAlgorithm != that.qualityMergingAlgorithm) return false;
-        return partsLayout == that.partsLayout;
-
+        if (partsLayout != that.partsLayout) return false;
+        return identityType == that.identityType;
     }
 
     @Override
@@ -103,6 +110,12 @@ public final class MergerParameters implements java.io.Serializable {
         result = 31 * result + maxQuality;
         temp = Double.doubleToLongBits(minimalIdentity);
         result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (identityType != null ? identityType.hashCode() : 0);
         return result;
+    }
+
+    public enum IdentityType {
+        Unweighted,
+        MinimalQualityWeighted
     }
 }

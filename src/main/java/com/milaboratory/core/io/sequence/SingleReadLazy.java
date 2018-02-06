@@ -133,4 +133,17 @@ public abstract class SingleReadLazy implements SingleRead {
             };
         throw new IllegalArgumentException("Unknown quality format.");
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+
+        if (!(o instanceof SingleRead))
+            return false;
+        SingleRead oth = (SingleRead) o;
+        return getId() == oth.getId()
+                && getData().equals(oth.getData())
+                && getDescription().equals(oth.getDescription());
+    }
 }

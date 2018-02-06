@@ -134,7 +134,7 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
      *
      * @param sequence byte array
      * @param offset   offset in {@code sequence}
-     * @param length   length of resulting seqeunce
+     * @param length   length of resulting sequence
      * @return nucleotide sequence
      */
     public static NucleotideSequence fromSequence(byte[] sequence, int offset, int length) {

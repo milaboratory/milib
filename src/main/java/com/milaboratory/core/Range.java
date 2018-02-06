@@ -100,6 +100,15 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
+     * Return +1 if this range is normal and -1 if it is reversed
+     *
+     * @return +1 if this range is normal and -1 if it is reversed
+     */
+    public int sig() {
+        return reversed ? -1 : +1;
+    }
+
+    /**
      * Return reversed range.
      *
      * @return reversed range
@@ -223,6 +232,19 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
      */
     public Range intersection(Range other) {
         if (!intersectsWith(other))
+            return null;
+
+        return new Range(Math.max(lower, other.lower), Math.min(upper, other.upper), reversed && other.reversed);
+    }
+
+    /**
+     * Returns intersection range with {@code other} range.
+     *
+     * @param other other range
+     * @return intersection range with {@code other} range or null if ranges not intersects
+     */
+    public Range intersectionWithTouch(Range other) {
+        if (!intersectsWithOrTouches(other))
             return null;
 
         return new Range(Math.max(lower, other.lower), Math.min(upper, other.upper), reversed && other.reversed);

@@ -142,6 +142,13 @@ public class MultiAlignmentHelper {
         return subjectPositions[position];
     }
 
+    public int subjectToAlignmentPosition(int subjectPosition) {
+        for (int i = 0; i < subjectPositions.length; i++)
+            if (subjectPositions[i] == subjectPosition)
+                return i;
+        return -1;
+    }
+
     public int getQueryPositionAt(int index, int position) {
         return queryPositions[index][position];
     }
@@ -168,6 +175,10 @@ public class MultiAlignmentHelper {
 
     public int getSubjectTo() {
         return getLastPosition(subjectPositions);
+    }
+
+    public int getSubjectLength() {
+        return 1 + getSubjectTo() - getSubjectFrom();
     }
 
     public int getQueryFrom(int index) {

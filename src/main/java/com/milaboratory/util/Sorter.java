@@ -23,17 +23,34 @@ public final class Sorter<T> {
     private final int chunkSize;
     private final ObjectSerializer<T> serializer;
     private final File tempFile;
-
     private final TLongArrayList chunkOffsets = new TLongArrayList();
     private int lastChunkSize = -1;
+    /**
+     * Amount of memory that can be used during read stage. Determined automatically as maximal block size during block
+     * sort procedure.
+     */
+    private long memoryBudget = -1;
 
-
-    Sorter(OutputPort<T> initialSource, Comparator<T> comparator, int chunkSize, ObjectSerializer<T> serializer, File tempFile) {
+    public Sorter(OutputPort<T> initialSource, Comparator<T> comparator, int chunkSize,
+                  ObjectSerializer<T> serializer, File tempFile) {
         this.initialSource = initialSource;
         this.comparator = comparator;
         this.chunkSize = chunkSize;
         this.serializer = serializer;
         this.tempFile = tempFile;
+    }
+
+    /**
+     * Sort objects supporting PrimitivIO serialization.
+     */
+    public static <T> OutputPortCloseable<T> sort(
+            OutputPort<T> initialSource,
+            Comparator<T> comparator,
+            int chunkSize,
+            Class<T> clazz,
+            File tempFile) throws IOException {
+        return sort(initialSource, comparator, chunkSize,
+                new ObjectSerializer.PrimitivIOObjectSerializer<>(clazz), tempFile);
     }
 
     public static <T> OutputPortCloseable<T> sort(
@@ -47,21 +64,29 @@ public final class Sorter<T> {
         return sorter.getSorted();
     }
 
-    void build() throws IOException {
-        try(CountingOutputStream output = new CountingOutputStream(new BufferedOutputStream(new FileOutputStream(tempFile), 1024 * 1024))) {
+    public void build() throws IOException {
+        try (CountingOutputStream output = new CountingOutputStream(new BufferedOutputStream(new FileOutputStream(tempFile), 1024 * 1024))) {
             OutputPort<Chunk<T>> chunked = CUtils.buffered(CUtils.chunked(initialSource, chunkSize), 1);
             Chunk<T> chunk;
+            // Maximal block size
+            long maxBlockSize = 0;
+            long previousPosition = 0;
             while ((chunk = chunked.take()) != null) {
                 Object[] data = chunk.toArray();
                 Arrays.sort(data, (Comparator) comparator);
+                maxBlockSize = Math.max(maxBlockSize, output.getByteCount() - previousPosition);
+                previousPosition = output.getByteCount();
                 chunkOffsets.add(output.getByteCount());
                 serializer.write((Collection) Arrays.asList(data), new CloseShieldOutputStream(output));
                 lastChunkSize = data.length;
             }
+            memoryBudget = maxBlockSize;
         }
     }
 
-    OutputPortCloseable<T> getSorted() throws IOException {
+    public OutputPortCloseable<T> getSorted() throws IOException {
+        if (lastChunkSize == -1)
+            throw new IllegalStateException();
         return new MergeSortingPort();
     }
 
@@ -69,8 +94,19 @@ public final class Sorter<T> {
         final PriorityQueue<SortedBlockReader> queue = new PriorityQueue<>();
 
         public MergeSortingPort() throws IOException {
+            // There will be chunkOffsets.size() separate readers =>
+            // chunkOffsets.size() separate buffered streams =>
+            // consuming memoryBudget / chunkOffsets.size() bytes each, will give
+            // ~ memoryBudget bytes consumed in total
+            int bufferSize = (int) Math.min(
+                    Math.max(1024,
+                            memoryBudget / chunkOffsets.size()),
+                    Integer.MAX_VALUE);
             for (int i = 0; i < chunkOffsets.size(); i++) {
-                SortedBlockReader block = new SortedBlockReader(tempFile, chunkOffsets.get(i), i == chunkOffsets.size() - 1 ? lastChunkSize : chunkSize);
+                SortedBlockReader block = new SortedBlockReader(tempFile,
+                        chunkOffsets.get(i),
+                        i == chunkOffsets.size() - 1 ? lastChunkSize : chunkSize,
+                        bufferSize);
                 block.advance();
                 queue.add(block);
             }
@@ -126,13 +162,14 @@ public final class Sorter<T> {
 
         public SortedBlockReader(File file,
                                  long chunkOffset,
-                                 int chunkSize) throws IOException {
+                                 int chunkSize,
+                                 int bufferSize) throws IOException {
             this.chunkSize = chunkSize;
 
             final FileInputStream fo = new FileInputStream(file);
             // Setting file position to the beginning of the chunkId-th chunk
             fo.getChannel().position(chunkOffset);
-            this.input = new DataInputStream(new BufferedInputStream(fo, 1024));
+            this.input = new DataInputStream(new BufferedInputStream(fo, bufferSize));
             this.port = serializer.read(this.input);
         }
 

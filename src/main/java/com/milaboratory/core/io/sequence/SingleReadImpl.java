@@ -70,14 +70,14 @@ public final class SingleReadImpl implements SingleRead {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (o == null) return false;
 
-        SingleReadImpl that = (SingleReadImpl) o;
-
-        if (id != that.id) return false;
-        if (!sequenceWithQuality.equals(that.sequenceWithQuality)) return false;
-        return !(description != null ? !description.equals(that.description) : that.description != null);
-
+        if (!(o instanceof SingleRead))
+            return false;
+        SingleRead oth = (SingleRead) o;
+        return id == oth.getId()
+                && sequenceWithQuality.equals(oth.getData())
+                && description.equals(oth.getDescription());
     }
 
     @Override
@@ -86,5 +86,10 @@ public final class SingleReadImpl implements SingleRead {
         result = 31 * result + sequenceWithQuality.hashCode();
         result = 31 * result + (description != null ? description.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "@" + description + "\n" + sequenceWithQuality.getSequence() + "\n+\n" + sequenceWithQuality.getQuality();
     }
 }

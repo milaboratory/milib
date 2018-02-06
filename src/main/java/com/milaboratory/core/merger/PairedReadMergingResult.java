@@ -16,6 +16,7 @@
 package com.milaboratory.core.merger;
 
 import com.milaboratory.core.io.sequence.PairedRead;
+import com.milaboratory.core.merger.MergerParameters.IdentityType;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 
 public class PairedReadMergingResult implements java.io.Serializable {
@@ -28,6 +29,8 @@ public class PairedReadMergingResult implements java.io.Serializable {
     final int errors;
     final boolean reversed;
     final int offset;
+    final IdentityType identityType;
+    final double identity;
 
     /**
      * Constructor for failed merging result.
@@ -41,6 +44,8 @@ public class PairedReadMergingResult implements java.io.Serializable {
         this.errors = -1;
         this.reversed = false;
         this.offset = Integer.MAX_VALUE;
+        this.identityType = IdentityType.Unweighted;
+        this.identity = 0.0;
     }
 
     /**
@@ -52,13 +57,16 @@ public class PairedReadMergingResult implements java.io.Serializable {
      * @param errors             number of mismatches/insertions/deletions found in overlapping region
      */
     public PairedReadMergingResult(PairedRead originalRead, NSequenceWithQuality overlappedSequence,
-                                   int overlap, int errors, boolean reversed, int offset) {
+                                   int overlap, int errors, boolean reversed, int offset,
+                                   IdentityType identityType, double identity) {
         this.originalRead = originalRead;
         this.overlappedSequence = overlappedSequence;
         this.overlap = overlap;
         this.errors = errors;
         this.reversed = reversed;
         this.offset = offset;
+        this.identityType = identityType;
+        this.identity = identity;
     }
 
     public boolean isSuccessful() {
@@ -85,8 +93,20 @@ public class PairedReadMergingResult implements java.io.Serializable {
         return errors;
     }
 
+    public double getIdentity() {
+        return identity;
+    }
+
+    public IdentityType getIdentityType() {
+        return identityType;
+    }
+
     public int score() {
         return (overlap - errors) * MATCH_SCORE + errors * MISMATCH_SCORE;
+    }
+
+    public boolean isReversed() {
+        return reversed;
     }
 
     @Override

@@ -18,7 +18,10 @@ package com.milaboratory.core.mutations;
 import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
-import com.milaboratory.core.mutations.generator.*;
+import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
+import com.milaboratory.core.mutations.generator.MutationsGenerator;
+import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
+import com.milaboratory.core.mutations.generator.SubstitutionModels;
 import com.milaboratory.core.sequence.*;
 import com.milaboratory.test.TestUtil;
 import gnu.trove.set.hash.TIntHashSet;
@@ -29,11 +32,8 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-import static com.milaboratory.core.mutations.MutationsUtil.btopDecode;
-import static com.milaboratory.core.mutations.MutationsUtil.nt2aa;
-import static com.milaboratory.core.sequence.TranslationParameters.FromLeftWithIncompleteCodon;
-import static com.milaboratory.core.sequence.TranslationParameters.FromRightWithIncompleteCodon;
-import static com.milaboratory.core.sequence.TranslationParameters.FromRightWithoutIncompleteCodon;
+import static com.milaboratory.core.mutations.MutationsUtil.*;
+import static com.milaboratory.core.sequence.TranslationParameters.*;
 
 /**
  * @author Dmitry Bolotin
@@ -366,5 +366,18 @@ public class MutationsUtilTest {
         NucleotideSequence qseq = new NucleotideSequence(qseqStr.replace("-", "")), sseq = new NucleotideSequence(sseqStr.replace("-", ""));
         Mutations muts = new Mutations<>(NucleotideSequence.ALPHABET, btopDecode(btop, NucleotideSequence.ALPHABET));
         Assert.assertEquals(qseq, muts.mutate(sseq));
+    }
+
+    @Test
+    public void test8() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("aaaaaaaaaatttttttttt");
+        Mutations<NucleotideSequence> mutations = Mutations.decode("DT13DT16", NucleotideSequence.ALPHABET);
+        Assert.assertEquals(
+                Mutations.decode("DT10DT11", NucleotideSequence.ALPHABET),
+                shiftIndelsAtHomopolymers(seq1, 10, mutations));
+
+        Assert.assertEquals(
+                Mutations.decode("DT12DT13", NucleotideSequence.ALPHABET),
+                shiftIndelsAtHomopolymers(seq1, 12, mutations));
     }
 }

@@ -18,6 +18,7 @@ package com.milaboratory.core.alignment;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
+import com.milaboratory.core.mutations.MutationsUtil;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 
@@ -158,6 +159,14 @@ public final class AlignmentUtils {
 
         return score;
     }
+
+    /** Shifts indels to the left at homopolymer regions */
+    public static <S extends Sequence<S>> Alignment<S> shiftIndelsAtHomopolymers(Alignment<S> alignment) {
+        return new Alignment<>(alignment.sequence1,
+                MutationsUtil.shiftIndelsAtHomopolymers(alignment.sequence1, alignment.sequence1Range.getFrom(), alignment.mutations),
+                alignment.sequence1Range, alignment.sequence2Range, alignment.score);
+    }
+
 
     public static <S extends Sequence<S>> String toStringSimple(S initialSequence, Mutations<S> mutations) {
         int pointer = 0;

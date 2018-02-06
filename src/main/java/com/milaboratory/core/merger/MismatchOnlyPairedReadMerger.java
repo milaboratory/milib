@@ -18,6 +18,7 @@ package com.milaboratory.core.merger;
 import cc.redberry.pipe.Processor;
 import com.milaboratory.core.PairedEndReadsLayout;
 import com.milaboratory.core.io.sequence.PairedRead;
+import com.milaboratory.core.merger.MergerParameters.IdentityType;
 import com.milaboratory.core.motif.BitapMatcher;
 import com.milaboratory.core.motif.BitapPattern;
 import com.milaboratory.core.motif.Motif;
@@ -31,9 +32,11 @@ import static com.milaboratory.core.sequence.SequencesUtils.mismatchCount;
 import static java.lang.Math.*;
 
 public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead, PairedReadMergingResult>,
-        java.io.Serializable {
+                                                           java.io.Serializable {
     public static final int MIN_SCORE_VALUE = 0;
     final int minOverlap;
+    final double minimalIdentity;
+    final IdentityType identityType;
     final double maxMismatchesPart;
     final int maxScoreValue;
     // opposite reads direction or collinear
@@ -49,7 +52,7 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
      * @param parameters merger parameters
      */
     public MismatchOnlyPairedReadMerger(MergerParameters parameters) {
-        this(parameters.getMinimalOverlap(), parameters.getMinimalIdentity(), parameters.getMaxQuality(),
+        this(parameters.getMinimalOverlap(), parameters.getMinimalIdentity(), parameters.getIdentityType(), parameters.getMaxQuality(),
                 parameters.qualityMergingAlgorithm, parameters.getPartsLayout());
     }
 
@@ -62,7 +65,25 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
      * @param qualityMergingAlgorithm algorithm to infer quality of merged reads from it's pairs
      * @param pairedEndReadsLayout    orientation of read pairs
      */
-    public MismatchOnlyPairedReadMerger(int minOverlap, double minimalIdentity, int maxScoreValue,
+    public MismatchOnlyPairedReadMerger(int minOverlap, double minimalIdentity,
+                                        int maxScoreValue,
+                                        QualityMergingAlgorithm qualityMergingAlgorithm,
+                                        PairedEndReadsLayout pairedEndReadsLayout) {
+        this(minOverlap, minimalIdentity, IdentityType.Unweighted, maxScoreValue, qualityMergingAlgorithm, pairedEndReadsLayout);
+    }
+
+    /**
+     * Creates paired-end reads merger.
+     *
+     * @param minOverlap              minimal number of nucleotide in overlap region
+     * @param minimalIdentity         maximal allowed percent of mismatches in overlap region
+     * @param identityType            identity type
+     * @param maxScoreValue           maximal output quality score value
+     * @param qualityMergingAlgorithm algorithm to infer quality of merged reads from it's pairs
+     * @param pairedEndReadsLayout    orientation of read pairs
+     */
+    public MismatchOnlyPairedReadMerger(int minOverlap, double minimalIdentity, IdentityType identityType,
+                                        int maxScoreValue,
                                         QualityMergingAlgorithm qualityMergingAlgorithm,
                                         PairedEndReadsLayout pairedEndReadsLayout) {
         if (qualityMergingAlgorithm == null || pairedEndReadsLayout == null)
@@ -70,6 +91,8 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
         this.qualityMergingAlgorithm = qualityMergingAlgorithm;
         this.pairedEndReadsLayout = pairedEndReadsLayout;
         this.minOverlap = minOverlap;
+        this.minimalIdentity = minimalIdentity;
+        this.identityType = identityType;
         this.maxMismatchesPart = 1.0 - minimalIdentity;
         this.strands = pairedEndReadsLayout.getPossibleRelativeStrands();
         this.maxScoreValue = maxScoreValue;
@@ -120,6 +143,7 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
             BitapMatcher bitapMatcher = bitapPattern.substitutionOnlyMatcherFirst(maxMismatchesInMotif, read1.getSequence());
 
             int matchPosition, mismatches, overlap;
+            double identity;
 
             PairedReadMergingResult tmp = null;
             while ((matchPosition = bitapMatcher.findNext()) != -1) {
@@ -128,25 +152,36 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
 
                 // Finally checking current hit position
                 overlap = min(read1.size() - matchPosition, read2.size());
-                if ((mismatches = mismatchCount(
+                mismatches = mismatchCount(
                         read1.getSequence(), matchPosition,
                         read2.getSequence(), 0,
-                        overlap)) <= overlap * maxMismatchesPart) {
+                        overlap);
+                identity = identity(identityType,
+                        read1, matchPosition,
+                        read2, 0,
+                        overlap);
+                if (identity >= minimalIdentity) {
                     tmp = new PairedReadMergingResult(pairedRead, overlap(read1, read2, matchPosition),
-                            overlap, mismatches, strand, swapped ? -matchPosition : matchPosition);
+                            overlap, mismatches, strand, swapped ? -matchPosition : matchPosition, identityType, identity);
                     break;
                 }
 
                 // Case: ending of r2 matched
                 matchPosition += motifLength; // Calculating position of right overlap boundary
                 overlap = min(matchPosition, read2.size());
-                if ((mismatches = mismatchCount(
+
+                mismatches = mismatchCount(
                         read1.getSequence(), matchPosition - overlap,
                         read2.getSequence(), max(0, read2.size() - overlap),
-                        overlap)) <= overlap * maxMismatchesPart) {
+                        overlap);
+                identity = identity(identityType,
+                        read1, matchPosition - overlap,
+                        read2, max(0, read2.size() - overlap),
+                        overlap);
+                if (identity >= minimalIdentity) {
                     final int offset = min(matchPosition - read2.size(), 0);
                     tmp = new PairedReadMergingResult(pairedRead, overlap(read1, read2, offset),
-                            overlap, mismatches, strand, swapped ? -offset : offset);
+                            overlap, mismatches, strand, swapped ? -offset : offset, identityType, identity);
                     break;
                 }
             }
@@ -158,6 +193,41 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
             return new PairedReadMergingResult(pairedRead);
         else
             return ret;
+    }
+
+    public static double identity(IdentityType identityType,
+                                  NSequenceWithQuality seq1, int offset1,
+                                  NSequenceWithQuality seq2, int offset2,
+                                  int length) {
+        if (length == 0)
+            return 0.0;
+        NucleotideSequence seq1s = seq1.getSequence(), seq2s = seq2.getSequence();
+        switch (identityType) {
+            case Unweighted:
+                return 1.0 * (length - mismatchCount(seq1s, offset1, seq2s, offset2, length)) / length;
+            case MinimalQualityWeighted:
+                if (seq1.size() < offset1 + length || seq1.size() < offset2 + length)
+                    throw new IllegalArgumentException();
+
+                long identQuality = 0, totalQuality = 0;
+                int nIdentical = 0;
+                for (int i = 0; i < length; ++i) {
+                    int minQuality = Math.min(
+                            seq1.getQuality().value(i + offset1),
+                            seq2.getQuality().value(i + offset2));
+                    if (seq1s.codeAt(i + offset1) == seq2s.codeAt(i + offset2)) {
+                        identQuality += minQuality;
+                        ++nIdentical;
+                    }
+                    totalQuality += minQuality;
+                }
+                if (totalQuality == 0)
+                    return 1.0 * nIdentical / length;
+                return 1.0 * identQuality / totalQuality;
+
+            default:
+                throw new RuntimeException("not supported identity type: " + identityType);
+        }
     }
 
     @Override

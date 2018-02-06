@@ -23,6 +23,8 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceQuality;
 import org.junit.Test;
 
+import static com.milaboratory.core.merger.MergerParameters.IdentityType.Unweighted;
+
 /**
  * Created by poslavsky on 15/04/15.
  */
@@ -32,7 +34,8 @@ public class PairedReadMergingResultTest {
         PairedReadMergingResult se = new PairedReadMergingResult(new PairedRead(
                 new SingleReadImpl(12, new NSequenceWithQuality(new NucleotideSequence("atgc"), new SequenceQuality("++++")), "x"),
                 new SingleReadImpl(12, new NSequenceWithQuality(new NucleotideSequence("atgc"), new SequenceQuality("++++")), "x")),
-                new NSequenceWithQuality(new NucleotideSequence("atgc"), new SequenceQuality("++++")), 12, 3,false, 9);
+                new NSequenceWithQuality(new NucleotideSequence("atgc"), new SequenceQuality("++++")), 12, 3,false, 9,
+                Unweighted, 0.9);
         IOTestUtil.assertJavaSerialization(se);
     }
 }

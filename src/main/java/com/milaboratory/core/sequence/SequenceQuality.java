@@ -42,6 +42,11 @@ public final class SequenceQuality extends AbstractSeq<SequenceQuality>
      */
     public static final byte GOOD_QUALITY_VALUE = (byte) 34;
     /**
+     * This value encoded with Phred+33 will giv 'z'.
+     * 59 would produce '{' which is a special character, and may spoil formatting in some cases.
+     */
+    public static final byte MAX_QUALITY_VALUE = (byte) 58;
+    /**
      * Default value of bad quality
      */
     public static final byte BAD_QUALITY_VALUE = (byte) 0;

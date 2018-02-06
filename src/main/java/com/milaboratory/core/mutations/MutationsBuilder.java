@@ -68,6 +68,8 @@ public final class MutationsBuilder<S extends Sequence<S>> {
     private void ensureInternalCapacity(int newSize) {
         if (size == -1)
             throw new IllegalStateException("Destroyed.");
+        if (mutations != null && mutations.length >= newSize)
+            return;
         if (newSize == 0) {
             assert mutations == null;
             return;

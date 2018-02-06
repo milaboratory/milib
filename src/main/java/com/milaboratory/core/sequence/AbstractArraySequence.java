@@ -59,6 +59,8 @@ abstract class AbstractArraySequence<S extends AbstractArraySequence<S>> extends
     public S getRange(int from, int to) {
         if (from == 0 && to == data.length)
             return (S) this;
+        if (from > to || to > data.length)
+            throw new IndexOutOfBoundsException();
         return getAlphabet().createUnsafe(Arrays.copyOfRange(data, from, to));
     }
 
