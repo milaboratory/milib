@@ -182,6 +182,9 @@ public class RangeTest {
 
         assertNull(r1.intersection(r2));
         assertNull(r2.intersection(r1));
+
+        assertTrue(r1.intersectionWithTouch(r2).isEmpty());
+        assertTrue(r2.intersectionWithTouch(r1).isEmpty());
     }
 
     @Test

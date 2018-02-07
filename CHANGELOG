@@ -1,4 +1,19 @@
 
+MiLib 1.8.2 ( 7 Feb 2018)
+========================
+
+-- Upgrade to on-HDD `Sorter` (smarter memory / speed trade-offs)
+-- Verbose exception for non-standard line breaks in fastq file
+-- `shiftIndelsAtHomopolymers` for alignments
+-- Reads/targets merging algorithms now supports differnet `IdentityType` (`Unweighted`, 
+   `MinimalQualityWeighted`)
+-- Added `SequenceReadUtil.setReadId`
+-- Added `PipeDataInputReader`
+-- `ArrayUtils` methods
+-- Added `move` method in `Alignment` object
+-- Many minor optimizations, enhancements
+
+
 MiLib 1.8.1 (24 Jul 2017)
 ========================
 

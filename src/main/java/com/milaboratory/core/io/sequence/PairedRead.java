@@ -33,4 +33,9 @@ public final class PairedRead extends MultiRead {
     public SingleRead getR2() {
         return data[1];
     }
+
+    @Override
+    public String toString() {
+        return getR1().toString() + "\n" + getR2().toString();
+    }
 }

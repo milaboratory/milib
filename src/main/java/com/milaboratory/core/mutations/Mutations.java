@@ -262,6 +262,17 @@ public final class Mutations<S extends Sequence<S>>
     }
 
     /**
+     * Concatenates this and other
+     */
+    public Mutations<S> concat(final Mutations<S> other) {
+        return new MutationsBuilder<>(alphabet, false)
+                .ensureCapacity(this.size() + other.size())
+                .append(this)
+                .append(other)
+                .createAndDestroy();
+    }
+
+    /**
      * Returns combined mutations array ({@code this} applied before {@code other}).
      *
      * @param other second mutations object
@@ -465,7 +476,6 @@ public final class Mutations<S extends Sequence<S>>
      * <p>Ranges must be sorted.</p>
      *
      * @param ranges ranges to remove
-     * @return
      */
     public Mutations<S> removeMutationsInRanges(Range... ranges) {
         Mutations<S> result = this;
@@ -485,7 +495,6 @@ public final class Mutations<S extends Sequence<S>>
      * See {@link #removeMutationsInRange(int, int)}.
      *
      * @param range range to removes
-     * @return
      */
     public Mutations<S> removeMutationsInRange(Range range) {
         return removeMutationsInRange(range.getFrom(), range.getTo());

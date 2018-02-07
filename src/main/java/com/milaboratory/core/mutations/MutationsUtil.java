@@ -93,18 +93,57 @@ public final class MutationsUtil {
      * This one shifts indels to the left at homopolymer regions Applicable to KAligner data, which normally put indels
      * randomly along such regions Required for filterMutations algorithm to work correctly Works inplace
      *
-     * @param seq       reference sequence for the mutations
+     * @param seq1      reference sequence for the mutations
      * @param mutations array of mutations
      */
-    public static void shiftIndelsAtHomopolymers(Sequence seq, int[] mutations) {
-        int prevPos = 0;
+    public static <S extends Sequence<S>> Mutations<S> shiftIndelsAtHomopolymers(S seq1, Mutations<S> mutations) {
+        return shiftIndelsAtHomopolymers(seq1, 0, mutations);
+    }
+
+    /**
+     * This one shifts indels to the left at homopolymer regions Applicable to KAligner data, which normally put indels
+     * randomly along such regions Required for filterMutations algorithm to work correctly Works inplace
+     *
+     * @param seq1      reference sequence for the mutations
+     * @param seq1From  seq1 from
+     * @param mutations array of mutations
+     */
+    public static <S extends Sequence<S>> Mutations<S> shiftIndelsAtHomopolymers(S seq1, int seq1From, Mutations<S> mutations) {
+        int[] muts = mutations.mutations.clone();
+        shiftIndelsAtHomopolymers(seq1, seq1From, muts);
+        return new Mutations<>(mutations.alphabet, muts);
+    }
+
+    /**
+     * This one shifts indels to the left at homopolymer regions Applicable to KAligner data, which normally put indels
+     * randomly along such regions Required for filterMutations algorithm to work correctly Works inplace
+     *
+     * @param seq1      reference sequence for the mutations
+     * @param mutations array of mutations
+     */
+    public static void shiftIndelsAtHomopolymers(Sequence seq1, int[] mutations) {
+        shiftIndelsAtHomopolymers(seq1, 0, mutations);
+    }
+
+    /**
+     * This one shifts indels to the left at homopolymer regions Applicable to KAligner data, which normally put indels
+     * randomly along such regions Required for filterMutations algorithm to work correctly Works inplace
+     *
+     * @param seq1      reference sequence for the mutations
+     * @param seq1From  seq1 from
+     * @param mutations array of mutations
+     */
+    public static void shiftIndelsAtHomopolymers(Sequence seq1, int seq1From, int[] mutations) {
+        int prevPos = seq1From;
 
         for (int i = 0; i < mutations.length; i++) {
             int code = mutations[i];
             if (!isSubstitution(code)) {
                 int pos = getPosition(code), offset = 0;
+                if (pos < seq1From)
+                    throw new IllegalArgumentException();
                 int nt = isDeletion(code) ? getFrom(code) : getTo(code);
-                while (pos > prevPos && seq.codeAt(pos - 1) == nt) {
+                while (pos > prevPos && seq1.codeAt(pos - 1) == nt) {
                     pos--;
                     offset--;
                 }
@@ -211,8 +250,7 @@ public final class MutationsUtil {
      * com.milaboratory.core.sequence.Alphabet)}.</p>
      *
      * <p>Mutations are just concatenated with given separator. The following RegExp can be used for simple parsing of
-     * resulting string for
-     * nucleotide sequences: {@code ([SDI])([ATGC]?)(\d+)([ATGC]?)} .</p>
+     * resulting string for nucleotide sequences: {@code ([SDI])([ATGC]?)(\d+)([ATGC]?)} .</p>
      *
      * @param mutations mutations to encode
      * @param separator separator
@@ -247,9 +285,6 @@ public final class MutationsUtil {
     /**
      * Decodes mutations encoded using format described in {@link com.milaboratory.core.mutations.Mutation#encode(int,
      * com.milaboratory.core.sequence.Alphabet)}.
-     *
-     * @param mutations
-     * @return
      */
     public static int[] decode(String mutations, Alphabet alphabet) {
         Matcher matcher = getMutationPatternForAlphabet(alphabet).matcher(mutations);
@@ -451,13 +486,9 @@ public final class MutationsUtil {
      *
      * <p>The resulting array contains:</p>
      *
-     * <ul>
-     * <li>the original nucleotide mutation</li>
-     * <li>"individual" amino acid mutation, i.e. an expected amino acid mutation given no other mutations have
-     * occurred</li>
-     * <li>"cumulative" amino acid mutation, i.e. the observed amino acid mutation combining effect from all other
-     * nucleotide mutations</li>
-     * </ul>
+     * <ul> <li>the original nucleotide mutation</li> <li>"individual" amino acid mutation, i.e. an expected amino acid
+     * mutation given no other mutations have occurred</li> <li>"cumulative" amino acid mutation, i.e. the observed
+     * amino acid mutation combining effect from all other nucleotide mutations</li> </ul>
      *
      * @param seq1                  the reference nucleotide sequence
      * @param mutations             nucleotide mutations in the reference nucleotide sequence

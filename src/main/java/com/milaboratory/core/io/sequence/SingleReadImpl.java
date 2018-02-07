@@ -87,4 +87,9 @@ public final class SingleReadImpl implements SingleRead {
         result = 31 * result + (description != null ? description.hashCode() : 0);
         return result;
     }
+
+    @Override
+    public String toString() {
+        return "@" + description + "\n" + sequenceWithQuality.getSequence() + "\n+\n" + sequenceWithQuality.getQuality();
+    }
 }
