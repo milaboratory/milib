@@ -15,11 +15,13 @@
  */
 package com.milaboratory.core.tree;
 
+import com.milaboratory.core.alignment.*;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.sequence.*;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well19937a;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.*;
@@ -435,7 +437,7 @@ public class SequenceTreeMapTest {
             @Override
             public boolean allowMutation(Sequence reference, int position, byte type, byte to) {
                 //TODO fix!!!!
-                return type == 2 ;//&&  to == IncompleteAminoAcidSequence.UNKNOWN_LETTER_CODE;
+                return type == 2;//&&  to == IncompleteAminoAcidSequence.UNKNOWN_LETTER_CODE;
             }
         };
 
@@ -950,5 +952,86 @@ public class SequenceTreeMapTest {
             //int result = Arrays.hashCode(mutations);
             return sequence.hashCode();
         }
+    }
+
+    @Test
+    public void optimalityAndScopeTest() {
+        //
+        // CASSLAPGATN-KLFF seq1
+        // CASS-APGATNEKLFF seq2 1ins 1del from s1
+        // CASSLAPG-TNEKLFF seq3
+        // CASSLAPG-TNEKLyF seq4 + 1mm
+
+        AminoAcidSequence seq1 = new AminoAcidSequence("CASSLAPGATNKLFF"),
+                seq2 = new AminoAcidSequence("CASSAPGATNEKLFF"),
+                seq3 = new AminoAcidSequence("CASSLAPGTNEKLFF"),
+                seq4 = new AminoAcidSequence("CASSLAPGTNEKLYF");
+
+        // Sanity check
+
+        Alignment<AminoAcidSequence> aln1 = Aligner.alignGlobalLinear(
+                LinearGapAlignmentScoring.getAminoAcidBLASTScoring(BLASTMatrix.BLOSUM45),
+                seq1, seq2
+        ), aln2 = Aligner.alignGlobalLinear(
+                LinearGapAlignmentScoring.getAminoAcidBLASTScoring(BLASTMatrix.BLOSUM45),
+                seq1, seq3
+        ), aln3 = Aligner.alignGlobalLinear(
+                LinearGapAlignmentScoring.getAminoAcidBLASTScoring(BLASTMatrix.BLOSUM45),
+                seq1, seq4
+        );
+        System.out.println("--NW  alignments--");
+        System.out.println(AlignmentUtils.toStringSimple(seq1, aln1.getAbsoluteMutations()));
+        System.out.println(AlignmentUtils.toStringSimple(seq1, aln2.getAbsoluteMutations()));
+        System.out.println(AlignmentUtils.toStringSimple(seq1, aln3.getAbsoluteMutations()));
+
+        // Init STM
+
+        SequenceTreeMap<AminoAcidSequence, AminoAcidSequence> stm = new SequenceTreeMap<>(AminoAcidSequence.ALPHABET);
+        stm.put(seq1, seq1); // we ignore seq1 in search -- anyways not placing it will also reproduce the bug
+        stm.put(seq2, seq2);
+        stm.put(seq3, seq3);
+        stm.put(seq4, seq4);
+
+        // Finding optimal match / finding seq4
+
+        NeighborhoodIterator<AminoAcidSequence, AminoAcidSequence> ni = stm.getNeighborhoodIterator(
+                seq1, new TreeSearchParameters(1, 1, 1, 3)
+        );
+
+        AminoAcidSequence currentMatch;
+        int minMms = seq1.size();
+        boolean seq4Found = false;
+        System.out.println("--STM alignments--");
+        while ((currentMatch = ni.next()) != null) {
+            if (!currentMatch.equals(seq1)) {
+                Mutations<AminoAcidSequence> mutations = ni.getCurrentMutations();
+                minMms = Math.min(mutations.size(), minMms);
+                System.out.println(AlignmentUtils.toStringSimple(seq1, mutations));
+
+                if (currentMatch.equals(seq4)) {
+                    seq4Found = true;
+                }
+            }
+        }
+        System.out.println("------------------");
+
+        Assert.assertEquals(2, minMms); // found optimal alignment for seq2/seq3
+        Assert.assertTrue(seq4Found); // seq4 found within scope
+
+
+        // Finding any match with correct scope for seq2 & seq3
+
+        ni = stm.getNeighborhoodIterator(
+                seq1, new TreeSearchParameters(0, 1, 1, 3)
+        );
+
+        int results = 0;
+        while ((currentMatch = ni.next()) != null) {
+            if (!currentMatch.equals(seq1)) {
+                results++;
+            }
+        }
+
+        Assert.assertEquals(2, results);
     }
 }
