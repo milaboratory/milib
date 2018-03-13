@@ -68,7 +68,7 @@ final class BranchingEnumerator<S extends Sequence<S>, O> {
         if (node == null)
             return;
 
-        if (reference.size() >= position) {
+        if (position >= reference.size()) {
             node = null;
             return;
         }
