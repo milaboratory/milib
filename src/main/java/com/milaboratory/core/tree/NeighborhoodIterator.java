@@ -88,14 +88,19 @@ public final class NeighborhoodIterator<S extends Sequence<S>, O> {
 
         //Setting up initial branching enumerators
         byte previous = -1, current;
+
         for (int i = 0; i < bSequence.length; ++i) {
             current = bSequence[i];
 
-            branchingEnumerators[i].setup(current,
-                    (previous == 1 && current == 2) || // prevents insertion right after deletion
-                            (previous == 2 && current == 1) || // prevents deletion right after insertion
-                            (previous == 2 && current == 0) // prevents mismatch right after insertion
-            );
+            boolean autoMove1 = (previous == 1 && current == 2); // prevents insertion right after deletion
+
+            if (parameters.isGreedy()) {
+                // prevent some other 'redundant' cases
+                autoMove1 = autoMove1 || (previous == 2 && current == 1) || // prevents deletion right after insertion
+                        (previous == 2 && current == 0); // prevents mismatch right after insertion
+            }
+
+            branchingEnumerators[i].setup(current, autoMove1);
 
             previous = bSequence[i];
         }

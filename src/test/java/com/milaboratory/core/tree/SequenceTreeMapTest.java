@@ -1034,4 +1034,62 @@ public class SequenceTreeMapTest {
 
         Assert.assertEquals(2, results);
     }
+
+    @Test
+    public void greedyTest() {
+        AminoAcidSequence seq1 = new AminoAcidSequence("CAAAAAAW"),
+                seq2 = new AminoAcidSequence("CAAAAAAAW"),
+                seq3 = new AminoAcidSequence("CCCCEACCCCCCC"),
+                seq4 = new AminoAcidSequence("CCCCTCCCCCCC");
+
+        SequenceTreeMap<AminoAcidSequence, AminoAcidSequence> stm = new SequenceTreeMap<>(AminoAcidSequence.ALPHABET);
+        stm.put(seq1, seq1);
+        stm.put(seq3, seq3);
+
+        // All equal 1 insertion
+
+        NeighborhoodIterator<AminoAcidSequence, AminoAcidSequence> ni = stm.getNeighborhoodIterator(
+                seq2, new TreeSearchParameters(0, 1, 0, 1)
+        );
+
+        int i = 0;
+        while (ni.next() != null) {
+            i++;
+            //Mutations<AminoAcidSequence> mutations = ni.getCurrentMutations();
+            //System.out.println(mutations);
+        }
+
+        Assert.assertEquals(7, i); // all 7 variants
+
+        // insertion + mismatch greedy
+
+        ni = stm.getNeighborhoodIterator(
+                seq4, new TreeSearchParameters(1, 0, 1, 2)
+        );
+
+        i = 0;
+        while (ni.next() != null) {
+            i++;
+            //Mutations<AminoAcidSequence> mutations = ni.getCurrentMutations();
+            //System.out.println(mutations);
+        }
+
+        Assert.assertEquals(1, i); // only 1 variant as we're greedy
+
+        // insertion + mismatch non-greedy
+
+        ni = stm.getNeighborhoodIterator(
+                seq4, new TreeSearchParameters(1, 0, 1, 2, false)
+        );
+
+        i = 0;
+        while (ni.next() != null) {
+            i++;
+            //Mutations<AminoAcidSequence> mutations = ni.getCurrentMutations();
+            //System.out.println(mutations);
+        }
+
+        Assert.assertEquals(2, i); // 2 combinations S4I5 + I4S4
+
+    }
 }
