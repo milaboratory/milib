@@ -748,4 +748,129 @@ public final class BandedLinearAligner {
                                                                     int width, int stopPenalty) {
         return alignSemiLocalRight(scoring, seq1, seq2, 0, seq1.size(), 0, seq2.size(), width, stopPenalty);
     }
+
+    /**
+     * Banded alignment where shorter sequence is aligned globally (start and end must be in the alignment) and longer
+     * sequence is aligned locally (not aligned tails are not penalized). For sequences of equal length, seq1 is
+     * considered shorter.
+     *
+     * @param scoring     scoring system
+     * @param seq1        first sequence
+     * @param seq2        second sequence
+     * @param width       width of banded alignment matrix. In other terms max allowed number of indels
+     * @return alignment objects which contains mutations and aligned ranges in sequences
+     */
+    public static Alignment<NucleotideSequence> alignLocalGlobal(LinearGapAlignmentScoring scoring,
+                                                                 NucleotideSequence seq1, NucleotideSequence seq2,
+                                                                 int width) {
+        boolean seq1IsShorter = seq1.size() <= seq2.size();
+        int size1 = seq1.size() + 1;
+        int size2 = seq2.size() + 1;
+
+        try {
+            BandedMatrix matrix = new BandedMatrix(AlignmentCache.get(), size1, size2, width);
+            int sizeI = matrix.getColumnDelta() + 1;
+            int sizeJ = matrix.getRowFactor() - matrix.getColumnDelta() + 1;
+
+            int i, j;
+            matrix.set(0, 0, 0);
+            for (i = 0; i < sizeI; i++)
+                matrix.set(i, 0, getDefaultMatrixValue(scoring, seq1IsShorter, i, 0));
+            for (j = 0; j < sizeJ; j++)
+                matrix.set(0, j, getDefaultMatrixValue(scoring, seq1IsShorter, 0, j));
+
+            printMatrix("init", matrix, sizeI, sizeJ);
+
+            int match, delete, insert;
+
+            for (i = 0; i < seq1.size(); i++) {
+                for (j = Math.max(0, i - (sizeI - 1)); j < Math.min(i + sizeJ, seq2.size()); j++) {
+                    match = matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j));
+                    delete = matrix.get(i, j + 1) + scoring.getGapPenalty();
+                    insert = matrix.get(i + 1, j) + scoring.getGapPenalty();
+                    matrix.set(i + 1, j + 1, Math.max(match, Math.max(delete, insert)));
+                }
+            }
+
+            printMatrix("stage2", matrix, seq1.size(), seq2.size());
+
+            int k, maxScore;
+            if (seq1IsShorter) {
+                i = seq1.size() - 1;
+                maxScore = Integer.MIN_VALUE;
+                for (k = Math.max(0, i - (sizeI - 1)); k < seq2.size(); k++) {
+                    int currentScore = matrix.get(seq1.size() - 1, k);
+                    if (currentScore > maxScore) {
+                        j = k;
+                        maxScore = currentScore;
+                    }
+                }
+            } else {
+                j = seq2.size() - 1;
+                maxScore = Integer.MIN_VALUE;
+                for (k = Math.max(0, j - (sizeJ - 1)); k < seq1.size(); k++) {
+                    int currentScore = matrix.get(seq2.size() - 1, k);
+                    if (currentScore > maxScore) {
+                        i = k;
+                        maxScore = currentScore;
+                    }
+                }
+            }
+
+            MutationsBuilder<NucleotideSequence> mutations = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
+            byte c1, c2;
+            while (matrix.get(i + 1, j + 1) != 0) {
+                if (i >= 0 && j >= 0)
+                    System.out.println(i + " " + j + " " + seq1.symbolAt(i) + " " + seq2.symbolAt(j));
+                if (i >= 0 && j >= 0 &&
+                        matrix.get(i + 1, j + 1) == matrix.get(i, j) +
+                                scoring.getScore(c1 = seq1.codeAt(i), c2 = seq2.codeAt(j))) {
+                    if (c1 != c2)
+                        mutations.appendSubstitution(i, c1, c2);
+                    --i;
+                    --j;
+                } else if (i >= 0 &&
+                        matrix.get(i + 1, j + 1) ==
+                                matrix.get(i, j + 1) + scoring.getGapPenalty()) {
+                    mutations.appendDeletion(i, seq1.codeAt(i));
+                    --i;
+                } else if (j >= 0 &&
+                        matrix.get(i + 1, j + 1) ==
+                                matrix.get(i + 1, j) + scoring.getGapPenalty()) {
+                    mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                    --j;
+                } else
+                    throw new RuntimeException();
+            }
+
+            mutations.reverseRange(0, mutations.size());
+            return new Alignment<>(seq1, mutations.createAndDestroy(), maxScore);
+        } finally {
+            AlignmentCache.release();
+        }
+    }
+
+    /**
+     * Default matrix value for alignLocalGlobal.
+     *
+     * @param scoring           scoring system
+     * @param seq1IsShorter     true if seq1 is shorter than seq2 or they have equal length
+     * @param i                 coordinate in seq1
+     * @param j                 coordinate in seq2
+     * @return                  default value for not calculated element of matrix
+     */
+    private static int getDefaultMatrixValue(LinearGapAlignmentScoring scoring, boolean seq1IsShorter, int i, int j) {
+        int distanceFromShorterStart = seq1IsShorter ? i : j;
+        return distanceFromShorterStart * scoring.getGapPenalty();
+    }
+
+    private static void printMatrix(String tag, BandedMatrix matrix, int sizeX, int sizeY) {
+        System.out.println(tag);
+        for (int j = 0; j < sizeY; j++) {
+            for (int i = 0; i < sizeX; i++) {
+                System.out.print(matrix.get(i, j) + " ");
+            }
+            System.out.println();
+        }
+    }
 }
