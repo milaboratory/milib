@@ -304,4 +304,20 @@ public class BandedLinearAlignerTest {
             AlignerTest.assertAlignment(la, seq2);
         }
     }
+
+    @Test
+    public void alignLocalGlobalTest() {
+        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA");
+        NucleotideSequence seq2 = new NucleotideSequence("ATTATACAT");
+        NucleotideSequence seq3 = new NucleotideSequence("GCTACTAGCACT");
+        NucleotideSequence seq4 = new NucleotideSequence("TT");
+        LinearGapAlignmentScoring<NucleotideSequence> scoring = new LinearGapAlignmentScoring<>(
+                NucleotideSequence.ALPHABET, 0, -4, -5);
+        Alignment<NucleotideSequence> alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, 2);
+        System.out.println(alignment.toCompactString());
+        alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq3, 3);
+        System.out.println(alignment.toCompactString());
+        alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq3, seq4, 1);
+        System.out.println(alignment.toCompactString());
+    }
 }
