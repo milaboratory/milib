@@ -16,8 +16,12 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.motif.BitapMatcher;
+import com.milaboratory.core.motif.BitapPattern;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
+
+import java.util.ArrayList;
 
 public final class BandedLinearAligner {
     private BandedLinearAligner() {
@@ -764,8 +768,13 @@ public final class BandedLinearAligner {
                                                                  NucleotideSequence seq1, NucleotideSequence seq2,
                                                                  int width) {
         boolean seq1IsShorter = seq1.size() <= seq2.size();
-        int size1 = seq1.size() + 1;
-        int size2 = seq2.size() + 1;
+        Range bestRange = findBestRange(seq1IsShorter ? seq1 : seq2, seq1IsShorter ? seq2 : seq1, width);
+        NucleotideSequence currentSeq1 = seq1IsShorter ? seq1 : seq1.getRange(bestRange);
+        NucleotideSequence currentSeq2 = seq1IsShorter ? seq2.getRange(bestRange) : seq2;
+        int size1 = currentSeq1.size() + 1;
+        int size2 = currentSeq2.size() + 1;
+        int mutOffset = seq1IsShorter ? 0 : bestRange.getLower();
+        System.out.println(currentSeq1 + " " + currentSeq2);
 
         try {
             BandedMatrix matrix = new BandedMatrix(AlignmentCache.get(), size1, size2, width);
@@ -783,22 +792,22 @@ public final class BandedLinearAligner {
 
             int match, delete, insert;
 
-            for (i = 0; i < seq1.size(); i++) {
-                for (j = Math.max(0, i - (sizeI - 1)); j < Math.min(i + sizeJ, seq2.size()); j++) {
-                    match = matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j));
+            for (i = 0; i < currentSeq1.size(); i++) {
+                for (j = Math.max(0, i - (sizeI - 1)); j < Math.min(i + sizeJ, currentSeq2.size()); j++) {
+                    match = matrix.get(i, j) + scoring.getScore(currentSeq1.codeAt(i), currentSeq2.codeAt(j));
                     delete = matrix.get(i, j + 1) + scoring.getGapPenalty();
                     insert = matrix.get(i + 1, j) + scoring.getGapPenalty();
                     matrix.set(i + 1, j + 1, Math.max(match, Math.max(delete, insert)));
                 }
             }
 
-            printMatrix("stage2", matrix, seq1.size() + 1, seq2.size() + 1);
+            printMatrix("stage2", matrix, currentSeq1.size() + 1, currentSeq2.size() + 1);
 
             int k, maxScore;
             if (seq1IsShorter) {
-                i = seq1.size();
+                i = currentSeq1.size();
                 maxScore = Integer.MIN_VALUE;
-                for (k = Math.max(0, i - (sizeI - 1)); k <= seq2.size(); k++) {
+                for (k = Math.max(0, i - (sizeI - 1)); k <= currentSeq2.size(); k++) {
                     int currentScore = matrix.get(i, k);
                     if (currentScore > maxScore) {
                         j = k;
@@ -806,9 +815,9 @@ public final class BandedLinearAligner {
                     }
                 }
             } else {
-                j = seq2.size();
+                j = currentSeq2.size();
                 maxScore = Integer.MIN_VALUE;
-                for (k = Math.max(0, j - (sizeJ - 1)); k <= seq1.size(); k++) {
+                for (k = Math.max(0, j - (sizeJ - 1)); k <= currentSeq1.size(); k++) {
                     int currentScore = matrix.get(k, j);
                     if (currentScore > maxScore) {
                         i = k;
@@ -822,22 +831,23 @@ public final class BandedLinearAligner {
             while (matrix.get(i, j) != 0) {
                 if (i >= 1 && j >= 1)
                     System.out.println((i - 1) + " " + (j - 1) + " "
-                            + seq1.symbolAt(i - 1) + " " + seq2.symbolAt(j - 1));
+                            + currentSeq1.symbolAt(i - 1) + " " + currentSeq2.symbolAt(j - 1));
                 if (i >= 1 && j >= 1 &&
                         matrix.get(i, j) == matrix.get(i - 1, j - 1) +
-                                scoring.getScore(c1 = seq1.codeAt(i - 1), c2 = seq2.codeAt(j - 1))) {
+                                scoring.getScore(c1 = currentSeq1.codeAt(i - 1),
+                                        c2 = currentSeq2.codeAt(j - 1))) {
                     if (c1 != c2)
-                        mutations.appendSubstitution(i - 1, c1, c2);
+                        mutations.appendSubstitution(mutOffset + i - 1, c1, c2);
                     --i;
                     --j;
                 } else if (i >= 1 &&
                         matrix.get(i, j) == matrix.get(i - 1, j) + scoring.getGapPenalty()) {
-                    mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
+                    mutations.appendDeletion(mutOffset + i - 1, currentSeq1.codeAt(i - 1));
                     --i;
                 } else if (j >= 1 &&
                         matrix.get(i, j) ==
                                 matrix.get(i, j - 1) + scoring.getGapPenalty()) {
-                    mutations.appendInsertion(i, seq2.codeAt(j - 1));
+                    mutations.appendInsertion(mutOffset + i, currentSeq2.codeAt(j - 1));
                     --j;
                 } else
                     throw new RuntimeException();
@@ -862,6 +872,30 @@ public final class BandedLinearAligner {
     private static int getDefaultMatrixValue(LinearGapAlignmentScoring scoring, boolean seq1IsShorter, int i, int j) {
         int distanceFromShorterStart = seq1IsShorter ? i : j;
         return distanceFromShorterStart * scoring.getGapPenalty();
+    }
+
+    /**
+     * Detect best range in long sequence for local-global aligner.
+     *
+     * @param shortSeq short sequence
+     * @param longSeq long sequence
+     * @param width width of banded alignment matrix: max allowed number of indels
+     * @return best range in long sequence to align short sequence
+     */
+    private static Range findBestRange(NucleotideSequence shortSeq, NucleotideSequence longSeq, int width) {
+        final int BITAP_MAX_LENGTH = 63;
+        int estimatedMaxErrors = width * 2;
+        if (shortSeq.size() <= BITAP_MAX_LENGTH) {
+            BitapPattern bitapPattern = shortSeq.toMotif().getBitapPattern();
+            for (int currentNumErrors = 0; currentNumErrors <= estimatedMaxErrors; currentNumErrors++) {
+                BitapMatcher bitapMatcher = bitapPattern.substitutionAndIndelMatcherFirst(currentNumErrors, longSeq);
+                int pos = bitapMatcher.findNext();
+                if (pos != -1)
+                    return new Range(pos, Math.min(longSeq.size(), pos + shortSeq.size()
+                            + Math.min(width, currentNumErrors)));
+            }
+        }
+        return new Range(0, longSeq.size());
     }
 
     private static void printMatrix(String tag, BandedMatrix matrix, int sizeX, int sizeY) {
