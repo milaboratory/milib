@@ -792,24 +792,24 @@ public final class BandedLinearAligner {
                 }
             }
 
-            printMatrix("stage2", matrix, seq1.size(), seq2.size());
+            printMatrix("stage2", matrix, seq1.size() + 1, seq2.size() + 1);
 
             int k, maxScore;
             if (seq1IsShorter) {
-                i = seq1.size() - 1;
+                i = seq1.size();
                 maxScore = Integer.MIN_VALUE;
-                for (k = Math.max(0, i - (sizeI - 1)); k < seq2.size(); k++) {
-                    int currentScore = matrix.get(seq1.size() - 1, k);
+                for (k = Math.max(0, i - (sizeI - 1)); k <= seq2.size(); k++) {
+                    int currentScore = matrix.get(i, k);
                     if (currentScore > maxScore) {
                         j = k;
                         maxScore = currentScore;
                     }
                 }
             } else {
-                j = seq2.size() - 1;
+                j = seq2.size();
                 maxScore = Integer.MIN_VALUE;
-                for (k = Math.max(0, j - (sizeJ - 1)); k < seq1.size(); k++) {
-                    int currentScore = matrix.get(seq2.size() - 1, k);
+                for (k = Math.max(0, j - (sizeJ - 1)); k <= seq1.size(); k++) {
+                    int currentScore = matrix.get(k, j);
                     if (currentScore > maxScore) {
                         i = k;
                         maxScore = currentScore;
@@ -819,25 +819,25 @@ public final class BandedLinearAligner {
 
             MutationsBuilder<NucleotideSequence> mutations = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
             byte c1, c2;
-            while (matrix.get(i + 1, j + 1) != 0) {
-                if (i >= 0 && j >= 0)
-                    System.out.println(i + " " + j + " " + seq1.symbolAt(i) + " " + seq2.symbolAt(j));
-                if (i >= 0 && j >= 0 &&
-                        matrix.get(i + 1, j + 1) == matrix.get(i, j) +
-                                scoring.getScore(c1 = seq1.codeAt(i), c2 = seq2.codeAt(j))) {
+            while (matrix.get(i, j) != 0) {
+                if (i >= 1 && j >= 1)
+                    System.out.println((i - 1) + " " + (j - 1) + " "
+                            + seq1.symbolAt(i - 1) + " " + seq2.symbolAt(j - 1));
+                if (i >= 1 && j >= 1 &&
+                        matrix.get(i, j) == matrix.get(i - 1, j - 1) +
+                                scoring.getScore(c1 = seq1.codeAt(i - 1), c2 = seq2.codeAt(j - 1))) {
                     if (c1 != c2)
-                        mutations.appendSubstitution(i, c1, c2);
+                        mutations.appendSubstitution(i - 1, c1, c2);
                     --i;
                     --j;
-                } else if (i >= 0 &&
-                        matrix.get(i + 1, j + 1) ==
-                                matrix.get(i, j + 1) + scoring.getGapPenalty()) {
-                    mutations.appendDeletion(i, seq1.codeAt(i));
+                } else if (i >= 1 &&
+                        matrix.get(i, j) == matrix.get(i - 1, j) + scoring.getGapPenalty()) {
+                    mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
                     --i;
-                } else if (j >= 0 &&
-                        matrix.get(i + 1, j + 1) ==
-                                matrix.get(i + 1, j) + scoring.getGapPenalty()) {
-                    mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                } else if (j >= 1 &&
+                        matrix.get(i, j) ==
+                                matrix.get(i, j - 1) + scoring.getGapPenalty()) {
+                    mutations.appendInsertion(i, seq2.codeAt(j - 1));
                     --j;
                 } else
                     throw new RuntimeException();
