@@ -21,8 +21,6 @@ import com.milaboratory.core.motif.BitapPattern;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
-import java.util.ArrayList;
-
 public final class BandedLinearAligner {
     private BandedLinearAligner() {
     }
@@ -774,7 +772,6 @@ public final class BandedLinearAligner {
         int size1 = currentSeq1.size() + 1;
         int size2 = currentSeq2.size() + 1;
         int mutOffset = seq1IsShorter ? 0 : bestRange.getLower();
-        System.out.println(currentSeq1 + " " + currentSeq2);
 
         try {
             BandedMatrix matrix = new BandedMatrix(AlignmentCache.get(), size1, size2, width);
@@ -788,8 +785,6 @@ public final class BandedLinearAligner {
             for (j = 0; j < sizeJ; j++)
                 matrix.set(0, j, getDefaultMatrixValue(scoring, seq1IsShorter, 0, j));
 
-            printMatrix("init", matrix, sizeI, sizeJ);
-
             int match, delete, insert;
 
             for (i = 0; i < currentSeq1.size(); i++) {
@@ -801,11 +796,12 @@ public final class BandedLinearAligner {
                 }
             }
 
-            printMatrix("stage2", matrix, currentSeq1.size() + 1, currentSeq2.size() + 1);
-
             int k, maxScore;
+            int seq1RangeLower, seq1RangeUpper, seq2RangeLower, seq2RangeUpper;
             if (seq1IsShorter) {
                 i = currentSeq1.size();
+                seq1RangeLower = 0;
+                seq1RangeUpper = i;
                 maxScore = Integer.MIN_VALUE;
                 for (k = Math.max(0, i - (sizeI - 1)); k <= currentSeq2.size(); k++) {
                     int currentScore = matrix.get(i, k);
@@ -814,8 +810,12 @@ public final class BandedLinearAligner {
                         maxScore = currentScore;
                     }
                 }
+                seq2RangeLower = -1;
+                seq2RangeUpper = j + bestRange.getLower();
             } else {
                 j = currentSeq2.size();
+                seq2RangeLower = 0;
+                seq2RangeUpper = j;
                 maxScore = Integer.MIN_VALUE;
                 for (k = Math.max(0, j - (sizeJ - 1)); k <= currentSeq1.size(); k++) {
                     int currentScore = matrix.get(k, j);
@@ -824,14 +824,13 @@ public final class BandedLinearAligner {
                         maxScore = currentScore;
                     }
                 }
+                seq1RangeLower = -1;
+                seq1RangeUpper = i + bestRange.getLower();
             }
 
             MutationsBuilder<NucleotideSequence> mutations = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
             byte c1, c2;
             while (matrix.get(i, j) != 0) {
-                if (i >= 1 && j >= 1)
-                    System.out.println((i - 1) + " " + (j - 1) + " "
-                            + currentSeq1.symbolAt(i - 1) + " " + currentSeq2.symbolAt(j - 1));
                 if (i >= 1 && j >= 1 &&
                         matrix.get(i, j) == matrix.get(i - 1, j - 1) +
                                 scoring.getScore(c1 = currentSeq1.codeAt(i - 1),
@@ -853,8 +852,13 @@ public final class BandedLinearAligner {
                     throw new RuntimeException();
             }
 
+            if (seq1IsShorter)
+                seq2RangeLower = j - i + bestRange.getLower();
+            else
+                seq1RangeLower = i - j + bestRange.getLower();
             mutations.reverseRange(0, mutations.size());
-            return new Alignment<>(seq1, mutations.createAndDestroy(), maxScore);
+            return new Alignment<>(seq1, mutations.createAndDestroy(), new Range(seq1RangeLower, seq1RangeUpper),
+                    new Range(seq2RangeLower, seq2RangeUpper), maxScore);
         } finally {
             AlignmentCache.release();
         }
@@ -889,22 +893,15 @@ public final class BandedLinearAligner {
             BitapPattern bitapPattern = shortSeq.toMotif().getBitapPattern();
             for (int currentNumErrors = 0; currentNumErrors <= estimatedMaxErrors; currentNumErrors++) {
                 BitapMatcher bitapMatcher = bitapPattern.substitutionAndIndelMatcherFirst(currentNumErrors, longSeq);
-                int pos = bitapMatcher.findNext();
-                if (pos != -1)
-                    return new Range(pos, Math.min(longSeq.size(), pos + shortSeq.size()
-                            + Math.min(width, currentNumErrors)));
+                int startPos = bitapMatcher.findNext();
+                if (startPos != -1) {
+                    int currentSeqWidth = shortSeq.size() + Math.min(width, currentNumErrors);
+                    int endPos = Math.min(longSeq.size(), startPos + currentSeqWidth);
+                    startPos = Math.max(0, endPos - currentSeqWidth);
+                    return new Range(startPos, endPos);
+                }
             }
         }
         return new Range(0, longSeq.size());
-    }
-
-    private static void printMatrix(String tag, BandedMatrix matrix, int sizeX, int sizeY) {
-        System.out.println(tag);
-        for (int j = 0; j < sizeY; j++) {
-            for (int i = 0; i < sizeX; i++) {
-                System.out.print(matrix.get(i, j) + " ");
-            }
-            System.out.println();
-        }
     }
 }
