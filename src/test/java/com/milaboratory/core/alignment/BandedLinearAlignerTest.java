@@ -16,6 +16,10 @@
 package com.milaboratory.core.alignment;
 
 import com.milaboratory.core.Range;
+import com.milaboratory.core.mutations.Mutations;
+import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
+import com.milaboratory.core.mutations.generator.MutationsGenerator;
+import com.milaboratory.core.mutations.generator.SubstitutionModels;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
@@ -306,18 +310,51 @@ public class BandedLinearAlignerTest {
     }
 
     @Test
-    public void alignLocalGlobalTest() {
+    public void alignLocalGlobalTest() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA");
         NucleotideSequence seq2 = new NucleotideSequence("ATTATACAT");
         NucleotideSequence seq3 = new NucleotideSequence("GCTACTAGCACT");
         NucleotideSequence seq4 = new NucleotideSequence("TT");
+        NucleotideSequence seq5 = new NucleotideSequence(
+                "ATGTGGGGTAACACGGCTCCTCGGAATATAGCTTCAGGGCCCAGAACCTGTGGCGCGTACCCGTATGAATCAGGA");
+        NucleotideSequence seq6 = new NucleotideSequence(
+                "ATGTGGGGTAACAGCTCTGTCCTAGGATCTAAGCTTTAGGCCCGTGAACCCGTGCGCGTACCGTATGATCGG");
         LinearGapAlignmentScoring<NucleotideSequence> scoring = new LinearGapAlignmentScoring<>(
                 NucleotideSequence.ALPHABET, 0, -4, -5);
         Alignment<NucleotideSequence> alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, 2);
-        System.out.println(alignment.toCompactString());
+        AlignerTest.assertAlignment(alignment, seq2);
         alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq3, 3);
-        System.out.println(alignment.toCompactString());
+        AlignerTest.assertAlignment(alignment, seq3);
         alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq3, seq4, 1);
-        System.out.println(alignment.toCompactString());
+        AlignerTest.assertAlignment(alignment, seq4);
+        alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq5, seq6, 4);
+        AlignerTest.assertAlignment(alignment, seq6);
+    }
+
+    @Test
+    public void alignLocalGlobalRandomTest() throws Exception {
+        NucleotideSequence seq1, seq2;
+        int mismatchScore, gapScore;
+        LinearGapAlignmentScoring<NucleotideSequence> scoring;
+        int width;
+        Alignment<NucleotideSequence> alignment;
+        RandomDataGenerator random = new RandomDataGenerator(new Well19937c());
+        for (int i = 0; i < 10000; ++i) {
+            seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 1, 100);
+            GenericNucleotideMutationModel model = new GenericNucleotideMutationModel(
+                    SubstitutionModels.getUniformNucleotideSubstitutionModel(.05),
+                    .05, .05);
+            Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(seq1, model);
+            seq2 = mut.mutate(seq1);
+            mismatchScore = -random.nextInt(1, 10);
+            gapScore = -random.nextInt(1, 10);
+            scoring = new LinearGapAlignmentScoring<>(NucleotideSequence.ALPHABET, 0, mismatchScore, gapScore);
+            int expectedScore = AlignmentUtils.calculateScore(seq1, new Range(0, seq1.size()), mut, scoring);
+            width = random.nextInt(1, 6);
+            alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, width);
+            if (width >= mut.countOfIndels())
+                assertTrue(alignment.score >= expectedScore);
+            AlignerTest.assertAlignment(alignment, seq2);
+        }
     }
 }
