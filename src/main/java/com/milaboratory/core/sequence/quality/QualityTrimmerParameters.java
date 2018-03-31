@@ -17,6 +17,6 @@ package com.milaboratory.core.sequence.quality;
 
 public class QualityTrimmerParameters {
     private float minimalAverageQuality;
-    private int minimalRegion
+    private int minimalGoodQualityRegion;
 
 }
