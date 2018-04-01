@@ -15,8 +15,15 @@
  */
 package com.milaboratory.core.sequence.quality;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.SequenceQuality;
 
+/**
+ * Searches for a region where for the given threshold and window size:
+ *
+ * 1. For any window of a predefined size inside the region average quality is greater than the threshold
+ * 2. Edge nucleotide position quality is greater than the threshold
+ */
 public final class QualityTrimmer {
     private QualityTrimmer() {
     }
@@ -29,21 +36,21 @@ public final class QualityTrimmer {
      * @param rightmostPosition       scanning region to, exclusive
      * @param scanIncrement           +1 to scan to the right (trim on the left side of the sequence);
      *                                -1 to scan to the left (trim on the right side of the sequence)
-     * @param windowSize              scanning window size
      * @param searchForRise           search mode; if true - searches for beginning of a "good quality region"
      *                                (e.g. useful for trimming of sequencing reads from sides);
      *                                if false - searches for the end of "good quality regions"
      *                                (e.g. useful to trim-off low quality leftovers from assembled contig)
      * @param averageQualityThreshold target minimal average quality
+     * @param windowSize              scanning window size
      * @return trimming position if search was successful (last position of the region) or
      * (-2 - trimming position) if search was unsuccessful
      */
     public static int trim(SequenceQuality quality,
                            int leftmostPosition, int rightmostPosition, int scanIncrement,
-                           int windowSize,
-                           boolean searchForRise, float averageQualityThreshold) {
+                           boolean searchForRise,
+                           float averageQualityThreshold, int windowSize) {
         if (quality.size() == 0)
-            return -1;
+            return scanIncrement == 1 ? -1 : 0;
 
         if (scanIncrement != -1 && scanIncrement != 1)
             throw new IllegalArgumentException("Wrong value for scanIncrement.");
@@ -71,7 +78,7 @@ public final class QualityTrimmer {
             position += scanIncrement;
         }
 
-        // Main search pass
+        // Main search pass (criteria #1)
         while ((searchForRise ^ (sum >= sumThreshold)) && // if searchForRise == true, the loop will be terminated on the first position where sum >= sumThreshold
                 position >= leftmostPosition &&
                 position < rightmostPosition) {
@@ -90,7 +97,7 @@ public final class QualityTrimmer {
 
         // Successful search
 
-        // Searching for actual boundary of the region
+        // Searching for actual boundary of the region, reverse search (criteria #2)
         do {
             position -= scanIncrement;
         } while (position >= leftmostPosition &&
@@ -100,5 +107,55 @@ public final class QualityTrimmer {
         // assert scanIncrement == 1 ? position >= windowEndPosition : position <= windowEndPosition;
 
         return position;
+    }
+
+
+    /**
+     * Core trimming method. Implements main algorithm that finds optimal trimming position.
+     *
+     * @param quality           sequence quality
+     * @param leftmostPosition  scanning region from, inclusive
+     * @param rightmostPosition scanning region to, exclusive
+     * @param scanIncrement     +1 to scan to the right (trim on the left side of the sequence);
+     *                          -1 to scan to the left (trim on the right side of the sequence)
+     * @param searchForRise     search mode; if true - searches for beginning of a "good quality region"
+     *                          (e.g. useful for trimming of sequencing reads from sides);
+     *                          if false - searches for the end of "good quality regions"
+     *                          (e.g. useful to trim-off low quality leftovers from assembled contig)
+     * @param parameters        trimming parameters
+     * @return trimming position if search was successful (last position of the region) or
+     * (-2 - trimming position) if search was unsuccessful
+     */
+    public static int trim(SequenceQuality quality,
+                           int leftmostPosition, int rightmostPosition, int scanIncrement,
+                           boolean searchForRise,
+                           QualityTrimmerParameters parameters) {
+        return trim(quality, leftmostPosition, rightmostPosition, scanIncrement, searchForRise, parameters.getAverageQualityThreshold(), parameters.getWindowSize());
+    }
+
+    /**
+     * Returns absolute position value.
+     *
+     * position >= -1 ? position : -2 -position
+     *
+     * @param position
+     * @return
+     */
+    public static int pabs(int position) {
+        return position >= -1 ? position : -2 - position;
+    }
+
+    /**
+     * Maximally extend initialRange to fulfill main criteria of QualityTrimmer along the whole extended region.
+     *
+     * @param quality      quality values
+     * @param initialRange initial range to extend
+     * @param parameters   trimming parameters
+     * @return
+     */
+    public static Range extendQualityRange(SequenceQuality quality, Range initialRange, QualityTrimmerParameters parameters) {
+        int lower = pabs(trim(quality, 0, initialRange.getLower(), -1, false, parameters));
+        int upper = pabs(trim(quality, initialRange.getUpper(), quality.size(), +1, false, parameters)) + 1;
+        return new Range(lower, upper, initialRange.isReverse());
     }
 }
