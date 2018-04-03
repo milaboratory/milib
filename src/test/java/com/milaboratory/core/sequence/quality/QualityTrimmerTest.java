@@ -85,30 +85,57 @@ public class QualityTrimmerTest {
     public void extendTest1() {
         //                               |0        |10       |20
         SequenceQuality q0 = q("0123456789999999999876543210");
-        Assert.assertEquals(new Range(7, 21), QualityTrimmer.extendQualityRange(q0, new Range(10, 15), params7));
-        Assert.assertEquals(new Range(7, 21), QualityTrimmer.extendQualityRange(q0, new Range(7, 21), params7));
-        Assert.assertEquals(new Range(6, 21), QualityTrimmer.extendQualityRange(q0, new Range(6, 21), params7));
-        Assert.assertEquals(new Range(5, 21), QualityTrimmer.extendQualityRange(q0, new Range(5, 21), params7));
-        Assert.assertEquals(new Range(5, 22), QualityTrimmer.extendQualityRange(q0, new Range(5, 22), params7));
-        Assert.assertEquals(new Range(5, 23), QualityTrimmer.extendQualityRange(q0, new Range(5, 23), params7));
+        Assert.assertEquals(new Range(7, 21), QualityTrimmer.extendRange(q0, params7, new Range(10, 15)));
+        Assert.assertEquals(new Range(7, 21), QualityTrimmer.extendRange(q0, params7, new Range(7, 21)));
+        Assert.assertEquals(new Range(6, 21), QualityTrimmer.extendRange(q0, params7, new Range(6, 21)));
+        Assert.assertEquals(new Range(5, 21), QualityTrimmer.extendRange(q0, params7, new Range(5, 21)));
+        Assert.assertEquals(new Range(5, 22), QualityTrimmer.extendRange(q0, params7, new Range(5, 22)));
+        Assert.assertEquals(new Range(5, 23), QualityTrimmer.extendRange(q0, params7, new Range(5, 23)));
     }
 
     @Test
     public void extendTest2() {
         SequenceQuality q0 = q("");
-        Assert.assertEquals(new Range(0, 0), QualityTrimmer.extendQualityRange(q0, new Range(0, 0), params7));
+        Assert.assertEquals(new Range(0, 0), QualityTrimmer.extendRange(q0, params7, new Range(0, 0)));
     }
 
     @Test
     public void extendTest3() {
         SequenceQuality q0 = q("1");
-        Assert.assertEquals(new Range(0, 0), QualityTrimmer.extendQualityRange(q0, new Range(0, 0), params7));
+        Assert.assertEquals(new Range(0, 0), QualityTrimmer.extendRange(q0, params7, new Range(0, 0)));
     }
 
     @Test
     public void extendTest4() {
         SequenceQuality q0 = q("9");
-        Assert.assertEquals(new Range(0, 1), QualityTrimmer.extendQualityRange(q0, new Range(0, 0), params7));
+        Assert.assertEquals(new Range(0, 1), QualityTrimmer.extendRange(q0, params7, new Range(0, 0)));
+    }
+
+    @Test
+    public void trimTest0() {
+        //                               |0        |10       |20
+        SequenceQuality q0 = q("0123456789999999999876543210");
+        Assert.assertEquals(new Range(7, 21), QualityTrimmer.trim(q0, params7));
+        Assert.assertNull(QualityTrimmer.trim(q0, params7, new Range(1, 5)));
+        Assert.assertEquals(new Range(10, 13), QualityTrimmer.trim(q0, params7, new Range(10, 13)));
+    }
+
+    @Test
+    public void trimTest2() {
+        SequenceQuality q0 = q("");
+        Assert.assertNull(QualityTrimmer.trim(q0, params7));
+    }
+
+    @Test
+    public void trimTest3() {
+        SequenceQuality q0 = q("1");
+        Assert.assertNull(QualityTrimmer.trim(q0, params7));
+    }
+
+    @Test
+    public void trimTest4() {
+        SequenceQuality q0 = q("9");
+        Assert.assertEquals(new Range(0, 1), QualityTrimmer.trim(q0, params7));
     }
 
     SequenceQuality q(String nuQuality) {

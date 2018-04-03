@@ -146,16 +146,57 @@ public final class QualityTrimmer {
     }
 
     /**
-     * Maximally extend initialRange to fulfill main criteria of QualityTrimmer along the whole extended region.
+     * Extend initialRange to the biggest possible range that fulfils the criteria of QualityTrimmer along the whole extended region.
+     *
+     * The criteria may not be fulfilled for the initial range.
      *
      * @param quality      quality values
-     * @param initialRange initial range to extend
      * @param parameters   trimming parameters
+     * @param initialRange initial range to extend
      * @return
      */
-    public static Range extendQualityRange(SequenceQuality quality, Range initialRange, QualityTrimmerParameters parameters) {
+    public static Range extendRange(SequenceQuality quality, QualityTrimmerParameters parameters, Range initialRange) {
         int lower = pabs(trim(quality, 0, initialRange.getLower(), -1, false, parameters));
         int upper = pabs(trim(quality, initialRange.getUpper(), quality.size(), +1, false, parameters)) + 1;
+        return new Range(lower, upper, initialRange.isReverse());
+    }
+
+    /**
+     * Trims the quality string by cutting off low quality nucleotides on both edges.
+     *
+     * The criteria of QualityTrimmer may not be fulfilled for the resulting range. This method detects
+     * beginning of the region with stably high quality, once the beginning of the region is detected the algorithm
+     * stops. Detected stop positions are "from" and "to" of the output range.
+     *
+     * @param quality    quality values
+     * @param parameters trimming parameters
+     * @return trimmed range
+     */
+    public static Range trim(SequenceQuality quality, QualityTrimmerParameters parameters) {
+        return trim(quality, parameters, new Range(0, quality.size()));
+    }
+
+    /**
+     * Trims the initialRange by cutting off low quality nucleotides on both edges.
+     *
+     * The criteria of QualityTrimmer may not be fulfilled for the resulting range. This method detects
+     * beginning of the region with stably high quality, once the beginning of the region is detected the algorithm
+     * stops. Detected stop positions are "from" and "to" of the output range.
+     *
+     * @param quality      quality values
+     * @param parameters   trimming parameters
+     * @param initialRange initial range to trim
+     * @return trimmed range
+     */
+    public static Range trim(SequenceQuality quality, QualityTrimmerParameters parameters, Range initialRange) {
+        int lower = pabs(trim(quality, initialRange.getLower(), initialRange.getUpper(), +1, true, parameters)) + 1;
+        assert lower >= initialRange.getLower();
+        if (lower == initialRange.getUpper())
+            return null;
+        int upper = pabs(trim(quality, lower, initialRange.getUpper(), -1, true, parameters));
+        if (upper == lower)
+            // Should not happen, just in case
+            return null;
         return new Range(lower, upper, initialRange.isReverse());
     }
 }
