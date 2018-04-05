@@ -18,6 +18,7 @@ package com.milaboratory.core.sequence.quality;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.SequenceQuality;
 import com.milaboratory.core.sequence.SequenceQualityBuilder;
+import com.milaboratory.test.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -136,6 +137,11 @@ public class QualityTrimmerTest {
     public void trimTest4() {
         SequenceQuality q0 = q("9");
         Assert.assertEquals(new Range(0, 1), QualityTrimmer.trim(q0, params7));
+    }
+
+    @Test
+    public void testParametersSerialization0() {
+        TestUtil.assertJson(params7, true);
     }
 
     SequenceQuality q(String nuQuality) {
