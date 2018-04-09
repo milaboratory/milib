@@ -189,6 +189,10 @@ public class MultiAlignmentHelper {
         return getLastPosition(queryPositions[index]);
     }
 
+    public String getAnnotationString(int i) {
+        return annotationStrings.get(i);
+    }
+
     public int size() {
         return subject.length();
     }

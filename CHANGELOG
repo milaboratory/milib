@@ -1,4 +1,14 @@
 
+MiLib 1.8.3 (30 Mar 2018)
+========================
+
+-- New `greedy` search flag for SequenceTreeMap, with `greedy = false` SequenceTreeMap searches for 
+   all possible alignments between target sequence and sequences stored in the Trie
+-- Fixed bug in `SequenceTreeMap`, leading to missed matches for sequences with at least one 
+   deletion and one insertion compared to the target one
+-- Fixed bug in `MismatchOnlyPairedReadMerger`, leading to wrong `IllegalArgumentException`
+
+
 MiLib 1.8.2 ( 7 Feb 2018)
 ========================
 

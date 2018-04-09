@@ -206,7 +206,7 @@ public final class MismatchOnlyPairedReadMerger implements Processor<PairedRead,
             case Unweighted:
                 return 1.0 * (length - mismatchCount(seq1s, offset1, seq2s, offset2, length)) / length;
             case MinimalQualityWeighted:
-                if (seq1.size() < offset1 + length || seq1.size() < offset2 + length)
+                if (seq1.size() < offset1 + length || seq2.size() < offset2 + length)
                     throw new IllegalArgumentException();
 
                 long identQuality = 0, totalQuality = 0;

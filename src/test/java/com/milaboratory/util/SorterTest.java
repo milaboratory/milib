@@ -24,6 +24,11 @@ public class SorterTest {
         }
     }
 
+    @Test
+    public void test2() throws Exception {
+        testWithInts(0, 10);
+    }
+
     private static void testWithInts(int nElements, int chunkSize) throws Exception {
         File tmpFile = TempFileManager.getTempFile();
 
@@ -36,7 +41,7 @@ public class SorterTest {
         ObjectSerializer<Integer> intSerializer = new ObjectSerializer<Integer>() {
             @Override
             public void write(Collection<Integer> data, OutputStream stream) {
-                try(DataOutputStream out = new DataOutputStream(stream)) {
+                try (DataOutputStream out = new DataOutputStream(stream)) {
                     for (Integer datum : data) {
                         out.writeInt(datum);
                     }

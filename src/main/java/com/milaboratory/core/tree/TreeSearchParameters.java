@@ -62,13 +62,19 @@ public final class TreeSearchParameters
     private final double[] penalty;
     private final double maxPenalty;
     private final byte[][] differencesCombination;
+    private final boolean greedy;
 
     public TreeSearchParameters(int[] maxErrors, double[] penalty, double maxPenalty) {
+        this(maxErrors, penalty, maxPenalty, true);
+    }
+
+    public TreeSearchParameters(int[] maxErrors, double[] penalty, double maxPenalty, boolean greedy) {
         if (penalty.length != 3 || maxErrors.length != 3)
             throw new IllegalArgumentException();
         this.maxErrors = maxErrors.clone();
         this.penalty = penalty.clone();
         this.maxPenalty = maxPenalty;
+        this.greedy = greedy;
         this.differencesCombination = PenaltyUtils.getDifferencesCombination(maxPenalty, penalty, maxErrors);
     }
 
@@ -82,23 +88,50 @@ public final class TreeSearchParameters
      * @param insertions maximum number of insertions
      */
     public TreeSearchParameters(int mismatches, int deletions, int insertions) {
+        this(mismatches, deletions, insertions, true);
+    }
+
+    /**
+     * Parameters to search with limited number of each mutation type. <p/> <p>Ordering of search is according to
+     * {@link
+     * #DEFAULT_PENALTY}.</p>
+     *
+     * @param mismatches maximum number of mismatches
+     * @param deletions  maximum number of deletions
+     * @param insertions maximum number of insertions
+     * @param greedy     speed up search by not considering substitutions right after indels (forcing them to be before indels)
+     */
+    public TreeSearchParameters(int mismatches, int deletions, int insertions, boolean greedy) {
         this(new int[]{mismatches, deletions, insertions},
                 DEFAULT_PENALTY,
-                maxPenaltyFor(mismatches, deletions, insertions));
+                maxPenaltyFor(mismatches, deletions, insertions),
+                greedy);
+    }
+
+    public TreeSearchParameters(int mismatches, int deletions, int insertions,
+                                int totalMutations, boolean greedy) {
+        this(new int[]{mismatches, deletions, insertions}, UNIFORM_PENALTY, UNIFORM_PENALTY_VALUE * totalMutations, greedy);
     }
 
     public TreeSearchParameters(int mismatches, int deletions, int insertions,
                                 int totalMutations) {
-        this(new int[]{mismatches, deletions, insertions}, UNIFORM_PENALTY, UNIFORM_PENALTY_VALUE * totalMutations);
+        this(mismatches, deletions, insertions, totalMutations, true);
+    }
+
+    public TreeSearchParameters(int maxSubstitutions, int maxDeletions, int maxInsertions,
+                                double substitutionPenalty, double deletionPenalty, double insertionPenalty,
+                                double maxPenalty, boolean greedy) {
+        this.maxErrors = new int[]{maxSubstitutions, maxDeletions, maxInsertions};
+        this.penalty = new double[]{substitutionPenalty, deletionPenalty, insertionPenalty};
+        this.maxPenalty = maxPenalty;
+        this.differencesCombination = PenaltyUtils.getDifferencesCombination(maxPenalty, penalty, maxErrors);
+        this.greedy = greedy;
     }
 
     public TreeSearchParameters(int maxSubstitutions, int maxDeletions, int maxInsertions,
                                 double substitutionPenalty, double deletionPenalty, double insertionPenalty,
                                 double maxPenalty) {
-        this.maxErrors = new int[]{maxSubstitutions, maxDeletions, maxInsertions};
-        this.penalty = new double[]{substitutionPenalty, deletionPenalty, insertionPenalty};
-        this.maxPenalty = maxPenalty;
-        this.differencesCombination = PenaltyUtils.getDifferencesCombination(maxPenalty, penalty, maxErrors);
+        this(maxSubstitutions, maxDeletions, maxInsertions, substitutionPenalty, deletionPenalty, insertionPenalty, maxPenalty, true);
     }
 
     private static double maxPenaltyFor(int mismatches, int deletions, int insertions) {
@@ -145,6 +178,10 @@ public final class TreeSearchParameters
         return maxPenalty;
     }
 
+    public boolean isGreedy() {
+        return greedy;
+    }
+
     byte[][] getDifferencesCombination() {
         return differencesCombination;
     }
@@ -157,6 +194,7 @@ public final class TreeSearchParameters
         TreeSearchParameters that = (TreeSearchParameters) o;
 
         if (Double.compare(that.maxPenalty, maxPenalty) != 0) return false;
+        if (greedy != that.greedy) return false;
         if (!Arrays.equals(maxErrors, that.maxErrors)) return false;
         if (!Arrays.equals(penalty, that.penalty)) return false;
 
@@ -171,6 +209,7 @@ public final class TreeSearchParameters
         result = 31 * result + Arrays.hashCode(penalty);
         temp = Double.doubleToLongBits(maxPenalty);
         result = 31 * result + (int) (temp ^ (temp >>> 32));
+        result = 31 * result + (greedy ? 1 : 0);
         return result;
     }
 
@@ -215,6 +254,11 @@ public final class TreeSearchParameters
                 return params;
             }
 
+            boolean greedy = true;
+
+            if ((tmp = node.get("greedy")) != null)
+                greedy = tmp.asBoolean();
+
             int[] maxErrors = new int[3];
 
             if ((tmp = node.get("maxSubstitutions")) != null)
@@ -258,7 +302,7 @@ public final class TreeSearchParameters
                 else if (maxErrors[2] != 0)
                     throw new IllegalArgumentException("insertionPenalty is absent.");
 
-                return new TreeSearchParameters(maxErrors, penalty, maxPenalty);
+                return new TreeSearchParameters(maxErrors, penalty, maxPenalty, greedy);
             }
         }
     }
@@ -271,6 +315,8 @@ public final class TreeSearchParameters
                 jgen.writeString(knownName);
             else {
                 jgen.writeStartObject();
+
+                jgen.writeObjectField("greedy", value.greedy);
 
                 if (value.maxErrors[0] != 0)
                     jgen.writeObjectField("maxSubstitutions", value.maxErrors[0]);
