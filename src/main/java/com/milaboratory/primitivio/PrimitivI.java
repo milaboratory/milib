@@ -21,7 +21,7 @@ import java.util.ArrayList;
 public final class PrimitivI implements DataInput, AutoCloseable {
     final DataInput input;
     final SerializersManager manager;
-    final ArrayList<Object> references = new ArrayList<>(), putKnownAfterReset = new ArrayList<>();
+    final ArrayList<Object> references = new ArrayList<>(), putKnownAfterReset = new ArrayList<>(), knownObjects = new ArrayList<>();
     int knownReferencesCount = 0;
     int depth = 0;
 
@@ -41,6 +41,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
 
     public SerializersManager getSerializersManager() {
         return manager;
+    }
+
+    public void putKnownObject(Object ref) {
+        knownObjects.add(ref);
     }
 
     public void putKnownReference(Object ref) {
@@ -91,8 +95,13 @@ public final class PrimitivI implements DataInput, AutoCloseable {
                     if (depth == 0)
                         reset();
                 }
+            } else if ((id & 1) == 0) {
+                Object obj = references.get((id >>> 1) - 1);
+                if (!type.isInstance(obj))
+                    throw new RuntimeException("Wrong file format.");
+                return (T) obj;
             } else {
-                Object obj = references.get(id - PrimitivO.ID_OFFSET);
+                Object obj = knownObjects.get((id >>> 1) - 1);
                 if (!type.isInstance(obj))
                     throw new RuntimeException("Wrong file format.");
                 return (T) obj;
