@@ -128,7 +128,7 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
             boolean writeIdAfter = false;
             if (serializer.isReference()) {
                 // Checking if it is a known object
-                int id = knownObjects.get(object);
+                int id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object);
                 if (id != Integer.MIN_VALUE) {
                     writeKnownObject(id);
                     return;
