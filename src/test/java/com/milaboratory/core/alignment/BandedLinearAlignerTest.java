@@ -334,7 +334,7 @@ public class BandedLinearAlignerTest {
     @Test
     public void alignLocalGlobalRandomTest() throws Exception {
         NucleotideSequence seq1, seq2;
-        int mismatchScore, gapScore;
+        int matchScore, mismatchScore, gapScore;
         LinearGapAlignmentScoring<NucleotideSequence> scoring;
         int width;
         Alignment<NucleotideSequence> alignment;
@@ -346,9 +346,10 @@ public class BandedLinearAlignerTest {
                     .05, .05);
             Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(seq1, model);
             seq2 = mut.mutate(seq1);
-            mismatchScore = -random.nextInt(1, 10);
-            gapScore = -random.nextInt(1, 10);
-            scoring = new LinearGapAlignmentScoring<>(NucleotideSequence.ALPHABET, 0, mismatchScore, gapScore);
+            matchScore = random.nextInt(-10, 10);
+            mismatchScore = Math.min(-1, matchScore - random.nextInt(1, 10));
+            gapScore = Math.min(-1, matchScore - random.nextInt(1, 10));
+            scoring = new LinearGapAlignmentScoring<>(NucleotideSequence.ALPHABET, matchScore, mismatchScore, gapScore);
             int expectedScore = AlignmentUtils.calculateScore(seq1, new Range(0, seq1.size()), mut, scoring);
             width = random.nextInt(1, 6);
             alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, width);
