@@ -186,7 +186,7 @@ public final class QualityTrimmer {
      * @param quality      quality values
      * @param parameters   trimming parameters
      * @param initialRange initial range to trim
-     * @return trimmed range
+     * @return trimmed range, or null in case the whole sequence should be trimmed
      */
     public static Range trim(SequenceQuality quality, QualityTrimmerParameters parameters, Range initialRange) {
         int lower = pabs(trim(quality, initialRange.getLower(), initialRange.getUpper(), +1, true, parameters)) + 1;

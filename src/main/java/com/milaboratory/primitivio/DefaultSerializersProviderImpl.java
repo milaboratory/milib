@@ -265,6 +265,9 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         }
     }
 
+    /**
+     * Default serializer for arrays of objects
+     */
     private static class ArraySerializer implements Serializer {
         final Class<?> componentType;
 
@@ -291,10 +294,15 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
             if (componentType == null)
                 throw new RuntimeException("Unknown array type.");
 
-            Object array = Array.newInstance(componentType, length);
+            // Object array = Array.newInstance(componentType, length);
+
+            // for (int i = 0; i < length; i++)
+            //     Array.set(array, i, input.readObject(componentType));
+
+            Object[] array = (Object[]) Array.newInstance(componentType, length);
 
             for (int i = 0; i < length; i++)
-                Array.set(array, i, input.readObject(componentType));
+                array[i] = input.readObject(componentType);
 
             return array;
         }

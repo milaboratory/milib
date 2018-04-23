@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.milaboratory.primitivio.test.TestEnum1.*;
@@ -176,6 +177,53 @@ public class PrimitivIOTest {
             Assert.assertTrue(dobj2.subObjects[0].subObjects[0] == dobj2.subObjects[1].subObjects[0]);
             Assert.assertTrue(dobj2.subObjects[4] == dobj2.subObjects[1].subObjects[0]);
             Assert.assertTrue(dobj2 == dobj2.subObjects[3]);
+        }
+    }
+
+    public static class StringWrapper {
+        final String str;
+
+        public StringWrapper(String str) {
+            this.str = str;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof StringWrapper)) return false;
+            StringWrapper that = (StringWrapper) o;
+            return Objects.equals(str, that.str);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(str);
+        }
+    }
+
+    @Test
+    public void testKnownObject1() throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO po = new PrimitivO(bos);
+        po.getSerializersManager().registerCustomSerializer(StringWrapper.class, PrimitivIO.dummySerializer());
+        int cc = 10;
+
+        for (int i = 0; i < cc; ++i)
+            po.putKnownObject(new StringWrapper("HiThere" + i));
+
+        for (int i = 0; i < cc; ++i)
+            po.writeObject(new StringWrapper("HiThere" + i));
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI pi = new PrimitivI(bis);
+        pi.getSerializersManager().registerCustomSerializer(StringWrapper.class, PrimitivIO.dummySerializer());
+        for (int i = 0; i < cc; ++i)
+            pi.putKnownObject(new StringWrapper("HiThere" + i));
+
+        StringWrapper obj;
+        for (int i = 0; i < cc; ++i) {
+            obj = pi.readObject(StringWrapper.class);
+            Assert.assertEquals(new StringWrapper("HiThere" + i), obj);
         }
     }
 

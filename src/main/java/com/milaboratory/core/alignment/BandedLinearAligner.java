@@ -46,6 +46,8 @@ public final class BandedLinearAligner {
     public static float align0(LinearGapAlignmentScoring scoring, NucleotideSequence seq1, NucleotideSequence seq2,
                                int offset1, int length1, int offset2, int length2,
                                int width, MutationsBuilder<NucleotideSequence> mutations, CachedIntArray cachedArray) {
+        if(offset1 < 0 || length1 < 0 || offset2 < 0 || length2 < 0)
+            throw new IllegalArgumentException();
 
         int size1 = length1 + 1,
                 size2 = length2 + 1;
@@ -129,6 +131,8 @@ public final class BandedLinearAligner {
     public static BandedSemiLocalResult alignRightAdded0(LinearGapAlignmentScoring scoring, NucleotideSequence seq1, NucleotideSequence seq2,
                                                          int offset1, int length1, int addedNucleotides1, int offset2, int length2, int addedNucleotides2,
                                                          int width, MutationsBuilder<NucleotideSequence> mutations, CachedIntArray cachedArray) {
+        if(offset1 < 0 || length1 < 0 || offset2 < 0 || length2 < 0)
+            throw new IllegalArgumentException();
 
         int size1 = length1 + 1,
                 size2 = length2 + 1;
@@ -240,6 +244,9 @@ public final class BandedLinearAligner {
     public static BandedSemiLocalResult alignLeftAdded0(LinearGapAlignmentScoring scoring, NucleotideSequence seq1, NucleotideSequence seq2,
                                                         int offset1, int length1, int addedNucleotides1, int offset2, int length2, int addedNucleotides2,
                                                         int width, MutationsBuilder<NucleotideSequence> mutations, CachedIntArray cachedArray) {
+        if(offset1 < 0 || length1 < 0 || offset2 < 0 || length2 < 0)
+            throw new IllegalArgumentException();
+
         int size1 = length1 + 1,
                 size2 = length2 + 1;
 
@@ -346,6 +353,8 @@ public final class BandedLinearAligner {
                                                             int offset1, int length1, int offset2, int length2,
                                                             int width, int stopPenalty, MutationsBuilder<NucleotideSequence> mutations,
                                                             CachedIntArray cachedArray) {
+        if(offset1 < 0 || length1 < 0 || offset2 < 0 || length2 < 0)
+            throw new IllegalArgumentException();
 
         int size1 = length1 + 1,
                 size2 = length2 + 1;
@@ -447,6 +456,9 @@ public final class BandedLinearAligner {
                                                              int offset1, int length1, int offset2, int length2,
                                                              int width, int stopPenalty, MutationsBuilder<NucleotideSequence> mutations,
                                                              CachedIntArray cachedArray) {
+        if(offset1 < 0 || length1 < 0 || offset2 < 0 || length2 < 0)
+            throw new IllegalArgumentException();
+
         int size1 = length1 + 1,
                 size2 = length2 + 1;
 

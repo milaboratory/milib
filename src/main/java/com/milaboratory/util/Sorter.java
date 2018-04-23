@@ -90,7 +90,18 @@ public final class Sorter<T> {
         if (!built)
             throw new IllegalStateException("Invoke build before requesting results.");
         if (lastChunkSize == -1)
-            return CUtils.EMPTY_OUTPUT_PORT_CLOSEABLE;
+            // Empty output port removing temp file on close.
+            return new OutputPortCloseable<T>() {
+                @Override
+                public void close() {
+                    tempFile.delete();
+                }
+
+                @Override
+                public T take() {
+                    return null;
+                }
+            };
         else
             return new MergeSortingPort();
     }
