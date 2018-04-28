@@ -40,7 +40,6 @@ public final class PatternAndTargetAligner {
             PatternAndTargetAlignmentScoring scoring, NucleotideSequenceCaseSensitive pattern,
             NSequenceWithQuality target, int rightMatchPosition, int maxIndels) {
         int leftMatchPosition = Math.max(0, rightMatchPosition + 1 - pattern.size() - maxIndels);
-        if (leftMatchPosition < 0) leftMatchPosition = 0;
         int patternSize = pattern.size();
         int targetPartSize = rightMatchPosition - leftMatchPosition + 1;
         NucleotideSequenceCaseSensitive targetSequence = fromNucleotideSequence(target.getSequence(), true);

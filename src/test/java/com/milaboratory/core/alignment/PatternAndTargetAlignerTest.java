@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 
 public class PatternAndTargetAlignerTest {
     private static final PatternAndTargetAlignmentScoring simpleScoring = new PatternAndTargetAlignmentScoring(
-            0, -9, -10, (byte)0, (byte)0, 0);
+            0, -9, -10, -9, (byte)0, (byte)0, 0);
 
     private static void assertScore(int expected, float score) {
         assertEquals((float)expected, score, 0.001);
@@ -67,8 +67,9 @@ public class PatternAndTargetAlignerTest {
         NucleotideSequenceCaseSensitive seq1 = new NucleotideSequenceCaseSensitive("tagaattagaca");
         NSequenceWithQuality seq2 = new NSequenceWithQuality("ATTAGTAA");
 
-        Alignment<NucleotideSequenceCaseSensitive> a = alignGlobal(new PatternAndTargetAlignmentScoring(0,
-                -10, -9, (byte)0, (byte)0, 0), seq1, seq2);
+        Alignment<NucleotideSequenceCaseSensitive> a = alignGlobal(new PatternAndTargetAlignmentScoring(
+                0, -10, -9, -10,
+                (byte)0, (byte)0, 0), seq1, seq2);
         Mutations<NucleotideSequenceCaseSensitive> muts = a.getAbsoluteMutations();
 
         int[] v = {-1, -1, -1, -1, 0, 1, 2, 3, 4, 6, -8, 7};
@@ -209,7 +210,8 @@ public class PatternAndTargetAlignerTest {
                 new NSequenceWithQuality("TTTTATTTTGTTTT") };
 
         PatternAndTargetAlignmentScoring smallGapPenaltyScoring = new PatternAndTargetAlignmentScoring(
-                0, -9, -2, (byte)0, (byte)0, 0);
+                0, -9, -2, -11,
+                (byte)0, (byte)0, 0);
 
         // ATTAGACA & ATTTAGACA
         Alignment<NucleotideSequenceCaseSensitive> a = alignLeftAdded(smallGapPenaltyScoring, patterns[0], targets[0],

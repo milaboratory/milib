@@ -19,6 +19,7 @@ import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.AlphabetCaseSensitive;
 import com.milaboratory.core.sequence.Wildcard;
 import gnu.trove.set.hash.TByteHashSet;
+import gnu.trove.set.hash.TCharHashSet;
 
 import java.util.Arrays;
 
@@ -38,23 +39,41 @@ public final class ScoringUtils {
      * @return simple substitution matrix
      */
     public static int[] getSymmetricMatrix(int match, int mismatch, Alphabet<?> alphabet) {
+        boolean patternAlphabet = alphabet instanceof AlphabetCaseSensitive;
         int codes = alphabet.size();
         int[] matrix = new int[codes * codes];
         Arrays.fill(matrix, mismatch);
-        if (alphabet instanceof AlphabetCaseSensitive)
+        if (patternAlphabet) {
             for (byte i = 0; i < codes; ++i)
                 for (byte j = 0; j < codes; ++j) {
                     if (Character.toLowerCase(alphabet.codeToSymbol(i))
                             == Character.toLowerCase(alphabet.codeToSymbol(j)))
                         matrix[i + codes * j] = match;
                 }
-        else
+            for (Wildcard wc1 : alphabet.getAllWildcards())
+                for (Wildcard wc2 : alphabet.getAllWildcards()) {
+                    boolean isMatch = false;
+                    TCharHashSet wc1MatchingChars = new TCharHashSet();
+                    for (int i = 0; i < wc1.basicSize(); i++)
+                        wc1MatchingChars.add(Character.toLowerCase(alphabet.codeToSymbol(wc1.getMatchingCode(i))));
+                    for (int i = 0; i < wc2.basicSize(); i++)
+                        if (wc1MatchingChars.contains(Character.toLowerCase(alphabet.codeToSymbol(
+                                wc2.getMatchingCode(i))))) {
+                            isMatch = true;
+                            break;
+                        }
+                    if (isMatch)
+                        matrix[wc1.getCode() + wc2.getCode() * codes] = match;
+                }
+        } else
             for (int i = 0; i < codes; ++i)
                 matrix[i + codes * i] = match;
-        return fillWildcardScores(matrix, alphabet);
+        return patternAlphabet ? matrix : fillWildcardScores(matrix, alphabet);
     }
 
     public static int[] setMismatchScore(Alphabet<?> alphabet, int[] matrix, int mismatch) {
+        if (alphabet instanceof AlphabetCaseSensitive)
+            throw new IllegalArgumentException();
         int size = (int) Math.round(Math.sqrt(matrix.length));
         if (size * size != matrix.length || alphabet.size() != size)
             throw new IllegalArgumentException();
@@ -68,6 +87,8 @@ public final class ScoringUtils {
     }
 
     public static int[] setMatchScore(Alphabet<?> alphabet, int[] matrix, int match) {
+        if (alphabet instanceof AlphabetCaseSensitive)
+            throw new IllegalArgumentException();
         int size = (int) Math.round(Math.sqrt(matrix.length));
         if (size * size != matrix.length || alphabet.size() != size)
             throw new IllegalArgumentException();
@@ -87,6 +108,8 @@ public final class ScoringUtils {
      * @return the same reference as matrix
      */
     public static int[] fillWildcardScores(int[] matrix, Alphabet<?> alphabet, byte... exclude) {
+        if (alphabet instanceof AlphabetCaseSensitive)
+            throw new IllegalArgumentException();
         int alSize = alphabet.size();
 
         if (matrix.length != alSize * alSize)
