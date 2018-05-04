@@ -70,8 +70,10 @@ public class AlignerCustomTest {
     @Ignore
     @Test
     public void testLinearSemiLocalLeft0Random() throws Exception {
-        for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                AffineGapAlignmentScoring.getNucleotideBLASTScoring()))
+        for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring()
+//                AffineGapAlignmentScoring.getNucleotideBLASTScoring()
+        ))
             for (boolean boundSeq1 : Arrays.asList(false, true))
                 for (boolean boundSeq2 : Arrays.asList(false, true))
                     testLinearSemiLocalLeft0Random(boundSeq1, boundSeq2, scoring);
@@ -106,9 +108,10 @@ public class AlignerCustomTest {
             if (boundSeq1 && boundSeq2)
                 assertTrue(la.getSequence1Range().getFrom() == offset1 &&
                         la.getSequence2Range().getFrom() == offset2);
-            else if (boundSeq1 || boundSeq2)
-                assertTrue((la.getSequence1Range().getFrom() == offset1 && boundSeq1) ||
-                        (la.getSequence2Range().getFrom() == offset2 && boundSeq2));
+            else if (boundSeq1)
+                assertTrue(la.getSequence1Range().getFrom() == offset1);
+            else if (boundSeq2)
+                assertTrue(la.getSequence2Range().getFrom() == offset2);
             else
                 assertTrue(la.getSequence1Range().getFrom() == offset1 ||
                         la.getSequence2Range().getFrom() == offset2);

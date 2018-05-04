@@ -19,6 +19,8 @@ import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.MutationsBuilder;
 import com.milaboratory.core.sequence.Sequence;
 
+import java.util.Arrays;
+
 public final class Aligner {
     private Aligner() {
     }
@@ -91,7 +93,7 @@ public final class Aligner {
     public static <S extends Sequence<S>> Alignment<S> alignGlobal(AlignmentScoring<S> alignmentScoring,
                                                                    S seq1, S seq2) {
         if (alignmentScoring instanceof AffineGapAlignmentScoring)
-            return alignGlobalAffine((AffineGapAlignmentScoring<S>) alignmentScoring, seq1, seq2);
+            return alignGlobalAffine4((AffineGapAlignmentScoring<S>) alignmentScoring, seq1, seq2);
         if (alignmentScoring instanceof LinearGapAlignmentScoring)
             return alignGlobalLinear((LinearGapAlignmentScoring<S>) alignmentScoring, seq1, seq2);
         throw new RuntimeException("Unknown scoring type.");
@@ -165,6 +167,99 @@ public final class Aligner {
                 score);
     }
 
+    public static final int MIN_VALUE = Integer.MIN_VALUE / 2;
+
+    static final class Matrix {
+        final int nRows, nColumns;
+        final int[][] data;
+
+        public Matrix(int nRows, int nColumns) {
+            this.nRows = nRows;
+            this.nColumns = nColumns;
+            this.data = new int[nRows][nColumns];
+        }
+
+        int get(int row, int col) {
+            return data[row][col];//data[nRows * row + column];
+        }
+
+        void set(int row, int col, int value) {
+            data[row][col] = value;// data[nRows * row + column] = value;
+        }
+
+        @Override
+        public String toString() {
+            int maxLength = 3;
+            for (int[] datum : data)
+                for (int n : datum)
+                    maxLength = Math.max(withSpaces(n, maxLength).length(), maxLength);
+
+            maxLength = Math.max(withSpaces(Math.max(nRows, nColumns), maxLength).length(), maxLength);
+
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(spaces(maxLength) + "  ");
+            for (int i = 0; ; ++i) {
+                sb.append(withSpaces(i, maxLength));
+                if (i == nColumns - 1)
+                    break;
+                sb.append(" ");
+            }
+            sb.append("\n");
+
+            for (int i = 0; ; ++i) {
+                sb.append(withSpaces(i, maxLength) + "  ");
+                for (int j = 0; j < data[i].length; ++j) {
+                    sb.append(withSpaces(data[i][j], maxLength));
+                    if (j == data[i].length - 1)
+                        break;
+                    sb.append(" ");
+                }
+                if (i == data.length - 1)
+                    return sb.toString();
+                sb.append("\n");
+            }
+        }
+
+        static String withSpacesL(int num, int len) {
+            String str = num == MIN_VALUE ? "-oo" : Integer.toString(num);
+            return str + spaces(len - str.length());
+        }
+
+        static String withSpaces(int num, int len) {
+            String str = num == MIN_VALUE ? "-oo" : Integer.toString(num);
+            return spaces(len - str.length()) + str;
+        }
+
+        static String spaces(int n) {
+            char[] sp = new char[n];
+            Arrays.fill(sp, ' ');
+            return new String(sp);
+        }
+
+        int max() {
+            int m = Integer.MIN_VALUE;
+            for (int i = 0; i < data.length; ++i) {
+                for (int j = 0; j < data[i].length; ++j) {
+                    m = Math.max(m, data[i][j]);
+                }
+            }
+            return m;
+        }
+    }
+
+    private static int max(int a, int b) {
+        return Math.max(a, b);
+    }
+
+    private static int max(int a, int b, int c) {
+        return max(max(a, b), c);
+    }
+
+    private static int max(int a, int b, int c, int d) {
+        return max(max(a, b, c), d);
+    }
+
     /**
      * Performs global alignment using affine gap scoring system (different penalties exist for gap opening and gap
      * extension)
@@ -179,90 +274,555 @@ public final class Aligner {
         if (seq1.getAlphabet() != seq2.getAlphabet() || seq1.getAlphabet() != scoring.getAlphabet())
             throw new IllegalArgumentException("Different alphabets.");
 
-        int size1 = seq1.size() + 1,
-                size2 = seq2.size() + 1;
+        int
+                length1 = seq1.size(),
+                length2 = seq2.size(),
+                size1 = length1 + 1,
+                size2 = length2 + 1;
+        Matrix
+                gapIn1 = new Matrix(size1, size2),
+                gapIn2 = new Matrix(size1, size2),
+                matrix = new Matrix(size1, size2);
 
-        int[] alignXToGapAfterY = new int[size1 * size2];
-        int[] alignYTOGapAfterX = new int[size1 * size2];
-        int[] matrix = new int[size1 * size2];
+        int
+                gapOpenPenalty = scoring.getGapOpenPenalty(),
+                gapExtensionPenalty = scoring.getGapExtensionPenalty();
 
-        for (int j = 0; j < size2; ++j)
-            matrix[j] = scoring.getAffineGapPenalty(j);
+        int i, j;
+        for (i = 1; i < size1; ++i)
+            matrix.set(i, 0, gapOpenPenalty + (i - 1) * gapExtensionPenalty);
+        for (j = 1; j < size2; ++j)
+            matrix.set(0, j, gapOpenPenalty + (j - 1) * gapExtensionPenalty);
+        matrix.set(0, 0, 0);
 
-        for (int i = 0; i < size1; ++i)
-            matrix[i * size2] = scoring.getAffineGapPenalty(i);
+        for (i = 0; i < size1; ++i)
+            gapIn1.set(i, 0, MIN_VALUE);
+        for (j = 0; j < size2; ++j)
+            gapIn2.set(0, j, MIN_VALUE);
 
-        matrix[0] = 0;
+        for (i = 0; i < length1; ++i) {
+            for (j = 0; j < length2; ++j) {
+                int match = matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j));
+                int gap1 = max(
+                        matrix.get(i + 1, j) + gapOpenPenalty,
+//                        gapIn2.get(i + 1, j) + gapOpenPenalty,
+                        gapIn1.get(i + 1, j) + gapExtensionPenalty);
+                int gap2 = max(
+                        matrix.get(i, j + 1) + gapOpenPenalty,
+//                        gapIn1.get(i, j + 1) + gapOpenPenalty,
+                        gapIn2.get(i, j + 1) + gapExtensionPenalty);
+                int score = max(match, gap1, gap2);
 
-        for (int i = 0; i < size2; i++)
-            alignXToGapAfterY[i] = -10000;
-
-        for (int i = 0; i < size1; i++)
-            alignYTOGapAfterX[i * size2] = -10000;
-
-        for (int i = 1; i < size1; ++i) {
-            for (int j = 1; j < size2; ++j) {
-                int match = matrix[(i - 1) * size2 + j - 1] + scoring.getScore(seq1.codeAt(i - 1), seq2.codeAt(j - 1));
-
-                alignXToGapAfterY[i * size2 + j] = Math.max(matrix[(i - 1) * size2 + j] + scoring.getGapOpenPenalty(), alignXToGapAfterY[(i - 1) * size2 + j] + scoring.getGapExtensionPenalty());
-                alignYTOGapAfterX[i * size2 + j] = Math.max(matrix[i * size2 + j - 1] + scoring.getGapOpenPenalty(), alignYTOGapAfterX[i * size2 + j - 1] + scoring.getGapExtensionPenalty());
-
-                matrix[i * size2 + j] = Math.max(match, Math.max(alignXToGapAfterY[i * size2 + j], alignYTOGapAfterX[i * size2 + j]));
+                gapIn1.set(i + 1, j + 1, gap1);
+                gapIn2.set(i + 1, j + 1, gap2);
+                matrix.set(i + 1, j + 1, score);
             }
         }
 
-        int i1 = seq1.size() - 1;
-        int i2 = seq2.size() - 1;
-        int v = matrix[(i1 + 1) * size2 + i2 + 1];
-        final int maxV = v;
 
-        MutationsBuilder<S> builder = new MutationsBuilder<S>(seq1.getAlphabet(), true);
+        //System.out.println(gapIn1);
+        i = length1 - 1;
+        j = length2 - 1;
 
-        while (i1 >= 0 || i2 >= 0) {
+        int pScore = matrix.get(i + 1, j + 1);
+        System.out.println(pScore);
+        MutationsBuilder<S> mutations = new MutationsBuilder<>(seq1.getAlphabet(), true);
+        while (i >= 0 || j >= 0) {
+            if (i >= 0
+                    && pScore == gapIn2.get(i + 1, j + 1)) {
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty)
+                    pScore = gapIn2.get(i, j + 1);
+                else {
+                    assert pScore == matrix.get(i, j + 1) + gapOpenPenalty;
+                    pScore = matrix.get(i, j + 1);
+                }
 
-            if (i1 >= 0 && v == alignXToGapAfterY[(i1 + 1) * size2 + i2 + 1]) {
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
+            } else if (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1)) {
 
-                if (v == alignXToGapAfterY[i1 * size2 + i2 + 1] + scoring.getGapExtensionPenalty())
-                    v = alignXToGapAfterY[i1 * size2 + i2 + 1];
-                else
-                    v = matrix[i1 * size2 + i2 + 1];
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty)
+                    pScore = gapIn1.get(i + 1, j);
+                else {
+                    assert pScore == matrix.get(i + 1, j) + gapOpenPenalty;
+                    pScore = matrix.get(i + 1, j);
+                }
 
-                builder.appendDeletion(i1, seq1.codeAt(i1));
-                i1--;
-            } else if (i2 >= 0 &&
-                    v == alignYTOGapAfterX[(i1 + 1) * size2 + i2 + 1]) {
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (i >= 0 && j >= 0
+                    && pScore == matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j))) {
+                pScore = matrix.get(i, j);
+                if (seq1.codeAt(i) != seq2.codeAt(j))
+                    mutations.appendSubstitution(i, seq1.codeAt(i), seq2.codeAt(j));
 
-                if (v == alignYTOGapAfterX[(i1 + 1) * size2 + i2] + scoring.getGapExtensionPenalty())
-                    v = alignYTOGapAfterX[(i1 + 1) * size2 + i2];
-                else
-                    v = matrix[(i1 + 1) * size2 + i2];
-
-                builder.appendInsertion(i1 + 1, seq2.codeAt(i2));
-                i2--;
-
-            } else if (i1 >= 0 && i2 >= 0 && v == matrix[i1 * size2 + i2] + scoring.getScore(seq1.codeAt(i1), seq2.codeAt(i2))) {
-                v = matrix[i1 * size2 + i2];
-
-                if (seq1.codeAt(i1) != seq2.codeAt(i2))
-                    builder.appendSubstitution(i1, seq1.codeAt(i1), seq2.codeAt(i2));
-
-                --i1;
-                --i2;
+                --i;
+                --j;
             }
-
             //gap up to first letter
-            else if (i1 == -1) {
-                builder.appendInsertion(i1 + 1, seq2.codeAt(i2));
-                i2--;
-            } else if (i2 == -1) {
-                builder.appendDeletion(i1, seq1.codeAt(i1));
-                i1--;
+            else if (i == -1) {
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (j == -1) {
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
             } else
                 throw new RuntimeException();
         }
 
-        return new Alignment<S>(seq1, builder.createAndDestroy(),
-                new Range(0, seq1.size()), new Range(0, seq2.size()), maxV);
+        return new Alignment<>(seq1, mutations.createAndDestroy(),
+                new Range(0, seq1.size()), new Range(0, seq2.size()), matrix.get(length1, length2));
+    }
+
+    /**
+     * Performs global alignment using affine gap scoring system (different penalties exist for gap opening and gap
+     * extension)
+     *
+     * @param scoring affine gap scoring system
+     * @param seq1    first sequence
+     * @param seq2    second sequence
+     * @return array of mutations
+     */
+    public static <S extends Sequence<S>> Alignment<S> alignGlobalAffine2(AffineGapAlignmentScoring<S> scoring,
+                                                                          S seq1, S seq2) {
+        if (seq1.getAlphabet() != seq2.getAlphabet() || seq1.getAlphabet() != scoring.getAlphabet())
+            throw new IllegalArgumentException("Different alphabets.");
+
+        int
+                length1 = seq1.size(),
+                length2 = seq2.size(),
+                size1 = length1 + 1,
+                size2 = length2 + 1;
+        Matrix
+                gapIn1 = new Matrix(size1, size2),
+                gapIn2 = new Matrix(size1, size2),
+                matrix = new Matrix(size1, size2);
+
+        int
+                gapOpenPenalty = scoring.getGapOpenPenalty(),
+                gapExtensionPenalty = scoring.getGapExtensionPenalty();
+
+        int i, j;
+        for (i = 0; i < size1; ++i) {
+            matrix.set(i, 0, MIN_VALUE);
+            gapIn1.set(i, 0, gapOpenPenalty + (i - 1) * gapExtensionPenalty);
+            gapIn2.set(i, 0, MIN_VALUE);
+
+        }
+        for (j = 0; j < size2; ++j) {
+            matrix.set(0, j, MIN_VALUE);
+            gapIn1.set(0, j, MIN_VALUE);
+            gapIn2.set(0, j, gapOpenPenalty + (j - 1) * gapExtensionPenalty);
+        }
+
+        matrix.set(0, 0, 0);
+        gapIn1.set(0, 0, 0);
+        gapIn2.set(0, 0, 0);
+
+        for (i = 1; i <= length1; ++i) {
+            for (j = 1; j <= length2; ++j) {
+                matrix.set(i, j, max(
+                        matrix.get(i - 1, j - 1),
+                        gapIn1.get(i - 1, j - 1),
+                        gapIn2.get(i - 1, j - 1))
+                        + scoring.getScore(seq1.codeAt(i - 1), seq2.codeAt(j - 1))
+                );
+
+                gapIn1.set(i, j, max(
+                        matrix.get(i - 1, j) + gapOpenPenalty,
+                        gapIn2.get(i - 1, j) + gapOpenPenalty,
+                        gapIn1.get(i - 1, j) + gapExtensionPenalty));
+                gapIn2.set(i, j, max(
+                        matrix.get(i, j - 1) + gapOpenPenalty,
+                        gapIn1.get(i, j - 1) + gapOpenPenalty,
+                        gapIn2.get(i, j - 1) + gapExtensionPenalty));
+//                int score = max(match, gap1, gap2);
+//
+//                gapIn1.set(i + 1, j + 1, gap1);
+//                gapIn2.set(i + 1, j + 1, gap2);
+//                matrix.set(i + 1, j + 1, score);
+            }
+        }
+
+
+        i = length1 - 1;
+        j = length2 - 1;
+
+        int pScore = matrix.get(length1, length2);
+        System.out.println(matrix.get(length1, length2));
+        System.out.println(gapIn1.get(length1, length2));
+        System.out.println(gapIn2.get(length1, length2));
+
+        MutationsBuilder<S> mutations = new MutationsBuilder<>(seq1.getAlphabet(), true);
+        while (i >= 0 || j >= 0) {
+            if (i >= 0
+                    && pScore == gapIn2.get(i + 1, j + 1)) {
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty)
+                    pScore = gapIn2.get(i, j + 1);
+                else {
+                    assert pScore == matrix.get(i, j + 1) + gapOpenPenalty;
+                    pScore = matrix.get(i, j + 1);
+                }
+
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
+            } else if (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1)) {
+
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty)
+                    pScore = gapIn1.get(i + 1, j);
+                else {
+                    assert pScore == matrix.get(i + 1, j) + gapOpenPenalty;
+                    pScore = matrix.get(i + 1, j);
+                }
+
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (i >= 0 && j >= 0
+                    && pScore == matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j))) {
+                pScore = matrix.get(i, j);
+                if (seq1.codeAt(i) != seq2.codeAt(j))
+                    mutations.appendSubstitution(i, seq1.codeAt(i), seq2.codeAt(j));
+
+                --i;
+                --j;
+            }
+            //gap up to first letter
+            else if (i == -1) {
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (j == -1) {
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
+            } else
+                throw new RuntimeException();
+        }
+
+        return new Alignment<>(seq1, mutations.createAndDestroy(),
+                new Range(0, seq1.size()), new Range(0, seq2.size()), matrix.get(length1, length2));
+    }
+
+
+    /**
+     * Performs global alignment using affine gap scoring system (different penalties exist for gap opening and gap
+     * extension)
+     *
+     * @param scoring affine gap scoring system
+     * @param seq1    first sequence
+     * @param seq2    second sequence
+     * @return array of mutations
+     */
+    public static <S extends Sequence<S>> Alignment<S> alignGlobalAffine3(AffineGapAlignmentScoring<S> scoring,
+                                                                          S seq1, S seq2) {
+        if (seq1.getAlphabet() != seq2.getAlphabet() || seq1.getAlphabet() != scoring.getAlphabet())
+            throw new IllegalArgumentException("Different alphabets.");
+
+        int
+                length1 = seq1.size(),
+                length2 = seq2.size(),
+                size1 = length1 + 1,
+                size2 = length2 + 1;
+        Matrix
+                gapIn1 = new Matrix(size1, size2),
+                gapIn2 = new Matrix(size1, size2),
+                matrix = new Matrix(size1, size2);
+
+        int
+                gapOpenPenalty = scoring.getGapOpenPenalty(),
+                gapExtensionPenalty = scoring.getGapExtensionPenalty();
+
+        int i, j;
+        for (i = 0; i < size1; ++i) {
+            matrix.set(i, 0, gapOpenPenalty + (i - 1) * gapExtensionPenalty);
+//            gapIn2.set(i, 0, gapOpenPenalty + (i - 1) * gapExtensionPenalty);
+            gapIn2.set(i, 0, MIN_VALUE);
+//            gapIn2.set(i, 0, MIN_VALUE);
+
+        }
+        for (j = 0; j < size2; ++j) {
+            matrix.set(0, j, gapOpenPenalty + (j - 1) * gapExtensionPenalty);
+//            gapIn1.set(0, j, gapOpenPenalty + (j - 1) * gapExtensionPenalty);
+            gapIn1.set(0, j, MIN_VALUE);
+//            gapIn1.set(0, j, MIN_VALUE);
+        }
+
+        matrix.set(0, 0, 0);
+//        gapIn1.set(0, 0, 0);
+//        gapIn2.set(0, 0, 0);
+
+        for (j = 0; j <= length2; ++j) {
+            for (i = 0; i <= length1; ++i) {
+
+
+                if (i >= 1)
+                    gapIn1.set(i, j, max(
+                            matrix.get(i - 1, j) + gapOpenPenalty,
+//                        gapIn2.get(i - 1, j) + gapOpenPenalty,
+                            gapIn1.get(i - 1, j) + gapExtensionPenalty));
+
+                if (j >= 1)
+                    gapIn2.set(i, j, max(
+                            matrix.get(i, j - 1) + gapOpenPenalty,
+//                        gapIn1.get(i, j - 1) + gapOpenPenalty,
+                            gapIn2.get(i, j - 1) + gapExtensionPenalty));
+
+                if (i >= 1 && j >= 1)
+                    matrix.set(i, j, max(
+                            matrix.get(i - 1, j - 1) + scoring.getScore(seq1.codeAt(i - 1), seq2.codeAt(j - 1)),
+                            gapIn1.get(i, j),
+                            gapIn2.get(i, j)));
+
+
+//                int score = max(match, gap1, gap2);
+//
+//                gapIn1.set(i + 1, j + 1, gap1);
+//                gapIn2.set(i + 1, j + 1, gap2);
+//                matrix.set(i + 1, j + 1, score);
+            }
+        }
+
+
+        i = length1 - 1;
+        j = length2 - 1;
+
+        int pScore = matrix.get(length1, length2);
+
+        System.out.println(" >>>>> >>>>> >>>>>");
+        System.out.println(matrix.get(length1, length2));
+        System.out.println(gapIn1.get(length1, length2));
+        System.out.println(gapIn2.get(length1, length2));
+        System.out.println(" <<<<< <<<<< <<<<<");
+
+        MutationsBuilder<S> mutations = new MutationsBuilder<>(seq1.getAlphabet(), true);
+        while (i >= 0 || j >= 0) {
+            if (i >= 0
+                    && pScore == gapIn2.get(i + 1, j + 1)) {
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty)
+                    pScore = gapIn2.get(i, j + 1);
+                else {
+//                    assert pScore == matrix.get(i, j + 1) + gapOpenPenalty;
+                    pScore = matrix.get(i, j + 1);
+                }
+
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
+            } else if (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1)) {
+
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty)
+                    pScore = gapIn1.get(i + 1, j);
+                else {
+//                    assert pScore == matrix.get(i + 1, j) + gapOpenPenalty;
+                    pScore = matrix.get(i + 1, j);
+                }
+
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (i >= 0 && j >= 0
+                    && pScore == matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j))) {
+                pScore = matrix.get(i, j);
+                if (seq1.codeAt(i) != seq2.codeAt(j))
+                    mutations.appendSubstitution(i, seq1.codeAt(i), seq2.codeAt(j));
+
+                --i;
+                --j;
+            }
+            //gap up to first letter
+            else if (i == -1) {
+                mutations.appendInsertion(i + 1, seq2.codeAt(j));
+                j--;
+            } else if (j == -1) {
+                mutations.appendDeletion(i, seq1.codeAt(i));
+                i--;
+            } else
+                throw new RuntimeException();
+        }
+
+        return new Alignment<>(seq1, mutations.createAndDestroy(),
+                new Range(0, seq1.size()), new Range(0, seq2.size()), matrix.get(length1, length2));
+    }
+
+    /**
+     * Performs global alignment using affine gap scoring system (different penalties exist for gap opening and gap
+     * extension)
+     *
+     * @param scoring affine gap scoring system
+     * @param seq1    first sequence
+     * @param seq2    second sequence
+     * @return array of mutations
+     */
+    public static <S extends Sequence<S>> Alignment<S> alignGlobalAffine4(AffineGapAlignmentScoring<S> scoring,
+                                                                          S seq1, S seq2) {
+        if (seq1.getAlphabet() != seq2.getAlphabet() || seq1.getAlphabet() != scoring.getAlphabet())
+            throw new IllegalArgumentException("Different alphabets.");
+
+        int
+                length1 = seq1.size(),
+                length2 = seq2.size(),
+                size1 = length1 + 1,
+                size2 = length2 + 1;
+        Matrix
+                gapIn1 = new Matrix(size1, size2),
+                gapIn2 = new Matrix(size1, size2),
+                matrix = new Matrix(size1, size2);
+
+        int
+                gapExtensionPenalty = scoring.getGapExtensionPenalty(),
+                gapOpenPenalty = scoring.getGapOpenPenalty() - gapExtensionPenalty;
+
+        int i, j;
+        for (i = 1; i < size1; ++i) {
+            matrix.set(i, 0, gapOpenPenalty + i * gapExtensionPenalty);
+            gapIn2.set(i, 0, gapOpenPenalty + i * gapExtensionPenalty);
+            gapIn1.set(i, 0, MIN_VALUE);
+
+        }
+        for (j = 1; j < size2; ++j) {
+            matrix.set(0, j, gapOpenPenalty + j * gapExtensionPenalty);
+            gapIn1.set(0, j, gapOpenPenalty + j * gapExtensionPenalty);
+            gapIn2.set(0, j, MIN_VALUE);
+        }
+
+        matrix.set(0, 0, 0);
+        gapIn1.set(0, 0, MIN_VALUE);
+        gapIn2.set(0, 0, MIN_VALUE);
+
+        for (i = 1; i <= length1; ++i) {
+            for (j = 1; j <= length2; ++j) {
+                gapIn1.set(i, j, max(
+                        matrix.get(i, j - 1) + gapOpenPenalty + gapExtensionPenalty,
+                        gapIn1.get(i, j - 1) + gapExtensionPenalty));
+
+                gapIn2.set(i, j, max(
+                        matrix.get(i - 1, j) + gapOpenPenalty + gapExtensionPenalty,
+                        gapIn2.get(i - 1, j) + gapExtensionPenalty));
+
+                matrix.set(i, j, max(
+                        matrix.get(i - 1, j - 1) +
+                                scoring.getScore(seq1.codeAt(i - 1), seq2.codeAt(j - 1)),
+                        gapIn2.get(i, j),
+                        gapIn1.get(i, j)));
+            }
+            // T-
+            // -A
+        }
+
+//        for (i = 0; i < length1; ++i) {
+//            for (j = 0; j < length2; ++j) {
+//                int match = matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j));
+//                int gap1 = max(
+//                        matrix.get(i + 1, j) + gapOpenPenalty + gapExtensionPenalty,
+//                        gapIn1.get(i + 1, j) + gapExtensionPenalty);
+//                int gap2 = max(
+//                        matrix.get(i, j + 1) + gapOpenPenalty + gapExtensionPenalty,
+//                        gapIn2.get(i, j + 1) + gapExtensionPenalty);
+//                int score = max(match, gap1, gap2);
+//
+//                gapIn1.set(i + 1, j + 1, gap1);
+//                gapIn2.set(i + 1, j + 1, gap2);
+//                matrix.set(i + 1, j + 1, score);
+//            }
+//        }
+
+
+//        System.out.println(" =======    matrix    ==== ");
+//        System.out.println(matrix);
+//        System.out.println(" =======    gap in 1 ====-- ");
+//        System.out.println(gapIn1);
+//        System.out.println(" =======    gap in 2 ====-- ");
+//        System.out.println(gapIn2);
+
+//        for (i = 0; i < length1; ++i) {
+//            for (j = 0; j < length2; ++j) {
+//                int match = matrix.get(i, j) + scoring.getScore(seq1.codeAt(i), seq2.codeAt(j));
+//                int gap1 = max(
+//                        matrix.get(i + 1, j) + gapOpenPenalty,
+////                        gapIn2.get(i + 1, j) + gapOpenPenalty,
+//                        gapIn1.get(i + 1, j) + gapExtensionPenalty);
+//                int gap2 = max(
+//                        matrix.get(i, j + 1) + gapOpenPenalty,
+////                        gapIn1.get(i, j + 1) + gapOpenPenalty,
+//                        gapIn2.get(i, j + 1) + gapExtensionPenalty);
+//                int score = max(match, gap1, gap2);
+//
+//                gapIn1.set(i + 1, j + 1, gap1);
+//                gapIn2.set(i + 1, j + 1, gap2);
+//                matrix.set(i + 1, j + 1, score);
+//            }
+//        }
+
+
+//        System.out.println(" >>>>> >>>>> >>>>>");
+//        System.out.println(matrix.get(length1, length2));
+//        System.out.println(gapIn2.get(length1, length2));
+//        System.out.println(gapIn1.get(length1, length2));
+//        System.out.println(" <<<<< <<<<< <<<<<");
+
+
+        i = length1;
+        j = length2;
+
+        MutationsBuilder<S> mutations = new MutationsBuilder<>(seq1.getAlphabet(), true);
+        int score = matrix.get(length1, length2);
+        boolean inGap1 = false, inGap2 = false;
+        while (i > 0 || j > 0) {
+            if (score == gapIn2.get(i, j) && score == gapIn1.get(i, j)) {
+                int sdasfsdfg = 1234234234;
+            }
+            assert !inGap1 || !inGap2;
+            if (!inGap2 && (inGap1 || (j > 0 && score == gapIn1.get(i, j)))) {
+                inGap1 = false;
+                if (score == gapIn1.get(i, j - 1) + gapExtensionPenalty) {
+                    inGap1 = true;
+                    score = gapIn1.get(i, j - 1);
+                } else {
+//                    assert score == matrix.get(i - 1, j) + gapOpenPenalty + gapExtensionPenalty;
+                    score = matrix.get(i, j - 1);
+                }
+
+                mutations.appendInsertion(i, seq2.codeAt(j - 1));
+//                mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
+//                mutations.appendInsertion(i, seq2.codeAt(j - 1));
+                j--;
+            } else if (inGap2 || (i > 0 && score == gapIn2.get(i, j))) {
+                inGap2 = false;
+                if (score == gapIn2.get(i - 1, j) + gapExtensionPenalty) {
+                    inGap2 = true;
+                    score = gapIn2.get(i - 1, j);
+                } else {
+//                    assert score == matrix.get(i, j - 1) + gapOpenPenalty + gapExtensionPenalty;
+                    score = matrix.get(i - 1, j);
+                }
+
+                mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
+//                mutations.appendInsertion(i - 1, seq2.codeAt(j - 1));
+//                mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
+                i--;
+            } else if (i > 0 && j > 0
+                    && score == matrix.get(i - 1, j - 1)
+                    + scoring.getScore(seq1.codeAt(i - 1), seq2.codeAt(j - 1))) {
+                score = matrix.get(i - 1, j - 1);
+                if (seq1.codeAt(i - 1) != seq2.codeAt(j - 1))
+                    mutations.appendSubstitution(i - 1, seq1.codeAt(i - 1), seq2.codeAt(j - 1));
+
+                --i;
+                --j;
+            }
+            //gap up to first letter
+//            else if (i == 0) {
+//                mutations.appendInsertion(i, seq2.codeAt(j - 1));
+//                j--;
+//            } else if (j == 0) {
+//                mutations.appendDeletion(i - 1, seq1.codeAt(i - 1));
+//                i--;
+//            }
+            else
+                throw new RuntimeException();
+        }
+
+        return new Alignment<>(seq1, mutations.createAndDestroy(),
+                new Range(0, seq1.size()), new Range(0, seq2.size()), matrix.get(length1, length2));
     }
 
     // TODO this is wrong, additional range calculation is required
@@ -404,10 +964,10 @@ public final class Aligner {
         int[] matrix = new int[size1 * size2];
 
         for (int i = 0; i < size2; i++)
-            alignXToGapAfterY[i] = -10000;
+            alignXToGapAfterY[i] = -10000000;
 
         for (int i = 0; i < size1; i++)
-            alignYTOGapAfterX[i * size2] = -10000;
+            alignYTOGapAfterX[i * size2] = -10000000;
 
         int max = -1;
         int i1Start = 0;
