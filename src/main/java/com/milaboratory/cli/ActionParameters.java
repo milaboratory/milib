@@ -17,8 +17,6 @@ package com.milaboratory.cli;
 
 import com.beust.jcommander.Parameter;
 
-import java.lang.reflect.Field;
-
 public abstract class ActionParameters {
     @Parameter(names = {"-h", "--help"}, help = true, description = "Displays help for this command.")
     public Boolean help = false;
