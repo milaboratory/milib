@@ -16,7 +16,9 @@
 package com.milaboratory.primitivio;
 
 import gnu.trove.impl.Constants;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
+import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
 
 import java.io.*;
@@ -28,13 +30,17 @@ import static com.milaboratory.primitivio.Util.zigZagEncodeLong;
 public final class PrimitivO implements DataOutput, AutoCloseable {
     static final int NULL_ID = 0;
     static final int NEW_OBJECT_ID = 1;
-    static final int ID_OFFSET = 2;
     private static final float RELOAD_FACTOR = 0.5f;
     final DataOutput output;
     final SerializersManager manager;
     final ArrayList<Object> putKnownAfterReset = new ArrayList<>();
     final TObjectIntCustomHashMap<Object> knownReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE,
             Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, Integer.MIN_VALUE);
+    /**
+     * These objects will be replaced by "known object token"
+     */
+    final TObjectIntMap<Object> knownObjects = new TObjectIntHashMap<>(Constants.DEFAULT_CAPACITY,
+            Constants.DEFAULT_LOAD_FACTOR, Integer.MIN_VALUE);
     final ArrayList<Object> addedReferences = new ArrayList<>();
     int depth = 0;
     TObjectIntCustomHashMap<Object> currentReferences = null;
@@ -59,6 +65,13 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
     private void ensureCurrentReferencesInitialized() {
         if (currentReferences == null)
             currentReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE, knownReferences);
+    }
+
+    public int putKnownObject(Object object) {
+        // Sequential id
+        int id = knownObjects.size();
+        knownObjects.put(object, id);
+        return id;
     }
 
     public void putKnownReference(Object object) {
@@ -114,15 +127,23 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
             boolean writeIdAfter = false;
             if (serializer.isReference()) {
-                int id = currentReferences.get(object);
+                // Checking if it is a known object
+                int id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object);
+                if (id != Integer.MIN_VALUE) {
+                    writeKnownObject(id);
+                    return;
+                }
+
+                // Checking if it is a known reference
+                id = currentReferences.get(object);
                 if (id != Integer.MIN_VALUE) {
                     writeObjectReference(id);
                     return;
-                } else {
-                    // Write just new object header to tell the reader that this object has no id yet
-                    writeNewObject();
-                    writeIdAfter = !serializer.handlesReference();
                 }
+
+                // Write just new object header to tell the reader that this object has no id yet
+                writeNewObject();
+                writeIdAfter = !serializer.handlesReference();
             }
 
             ++depth;
@@ -147,7 +168,11 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
     }
 
     private void writeObjectReference(int value) {
-        writeVarInt(value + ID_OFFSET);
+        writeVarInt((value + 1) << 1);
+    }
+
+    private void writeKnownObject(int value) {
+        writeVarInt(((value + 1) << 1) | 1);
     }
 
     public void writeVarIntZigZag(int value) {
