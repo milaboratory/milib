@@ -217,9 +217,14 @@ public class JCommanderBasedMain implements ActionHelper {
                 if (value == null)
                     continue;
 
-                String message = deprecated.value();
+                String message = "WARNING: " + Arrays.toString(parameter.names()) + " is deprecated";
                 if (!deprecated.version().isEmpty())
-                    message += " (deprecated since " + deprecated.version() + ")";
+                    message += " (since version " + deprecated.version() + ").";
+                else
+                    message += ".";
+
+                message += " ";
+                message += deprecated.value();
                 System.err.println(message);
             } catch (IllegalAccessException e) {}
         }
