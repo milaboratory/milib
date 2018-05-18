@@ -273,26 +273,26 @@ public class JCommanderBasedMain implements ActionHelper {
 
     public static class MainParameters {
         @Parameter(names = {"-h", "--help"}, help = true, description = "Displays this help message.")
-        public Boolean help;
+        public Boolean help = false;
 
         public boolean help() {
-            return help != null && help;
+            return help;
         }
     }
 
     public static class MainParametersWithVersion extends MainParameters {
         @Parameter(names = {"-v"}, help = true, description = "Output short version information.")
-        public Boolean shortVersion;
+        public Boolean shortVersion = false;
 
         @Parameter(names = {"--version"}, help = true, description = "Output full version information.")
-        public Boolean fullVersion;
+        public Boolean fullVersion = false;
 
         public boolean shortVersion() {
-            return shortVersion != null && shortVersion;
+            return shortVersion;
         }
 
         public boolean fullVersion() {
-            return fullVersion != null && fullVersion;
+            return fullVersion;
         }
     }
 }
