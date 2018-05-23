@@ -44,6 +44,24 @@ public class PatternAndTargetAlignmentScoringTest {
                 NucleotideAlphabetCaseSensitive.S), GOOD_QUALITY_VALUE);
         assertEquals(-5, scoring.getScore(NucleotideAlphabetCaseSensitive.w,
                 NucleotideAlphabetCaseSensitive.s), GOOD_QUALITY_VALUE);
+
+        scoring = new PatternAndTargetAlignmentScoring(10, -30,
+                -30, -100, GOOD_QUALITY_VALUE, BAD_QUALITY_VALUE, 0);
+
+        assertEquals(10, scoring.getScore(NucleotideAlphabetCaseSensitive.N,
+                NucleotideAlphabetCaseSensitive.A));
+        assertEquals(10, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
+                NucleotideAlphabetCaseSensitive.N));
+        assertEquals(10, scoring.getScore(NucleotideAlphabetCaseSensitive.n,
+                NucleotideAlphabetCaseSensitive.a));
+        assertEquals(10, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
+                NucleotideAlphabetCaseSensitive.n));
+        assertEquals(10, scoring.getScore(NucleotideAlphabetCaseSensitive.n,
+                NucleotideAlphabetCaseSensitive.n));
+        assertEquals(-30, scoring.getScore(NucleotideAlphabetCaseSensitive.a,
+                NucleotideAlphabetCaseSensitive.S));
+        assertEquals(-100, scoring.getScore(NucleotideAlphabetCaseSensitive.A,
+                NucleotideAlphabetCaseSensitive.S));
     }
 
     @Test

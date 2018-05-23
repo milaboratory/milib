@@ -134,22 +134,33 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     }
 
     /**
+     * Get score for matched nucleotide with extra check for uppercase mismatch penalty.
+     *
+     * @param from code of letter in pattern which is to be replaced
+     * @param to code of letter in target which is replacing
+     * @return match score with possible extra penalty for uppercase mismatch
+     */
+    @Override
+    public int getScore(byte from, byte to) {
+        int basicScore = super.getScore(from, to);
+        // for case sensitive alphabet, possible results for basicScore are only matchScore and mismatchScore
+        boolean isMismatch = (basicScore == mismatchScore);
+        return (isMismatch && Character.isUpperCase(alphabet.codeToSymbol(from))) ? uppercaseMismatchScore : basicScore;
+    }
+
+    /**
      * Get score for matched nucleotide using known target quality.
      *
      * @param from code of letter in pattern which is to be replaced
      * @param to code of letter in target which is replacing
      * @param quality quality for this matched nucleotide in target
-     * @return match score that includes corrections based on target quality and possible uppercase mismatch
+     * @return match score that includes correction based on target quality
      */
     public int getScore(byte from, byte to, byte quality) {
         int basicScore = getScore(from, to);
         int extraQualityPenalty = maxQualityPenalty * (goodQuality
                 - Math.min(goodQuality, Math.max(badQuality, quality))) / Math.max(1, goodQuality - badQuality);
-        // for case sensitive alphabet, possible results for basicScore are only matchScore and mismatchScore
-        boolean isMismatch = (basicScore == mismatchScore);
-        int extraMismatchPenalty = (isMismatch && Character.isUpperCase(from))
-                ? uppercaseMismatchScore - mismatchScore : 0;
-        return basicScore + extraQualityPenalty + extraMismatchPenalty;
+        return basicScore + extraQualityPenalty;
     }
 
     @Override
