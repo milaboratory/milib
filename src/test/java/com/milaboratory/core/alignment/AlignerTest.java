@@ -541,7 +541,7 @@ public class AlignerTest {
         NucleotideSequence ns1, ns2;
         LinearGapAlignmentScoring<NucleotideSequence> scoring = LinearGapAlignmentScoring.getNucleotideBLASTScoring();
         long time, t;
-        int iterations = 100000;
+        int iterations = 10000;
 
         for (int j = 0; j < 3; j++) {
             time = 0;
