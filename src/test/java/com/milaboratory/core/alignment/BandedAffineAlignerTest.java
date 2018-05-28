@@ -357,7 +357,7 @@ public class BandedAffineAlignerTest {
     }
 
     @Test
-    public void testSemiLocalLeftRandomCheckNucleotideScoring() {
+    public void testRandomCheckNucleotideScoring() {
         NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel()
                 .multiplyProbabilities(15);
 
