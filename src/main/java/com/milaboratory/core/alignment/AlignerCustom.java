@@ -305,25 +305,31 @@ public class AlignerCustom {
         int pScore = main.get(i + 1, j + 1);
 
         byte c1, c2;
+        boolean inGap1 = false, inGap2 = false;
         while (i >= 0 || j >= 0) {
             //if (i == -1 && !boundSeq2)
             //    break;
             //if (j == -1 && !boundSeq1)
             //    break;
-            if (i >= 0 &&
-                    pScore == gapIn2.get(i + 1, j + 1)) {
-                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty)
+            assert !inGap1 || !inGap2;
+            if (!inGap2 && (inGap1 || (i >= 0 &&
+                    pScore == gapIn2.get(i + 1, j + 1)))) {
+                inGap1 = false;
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty) {
+                    inGap1 = true;
                     pScore = gapIn2.get(i, j + 1);
-                else
+                } else
                     pScore = main.get(i, j + 1);
 
                 mutations.appendDeletion(offset1 + i, seq1.codeAt(offset1 + i));
                 --i;
-            } else if (j >= 0 &&
-                    pScore == gapIn1.get(i + 1, j + 1)) {
-                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty)
+            } else if (inGap2 || (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1))) {
+                inGap2 = false;
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty) {
+                    inGap2 = true;
                     pScore = gapIn1.get(i + 1, j);
-                else
+                } else
                     pScore = main.get(i + 1, j);
 
                 mutations.appendInsertion(offset1 + i + 1, seq2.codeAt(offset2 + j));

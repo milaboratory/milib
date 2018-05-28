@@ -20,7 +20,6 @@ import com.milaboratory.core.mutations.generator.MutationsGenerator;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -67,19 +66,18 @@ public class AlignerCustomTest {
     //    System.out.println(alignment);
     //}
 
-    @Ignore
     @Test
-    public void testLinearSemiLocalLeft0Random() throws Exception {
+    public void testSemiLocalLeft0Random() throws Exception {
         for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
                 LinearGapAlignmentScoring.getNucleotideBLASTScoring()
-//                AffineGapAlignmentScoring.getNucleotideBLASTScoring()
         ))
             for (boolean boundSeq1 : Arrays.asList(false, true))
                 for (boolean boundSeq2 : Arrays.asList(false, true))
-                    testLinearSemiLocalLeft0Random(boundSeq1, boundSeq2, scoring);
+                    testSemiLocalLeft0Random(boundSeq1, boundSeq2, scoring);
     }
 
-    public static void testLinearSemiLocalLeft0Random(boolean boundSeq1, boolean boundSeq2, AlignmentScoring<NucleotideSequence> scoring) throws Exception {
+    public static void testSemiLocalLeft0Random(boolean boundSeq1, boolean boundSeq2, AlignmentScoring<NucleotideSequence> scoring) throws Exception {
         int its = its(1000, 100000);
         AlignerCustom.LinearMatrixCache cacheLinear = new AlignerCustom.LinearMatrixCache();
         AlignerCustom.AffineMatrixCache cacheAffine = new AlignerCustom.AffineMatrixCache();
