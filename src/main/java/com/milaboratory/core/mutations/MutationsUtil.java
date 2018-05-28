@@ -203,6 +203,24 @@ public final class MutationsUtil {
         return true;
     }
 
+    public static <S extends Sequence> void assertCompatibleWithSequence(S sequence, int[] mutations) {
+        for (int mutation : mutations) {
+            int position = getPosition(mutation);
+            Alphabet al = sequence.getAlphabet();
+            Mutations muts = new Mutations<>(al, mutations);
+            if (isInsertion(mutation)) {
+                if (position >= sequence.size() + 1) {
+                    throw new IllegalArgumentException("Incompatible mutations (" + muts + ") and seq (" + sequence + "): position (" + position + ") in mutation (" + Mutation.encode(mutation, al) + ") is larger than seq size (" + sequence.size() + ")");
+                }
+            } else {
+                if (position >= sequence.size())
+                    throw new IllegalArgumentException("Incompatible mutations (" + muts + ") and seq (" + sequence + "): position (" + position + ") in mutation (" + Mutation.encode(mutation, al) + ") is larger than seq size (" + sequence.size() + ")");
+                if (sequence.codeAt(position) != getFrom(mutation))
+                    throw new IllegalArgumentException("Incompatible mutations (" + muts + ") and seq (" + sequence + "): from letter (" + al.codeToSymbol(getFrom(mutation)) + ") in mutation (" + Mutation.encode(mutation, al) + ") is not equal to letter in seq (" + al.codeToSymbol(sequence.codeAt(position)) + ")");
+            }
+        }
+    }
+
     static String getMutationPatternStringForAlphabet(Alphabet alphabet) {
         StringBuilder sb = new StringBuilder();
         StringBuilder t = new StringBuilder("([\\Q");
