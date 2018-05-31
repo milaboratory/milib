@@ -121,7 +121,7 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
 
             T[] temp;
             boolean inTree;
-            // Iterating through objects from smallest to biggest //TODO ???????
+            // Iterating through objects from biggest to smallest
             for (int i = 0; i < objects.size(); ++i) {
                 this.progress = i;
                 T object = objects.get(i);
