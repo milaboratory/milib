@@ -17,10 +17,12 @@ package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.Sequence;
+import com.milaboratory.util.GlobalObjectMappers;
 
 import java.io.ObjectStreamException;
 
@@ -146,6 +148,15 @@ public final class AffineGapAlignmentScoring<S extends Sequence<S>> extends Abst
     public AffineGapAlignmentScoring<S> setGapExtensionScore(int gapExtensionPenalty) {
         return new AffineGapAlignmentScoring<>(alphabet,
                 subsMatrixActual.clone(), gapOpenPenalty, gapExtensionPenalty);
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return GlobalObjectMappers.PRETTY.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override

@@ -305,25 +305,31 @@ public class AlignerCustom {
         int pScore = main.get(i + 1, j + 1);
 
         byte c1, c2;
+        boolean inGap1 = false, inGap2 = false;
         while (i >= 0 || j >= 0) {
             //if (i == -1 && !boundSeq2)
             //    break;
             //if (j == -1 && !boundSeq1)
             //    break;
-            if (i >= 0 &&
-                    pScore == gapIn2.get(i + 1, j + 1)) {
-                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty)
+            assert !inGap1 || !inGap2;
+            if (!inGap2 && (inGap1 || (i >= 0 &&
+                    pScore == gapIn2.get(i + 1, j + 1)))) {
+                inGap1 = false;
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty) {
+                    inGap1 = true;
                     pScore = gapIn2.get(i, j + 1);
-                else
+                } else
                     pScore = main.get(i, j + 1);
 
                 mutations.appendDeletion(offset1 + i, seq1.codeAt(offset1 + i));
                 --i;
-            } else if (j >= 0 &&
-                    pScore == gapIn1.get(i + 1, j + 1)) {
-                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty)
+            } else if (inGap2 || (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1))) {
+                inGap2 = false;
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty) {
+                    inGap2 = true;
                     pScore = gapIn1.get(i + 1, j);
-                else
+                } else
                     pScore = main.get(i + 1, j);
 
                 mutations.appendInsertion(offset1 + i + 1, seq2.codeAt(offset2 + j));
@@ -349,6 +355,136 @@ public class AlignerCustom {
         return new Alignment<>(seq1, mutations.createAndDestroy(),
                 new Range(offset1 + i + 1, offset1 + maxI + 1),
                 new Range(offset2 + j + 1, offset2 + maxJ + 1),
+                maxScore);
+    }
+
+    public static <S extends Sequence<S>> Alignment<S> alignAffineSemiLocalRight0(AffineGapAlignmentScoring<S> scoring,
+                                                                                  S seq1, S seq2,
+                                                                                  int offset1, int length1,
+                                                                                  int offset2, int length2,
+                                                                                  boolean boundSeq1, boolean boundSeq2,
+                                                                                  Alphabet<S> alphabet,
+                                                                                  AffineMatrixCache cache) {
+        if (length1 == 0 || length2 == 0)
+            return new Alignment<>(seq1, Mutations.empty(alphabet), new Range(offset1, offset1), new Range(offset2, offset2), 0);
+
+        int size1 = length1 + 1,
+                size2 = length2 + 1;
+
+        cache.initMatrices(size1, size2);
+
+        Matrix main = cache.main;
+        Matrix gapIn1 = cache.gapIn1;
+        Matrix gapIn2 = cache.gapIn2;
+
+        int i, j;
+
+        for (i = 1; i < size1; ++i) {
+            //int v = boundSeq1 ?
+            //        scoring.getGapOpenPenalty() + scoring.getGapExtensionPenalty() * (i - 1) :
+            //        0;
+            int v = scoring.getGapOpenPenalty() + scoring.getGapExtensionPenalty() * (i - 1);
+            main.set(i, 0, boundSeq1 ? v : 0);
+            gapIn1.set(i, 0, MIN_VALUE);
+            gapIn2.set(i, 0, v);
+        }
+
+        for (i = 1; i < size2; ++i) {
+            //int v = boundSeq2 ?
+            //        scoring.getGapOpenPenalty() + scoring.getGapExtensionPenalty() * (i - 1) :
+            //        0;
+            int v = scoring.getGapOpenPenalty() + scoring.getGapExtensionPenalty() * (i - 1);
+            main.set(0, i, boundSeq2 ? v : 0);
+            gapIn1.set(0, i, v);
+            gapIn2.set(0, i, MIN_VALUE);
+        }
+
+        main.set(0, 0, 0);
+        gapIn1.set(0, 0, MIN_VALUE);
+        gapIn2.set(0, 0, MIN_VALUE);
+
+        int match, gap1, gap2;
+
+        int maxI = -1, maxJ = -1, maxScore = 0;
+        final int gapExtensionPenalty = scoring.getGapExtensionPenalty();
+
+        for (i = 0; i < length1; ++i) {
+            for (j = 0; j < length2; ++j) {
+                match = main.get(i, j) +
+                        scoring.getScore(seq1.codeAt(offset1 + length1 - 1 - i), seq2.codeAt(offset2 + length2 - 1 - j));
+
+                gap1 = Math.max(main.get(i + 1, j) + scoring.getGapOpenPenalty(), gapIn1.get(i + 1, j) + gapExtensionPenalty);
+                gap2 = Math.max(main.get(i, j + 1) + scoring.getGapOpenPenalty(), gapIn2.get(i, j + 1) + gapExtensionPenalty);
+
+                gapIn1.set(i + 1, j + 1, gap1);
+                gapIn2.set(i + 1, j + 1, gap2);
+                int score = Math.max(match, Math.max(gap1, gap2));
+                main.set(i + 1, j + 1, score);
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    maxI = i;
+                    maxJ = j;
+                }
+            }
+        }
+
+        MutationsBuilder<S> mutations = new MutationsBuilder<>(alphabet);
+
+        i = maxI;
+        j = maxJ;
+        int pScore = main.get(i + 1, j + 1);
+
+        byte c1, c2;
+        boolean inGap1 = false, inGap2 = false;
+        while (i >= 0 || j >= 0) {
+            //if (i == -1 && !boundSeq2)
+            //    break;
+            //if (j == -1 && !boundSeq1)
+            //    break;
+            assert !inGap1 || !inGap2;
+            if (!inGap2 && (inGap1 || (i >= 0 &&
+                    pScore == gapIn2.get(i + 1, j + 1)))) {
+                inGap1 = false;
+                if (pScore == gapIn2.get(i, j + 1) + gapExtensionPenalty) {
+                    inGap1 = true;
+                    pScore = gapIn2.get(i, j + 1);
+                } else
+                    pScore = main.get(i, j + 1);
+
+                mutations.appendDeletion(offset1 + length1 - 1 - i, seq1.codeAt(offset1 + length1 - 1 - i));
+                --i;
+            } else if (inGap2 || (j >= 0 &&
+                    pScore == gapIn1.get(i + 1, j + 1))) {
+                inGap2 = false;
+                if (pScore == gapIn1.get(i + 1, j) + gapExtensionPenalty) {
+                    inGap2 = true;
+                    pScore = gapIn1.get(i + 1, j);
+                } else
+                    pScore = main.get(i + 1, j);
+
+                mutations.appendInsertion(offset1 + length1 - 1 - i, seq2.codeAt(offset2 + length2 - 1 - j));
+                --j;
+            } else if (i >= 0 && j >= 0 &&
+                    pScore == main.get(i, j) + scoring.getScore(c1 = seq1.codeAt(offset1 + length1 - 1 - i),
+                            c2 = seq2.codeAt(offset2 + length2 - 1 - j))) {
+                pScore = main.get(i, j);
+                if (c1 != c2)
+                    mutations.appendSubstitution(offset1 + length1 - 1 - i, c1, c2);
+                --i;
+                --j;
+            } else {
+                if (i == -1 && !boundSeq2)
+                    break;
+                if (j == -1 && !boundSeq1)
+                    break;
+                throw new RuntimeException();
+            }
+        }
+
+        return new Alignment<>(seq1, mutations.createAndDestroy(),
+                new Range(offset1 + length1 - maxI - 1, offset1 + length1 - i - 1),
+                new Range(offset2 + length2 - maxJ - 1, offset2 + length2 - j - 1),
                 maxScore);
     }
 

@@ -20,7 +20,9 @@ import com.milaboratory.core.io.util.IOTestUtil;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.MutationsUtil;
-import com.milaboratory.core.mutations.generator.*;
+import com.milaboratory.core.mutations.generator.MutationModels;
+import com.milaboratory.core.mutations.generator.MutationsGenerator;
+import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.AminoAcidSequence;
 import com.milaboratory.core.sequence.NucleotideSequence;
@@ -31,7 +33,6 @@ import gnu.trove.set.hash.TIntHashSet;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -53,10 +54,11 @@ public class AlignerTest {
         assertAlignment(alignment, s2);
         int calculatedScoring = alignment.calculateScore(scoring);
         if (calculatedScoring != alignment.getScore()) {
-            System.out.println(alignment.getScore());
-            System.out.println(calculatedScoring);
+            System.out.println("Actual score: " + alignment.getScore());
+            System.out.println("Expected score: " + calculatedScoring);
+            System.out.println("Actual alignment: ");
             System.out.println(alignment);
-            int i = 0;
+            System.out.println();
         }
         Assert.assertEquals(calculatedScoring, alignment.getScore(), 0.1);
     }
@@ -311,6 +313,96 @@ public class AlignerTest {
     }
 
     @Test
+    public void testGlobalRandomCheckNucleotideScoring() {
+        NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel()
+                .multiplyProbabilities(15);
+
+        Well19937c rand = new Well19937c(System.nanoTime());
+        for (AlignmentScoring<NucleotideSequence> sc : Arrays.asList(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),//new AffineGapAlignmentScoring<>(NucleotideSequence.ALPHABET, 5, -4, -10, -1),
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring())) {
+
+            int its = TestUtil.its(1000, 5000);
+            for (int i = 0; i < its; ++i) {
+                NucleotideSequence sequence = randomSequence(NucleotideSequence.ALPHABET, rand, 30, 300);
+
+                model.reseed(rand.nextLong());
+                Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(sequence, model);
+                float mutScore = AlignmentUtils.calculateScore(sequence, mut, sc);
+                NucleotideSequence mutated = mut.mutate(sequence);
+
+                Alignment<NucleotideSequence> r = Aligner.alignGlobal(sc, sequence, mutated);
+
+                Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
+                        mutated.getRange(r.getSequence2Range()));
+
+                AlignerTest.assertAlignment(r, mutated, sc);
+                Assert.assertTrue(mutScore <= r.calculateScore(sc));
+
+                r = Aligner.alignGlobal(sc, mutated, sequence);
+                AlignerTest.assertAlignment(r, sequence, sc);
+
+                Assert.assertEquals(r.getRelativeMutations().mutate(mutated.getRange(r.getSequence1Range())),
+                        sequence.getRange(r.getSequence2Range()));
+
+                Assert.assertTrue("Scoring type = " + sc.getClass().getName(),
+                        mutScore <= r.calculateScore(sc));
+            }
+        }
+    }
+
+    @Test
+    public void testGlobalAffine2() {
+        Mutations<NucleotideSequence> mutations = Mutations.decode("I2CSA4TSG5TDT6DC7DG8SA11GST15C", NucleotideSequence.ALPHABET);
+        NucleotideSequence seq1 = new NucleotideSequence("CAGCAGTCGTAACAGTTA");
+        NucleotideSequence seq2 = mutations.mutate(seq1);
+
+        AffineGapAlignmentScoring<NucleotideSequence> scoring = AffineGapAlignmentScoring.getNucleotideBLASTScoring();
+        Alignment<NucleotideSequence> expected = new Alignment<>(seq1, mutations, scoring);
+
+        Alignment<NucleotideSequence> actual = Aligner.alignGlobalAffine(scoring, seq2, seq1);
+
+        assertAlignment(actual, seq1);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+        assertTrue(actual.score >= expected.score);
+    }
+
+    @Test
+    public void testGlobalAffine2a() {
+        NucleotideSequence seq1 = new NucleotideSequence("ATATATAT");
+        NucleotideSequence seq2 = new NucleotideSequence("GCGCGCGC");
+        AffineGapAlignmentScoring<NucleotideSequence> scoring = AffineGapAlignmentScoring.getNucleotideBLASTScoring();
+        Alignment<NucleotideSequence> actual = Aligner.alignGlobalAffine(scoring, seq1, seq2);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+    }
+
+    @Test
+    public void testGlobalAffine3() {
+        NucleotideSequence seq1 = new NucleotideSequence("ATGCCGTAGCG");
+        NucleotideSequence seq2 = new NucleotideSequence("GCCGTAGCG");
+
+        AffineGapAlignmentScoring<NucleotideSequence> scoring = AffineGapAlignmentScoring.getNucleotideBLASTScoring();
+        Alignment<NucleotideSequence> actual = Aligner.alignGlobalAffine(scoring, seq1, seq2);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+
+        actual = Aligner.alignGlobalAffine(scoring, seq2, seq1);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+    }
+
+    @Test
+    public void testGlobalAffine4() {
+        NucleotideSequence seq1 = new NucleotideSequence("ATGCCGTAGCG");
+        NucleotideSequence seq2 = new NucleotideSequence("ATGCCGTAG");
+
+        AffineGapAlignmentScoring<NucleotideSequence> scoring = AffineGapAlignmentScoring.getNucleotideBLASTScoring();
+        Alignment<NucleotideSequence> actual = Aligner.alignGlobalAffine(scoring, seq1, seq2);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+
+        actual = Aligner.alignGlobalAffine(scoring, seq2, seq1);
+        assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
+    }
+
+    @Test
     public void testLocal1() {
         NucleotideSequence ns1 = new NucleotideSequence("tccCAGTTATGTCAGgggacacgagcatgcagagac");
         NucleotideSequence ns2 = new NucleotideSequence("aattgccgccgtcgttttcagCAGTATGTCAGatc");
@@ -398,112 +490,44 @@ public class AlignerTest {
     }
 
     @Test
-    public void testLocalRandomNucleotide1() {
-        AlignmentScoring<NucleotideSequence>[] scorings = new AlignmentScoring[]{
-                LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                AffineGapAlignmentScoring.getNucleotideBLASTScoring()
-        };
-        for (AlignmentScoring sc : scorings)
-            testLocalRandomCheckAlignedSequencesNucleotide(sc);
-    }
+    public void testLocalRandomCheckNucleotideScoring() {
+        NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel()
+                .multiplyProbabilities(15);
 
-    public void testLocalRandomCheckAlignedSequencesNucleotide(AlignmentScoring<NucleotideSequence> sc) {
-        int its = TestUtil.its(100, 3000);
-        Well19937c rand = new Well19937c();
+        Well19937c rand = new Well19937c(0);
         RandomDataGenerator rdi = new RandomDataGenerator(rand);
 
-        GenericNucleotideMutationModel model = new GenericNucleotideMutationModel(
-                SubstitutionModels.getUniformNucleotideSubstitutionModel(.05),
-                .05, .05);
+        for (AlignmentScoring<NucleotideSequence> sc : Arrays.asList(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring())) {
 
-        // Local
-        for (int i = 0; i < its; ++i) {
-            NucleotideSequence sequence = randomSequence(sc.getAlphabet(), rand, 100, 300);
-
-            int length = rdi.nextInt(20, 40);
-            int from = rdi.nextInt(0, sequence.size() - length - 1);
-
-            NucleotideSequence subsequence = sequence.getRange(from, from + length);
-
-            Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(subsequence, model);
-
-            int expectedScoring = AlignmentUtils.calculateScore(subsequence, new Range(0, subsequence.size()), mut, sc);
-
-            subsequence = mut.mutate(subsequence);
-            Alignment<NucleotideSequence> r = Aligner.alignLocal(sc, sequence, subsequence);
-            Assert.assertTrue("Scoring.", r.score >= expectedScoring);
-
-            Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
-                    subsequence.getRange(r.getSequence2Range()));
-
-            r = Aligner.alignLocal(sc, subsequence, sequence);
-
-            Assert.assertEquals(r.getRelativeMutations().mutate(subsequence.getRange(r.getSequence1Range())),
-                    sequence.getRange(r.getSequence2Range()));
-        }
-
-        // Global
-        for (int i = 0; i < its; ++i) {
-            NucleotideSequence seq1 = randomSequence(sc.getAlphabet(), rand, 100, 300);
-
-            Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(seq1, model);
-            int expectedScoring = AlignmentUtils.calculateScore(seq1, mut, sc);
-
-            NucleotideSequence seq2 = mut.mutate(seq1);
-
-            Alignment<NucleotideSequence> r = Aligner.alignGlobal(sc, seq1, seq2);
-            Assert.assertEquals(r.getAbsoluteMutations().mutate(seq1), seq2);
-            Assert.assertTrue("Scoring.", r.score >= expectedScoring);
-
-            r = Aligner.alignGlobal(sc, seq2, seq1);
-            Assert.assertEquals(r.getAbsoluteMutations().mutate(seq2), seq1);
-        }
-    }
-
-    @Ignore
-    @Test
-    public void testLocalRandomCheckNucleotideScoring() {
-        AlignmentScoring<NucleotideSequence>[] scorings = new AlignmentScoring[]{
-                LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                AffineGapAlignmentScoring.getNucleotideBLASTScoring()
-        };
-        for (AlignmentScoring<NucleotideSequence> sc : scorings) {
-            int its = 100000; //TestUtil.its(100, 5000);
-            Well19937c rand = new Well19937c();
-            RandomDataGenerator rdi = new RandomDataGenerator(rand);
-
-            //GenericNucleotideMutationModel model = new GenericNucleotideMutationModel(
-            //        SubstitutionModels.getUniformNucleotideSubstitutionModel(.05),
-            //        .05, .05);
-
-            NucleotideMutationModel model = MutationModels.getEmpiricalNucleotideMutationModel()
-                    .multiplyProbabilities(15);
+            int its = TestUtil.its(1000, 5000);
 
             for (int i = 0; i < its; ++i) {
-                NucleotideSequence sequence = randomSequence(NucleotideSequence.ALPHABET, rand, 100, 300);
+                NucleotideSequence sequence = randomSequence(NucleotideSequence.ALPHABET, rand, 50, 300);
 
-                int length = rdi.nextInt(20, 40);
+                int length = rdi.nextInt(20, 30);
                 int from = rdi.nextInt(0, sequence.size() - length - 1);
 
-                NucleotideSequence subsequence = sequence.getRange(from, from + length);
+                NucleotideSequence subSeq = sequence.getRange(from, from + length);
+                model.reseed(rand.nextLong());
+                Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(subSeq, model);
+                float mutScore = AlignmentUtils.calculateScore(subSeq, mut, sc);
 
-                Mutations<NucleotideSequence> mut = MutationsGenerator.generateMutations(subsequence, model);
-                float mutScore = AlignmentUtils.calculateScore(subsequence, mut, sc);
+                NucleotideSequence mutated = mut.mutate(subSeq);
 
-                subsequence = mut.mutate(subsequence);
-
-                Alignment<NucleotideSequence> r = Aligner.alignLocal(sc, sequence, subsequence);
+                Alignment<NucleotideSequence> r = Aligner.alignLocal(sc, sequence, mutated);
 
                 Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
-                        subsequence.getRange(r.getSequence2Range()));
+                        mutated.getRange(r.getSequence2Range()));
 
-                AlignerTest.assertAlignment(r, subsequence, sc);
+                AlignerTest.assertAlignment(r, mutated, sc);
                 Assert.assertTrue(mutScore <= r.calculateScore(sc));
 
-                r = Aligner.alignLocal(sc, subsequence, sequence);
+                r = Aligner.alignLocal(sc, mutated, sequence);
                 AlignerTest.assertAlignment(r, sequence, sc);
 
-                Assert.assertEquals(r.getRelativeMutations().mutate(subsequence.getRange(r.getSequence1Range())),
+                Assert.assertEquals(r.getRelativeMutations().mutate(mutated.getRange(r.getSequence1Range())),
                         sequence.getRange(r.getSequence2Range()));
 
                 Assert.assertTrue("Scoring type = " + sc.getClass().getName(),
@@ -512,13 +536,12 @@ public class AlignerTest {
         }
     }
 
-
     @Test
     public void testCalculateScore1() throws Exception {
         NucleotideSequence ns1, ns2;
         LinearGapAlignmentScoring<NucleotideSequence> scoring = LinearGapAlignmentScoring.getNucleotideBLASTScoring();
         long time, t;
-        int iterations = 100000;
+        int iterations = 10000;
 
         for (int j = 0; j < 3; j++) {
             time = 0;
