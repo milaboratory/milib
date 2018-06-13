@@ -19,6 +19,7 @@ import com.milaboratory.core.Range;
 import com.milaboratory.core.io.binary.AlignmentSerializer;
 import com.milaboratory.core.mutations.Mutation;
 import com.milaboratory.core.mutations.Mutations;
+import com.milaboratory.core.mutations.MutationsUtil;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.primitivio.annotations.Serializable;
@@ -80,10 +81,13 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
                      Range sequence1Range, Range sequence2Range,
                      float score) {
         if (!mutations.isEmpty()) {
-            if (!mutations.isCompatibleWith(sequence1)
-                    || !sequence1Range.contains(mutations.getMutatedRange())
-                    || sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
-                throw new IllegalArgumentException("Not compatible arguments: muts: " + mutations + " range1: " + sequence1Range + " range2: " + sequence2Range);
+            if (!mutations.isCompatibleWith(sequence1)) {
+                MutationsUtil.assertCompatibleWithSequence(sequence1, mutations.getRAWMutations());
+                throw new IllegalArgumentException("Not compatible mutations: muts: " + mutations + " range1: " + sequence1Range + " seq1: " + sequence1.getRange(sequence1Range));
+            } if (!sequence1Range.contains(mutations.getMutatedRange()))
+                throw new IllegalArgumentException("Not compatible mutations range: muts: " + mutations + " range1: " + sequence1Range);
+            if (sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
+                throw new IllegalArgumentException("Not compatible range2: muts: " + mutations + "muts delta:" + mutations.getLengthDelta() + " range1: " + sequence1Range + " range2: " + sequence2Range);
         } else if (sequence1Range.length() != sequence2Range.length())
             throw new IllegalArgumentException("Not compatible arguments.");
 

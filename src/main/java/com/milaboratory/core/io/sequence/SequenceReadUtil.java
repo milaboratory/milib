@@ -4,15 +4,25 @@ public final class SequenceReadUtil {
     private SequenceReadUtil() {}
 
     public static SequenceRead setReadId(long readId, SequenceRead read) {
+        if (readId == read.getId())
+            return read;
+
+        if (read instanceof SingleReadLazy)
+            return ((SingleReadLazy) read).setReadId(readId);
+
+        if (read.numberOfReads() == 1) {
+            SingleRead sRead = read.getRead(0);
+            return new SingleReadImpl(readId, sRead.getData(), sRead.getDescription());
+        }
+
         int nReads = read.numberOfReads();
-        SingleRead[] reads = new SingleRead[nReads];
-        for (int i = 0; i < reads.length; i++)
-            reads[i] = new SingleReadImpl(readId, read.getRead(i).getData(), read.getRead(i).getDescription());
-        if (nReads == 1)
-            return reads[0];
-        else if (nReads == 2)
-            return new PairedRead(reads);
+        SingleRead[] sReads = new SingleRead[nReads];
+        for (int i = 0; i < sReads.length; i++)
+            sReads[i] = (SingleRead) setReadId(readId, read.getRead(i));
+
+        if (nReads == 2)
+            return new PairedRead(sReads);
         else
-            return new MultiRead(reads);
+            return new MultiRead(sReads);
     }
 }

@@ -10,6 +10,10 @@ public interface AbstractKAlignerParameters extends BatchAlignerWithBaseParamete
 
     boolean isFloatingRightBound();
 
+    AbstractKAlignerParameters setFloatingLeftBound(boolean floatingLeftBound);
+
+    AbstractKAlignerParameters setFloatingRightBound(boolean floatingRightBound);
+
     float getRelativeMinScore();
 
     int getMaxHits();

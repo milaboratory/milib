@@ -20,7 +20,6 @@ import com.milaboratory.core.mutations.generator.MutationsGenerator;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -67,18 +66,19 @@ public class AlignerCustomTest {
     //    System.out.println(alignment);
     //}
 
-    @Ignore
     @Test
-    public void testLinearSemiLocalLeft0Random() throws Exception {
-        for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                AffineGapAlignmentScoring.getNucleotideBLASTScoring()))
+    public void testSemiLocalLeft0Random() throws Exception {
+        for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring()
+        ))
             for (boolean boundSeq1 : Arrays.asList(false, true))
                 for (boolean boundSeq2 : Arrays.asList(false, true))
-                    testLinearSemiLocalLeft0Random(boundSeq1, boundSeq2, scoring);
+                    testSemiLocalLeft0Random(boundSeq1, boundSeq2, scoring);
     }
 
-    public static void testLinearSemiLocalLeft0Random(boolean boundSeq1, boolean boundSeq2, AlignmentScoring<NucleotideSequence> scoring) throws Exception {
-        int its = its(1000, 100000);
+    public static void testSemiLocalLeft0Random(boolean boundSeq1, boolean boundSeq2, AlignmentScoring<NucleotideSequence> scoring) throws Exception {
+        int its = its(1000, 50000);
         AlignerCustom.LinearMatrixCache cacheLinear = new AlignerCustom.LinearMatrixCache();
         AlignerCustom.AffineMatrixCache cacheAffine = new AlignerCustom.AffineMatrixCache();
         NucleotideSequence seq1, seq2;
@@ -106,9 +106,10 @@ public class AlignerCustomTest {
             if (boundSeq1 && boundSeq2)
                 assertTrue(la.getSequence1Range().getFrom() == offset1 &&
                         la.getSequence2Range().getFrom() == offset2);
-            else if (boundSeq1 || boundSeq2)
-                assertTrue((la.getSequence1Range().getFrom() == offset1 && boundSeq1) ||
-                        (la.getSequence2Range().getFrom() == offset2 && boundSeq2));
+            else if (boundSeq1)
+                assertTrue(la.getSequence1Range().getFrom() == offset1);
+            else if (boundSeq2)
+                assertTrue(la.getSequence2Range().getFrom() == offset2);
             else
                 assertTrue(la.getSequence1Range().getFrom() == offset1 ||
                         la.getSequence2Range().getFrom() == offset2);
@@ -125,21 +126,25 @@ public class AlignerCustomTest {
     }
 
     @Test
-    public void testLinearSemiLocalRight0Random() throws Exception {
-        for (boolean boundSeq1 : Arrays.asList(false, true))
-            for (boolean boundSeq2 : Arrays.asList(false, true))
-                testLinearSemiLocalRight0Random(boundSeq1, boundSeq2);
+    public void testSemiLocalRight0Random() throws Exception {
+        for (AlignmentScoring<NucleotideSequence> scoring : Arrays.asList(
+                AffineGapAlignmentScoring.getNucleotideBLASTScoring(),
+                LinearGapAlignmentScoring.getNucleotideBLASTScoring()
+        ))
+            for (boolean boundSeq1 : Arrays.asList(false, true))
+                for (boolean boundSeq2 : Arrays.asList(false, true))
+                    testSemiLocalRight0Random(boundSeq1, boundSeq2, scoring);
     }
 
-    public static void testLinearSemiLocalRight0Random(boolean boundSeq1, boolean boundSeq2) throws Exception {
-        int its = its(1000, 100000);
-        AlignerCustom.LinearMatrixCache cache = new AlignerCustom.LinearMatrixCache();
+    public static void testSemiLocalRight0Random(boolean boundSeq1, boolean boundSeq2, AlignmentScoring<NucleotideSequence> scoring) throws Exception {
+        int its = its(1000, 50000);
+        AlignerCustom.LinearMatrixCache cacheLinear = new AlignerCustom.LinearMatrixCache();
+        AlignerCustom.AffineMatrixCache cacheAffine = new AlignerCustom.AffineMatrixCache();
         NucleotideSequence seq1, seq2;
         int offset1, offset2, length1, length2;
         Alignment<NucleotideSequence> la;
         RandomDataGenerator random = new RandomDataGenerator(new Well19937c());
         long totalAlLength = 0;
-        LinearGapAlignmentScoring<NucleotideSequence> scoring = LinearGapAlignmentScoring.getNucleotideBLASTScoring();
         for (int i = 0; i < its; ++i) {
             seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 80, 84);
             seq2 = MutationsGenerator.generateMutations(seq1, MutationModels.getEmpiricalNucleotideMutationModel().multiplyProbabilities(15)).mutate(seq1);
@@ -148,9 +153,14 @@ public class AlignerCustomTest {
             length1 = random.nextInt((seq1.size() - offset1) / 2, seq1.size() - offset1);
             length2 = random.nextInt((seq2.size() - offset2) / 2, seq2.size() - offset2);
 
-            la = AlignerCustom.alignLinearSemiLocalRight0(scoring,
-                    seq1, seq2, offset1, length1, offset2, length2, boundSeq1, boundSeq2,
-                    NucleotideSequence.ALPHABET, cache);
+            if (scoring instanceof LinearGapAlignmentScoring)
+                la = AlignerCustom.alignLinearSemiLocalRight0((LinearGapAlignmentScoring<NucleotideSequence>) scoring,
+                        seq1, seq2, offset1, length1, offset2, length2, boundSeq1, boundSeq2,
+                        NucleotideSequence.ALPHABET, cacheLinear);
+            else
+                la = AlignerCustom.alignAffineSemiLocalRight0((AffineGapAlignmentScoring<NucleotideSequence>) scoring,
+                        seq1, seq2, offset1, length1, offset2, length2, boundSeq1, boundSeq2,
+                        NucleotideSequence.ALPHABET, cacheAffine);
 
             if (boundSeq1 && boundSeq2)
                 assertTrue(la.getSequence1Range().getTo() == offset1 + length1 &&

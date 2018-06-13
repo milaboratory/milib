@@ -520,6 +520,7 @@ public final class KAlignerParameters2 implements AbstractKAlignerParameters, Cl
      * @param floatingLeftBound {@code true} if left bound of alignment could be floating
      * @return parameters object
      */
+    @Override
     public KAlignerParameters2 setFloatingLeftBound(boolean floatingLeftBound) {
         this.floatingLeftBound = floatingLeftBound;
         return this;
@@ -541,6 +542,7 @@ public final class KAlignerParameters2 implements AbstractKAlignerParameters, Cl
      * @param floatingRightBound {@code true} if right bound of alignment could be floating
      * @return parameters object
      */
+    @Override
     public KAlignerParameters2 setFloatingRightBound(boolean floatingRightBound) {
         this.floatingRightBound = floatingRightBound;
         return this;

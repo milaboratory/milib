@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -151,6 +152,7 @@ public class JCommanderBasedMain implements ActionHelper {
             if (action.params().help()) {
                 printActionHelp(commander, action);
             } else {
+                printDeprecationNotes(action);
                 action.params().validate();
                 action.go(this);
             }
@@ -199,6 +201,33 @@ public class JCommanderBasedMain implements ActionHelper {
             e.printStackTrace(new PrintStream(outputStream));
         if (printHelpOnError)
             printActionHelp(commander, action);
+    }
+
+    protected void printDeprecationNotes(Action action) {
+        ActionParameters params = action.params();
+        for (Field field : params.getClass().getFields()) {
+            Parameter parameter = field.getAnnotation(Parameter.class);
+            if (parameter == null)
+                continue;
+            DeprecatedParameter deprecated = field.getAnnotation(DeprecatedParameter.class);
+            if (deprecated == null)
+                continue;
+            try {
+                Object value = field.get(params);
+                if (value == null)
+                    continue;
+
+                String message = "WARNING: " + Arrays.toString(parameter.names()) + " is deprecated";
+                if (!deprecated.version().isEmpty())
+                    message += " (since version " + deprecated.version() + ").";
+                else
+                    message += ".";
+
+                message += " ";
+                message += deprecated.value();
+                System.err.println(message);
+            } catch (IllegalAccessException e) {}
+        }
     }
 
     public enum ProcessResult {

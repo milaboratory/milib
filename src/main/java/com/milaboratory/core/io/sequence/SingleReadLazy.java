@@ -27,12 +27,13 @@ import java.util.Iterator;
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
  */
-public abstract class SingleReadLazy implements SingleRead {
+public final class SingleReadLazy implements SingleRead {
     final long id;
     final byte[] buffer;
     final int descriptionFrom;
     final short sequenceOffset, qualityOffset, dataLength, descriptionLength;
     final boolean replaceWildcards;
+    final byte phredQualityOffset;
     NSequenceWithQuality sequenceWithQuality;
     String description;
 
@@ -43,7 +44,8 @@ public abstract class SingleReadLazy implements SingleRead {
                            short qualityOffset,
                            short dataLength,
                            short descriptionLength,
-                           boolean replaceWildcards) {
+                           boolean replaceWildcards,
+                           byte phredQualityOffset) {
         this.id = id;
         this.buffer = buffer;
         this.descriptionFrom = descriptionFrom;
@@ -52,9 +54,34 @@ public abstract class SingleReadLazy implements SingleRead {
         this.dataLength = dataLength;
         this.descriptionLength = descriptionLength;
         this.replaceWildcards = replaceWildcards;
+        this.phredQualityOffset = phredQualityOffset;
     }
 
-    abstract byte getQualityOffset();
+    private SingleReadLazy(long id, byte[] buffer, int descriptionFrom,
+                           short sequenceOffset, short qualityOffset, short dataLength, short descriptionLength,
+                           boolean replaceWildcards, byte phredQualityOffset, NSequenceWithQuality sequenceWithQuality,
+                           String description) {
+        this.id = id;
+        this.buffer = buffer;
+        this.descriptionFrom = descriptionFrom;
+        this.sequenceOffset = sequenceOffset;
+        this.qualityOffset = qualityOffset;
+        this.dataLength = dataLength;
+        this.descriptionLength = descriptionLength;
+        this.replaceWildcards = replaceWildcards;
+        this.phredQualityOffset = phredQualityOffset;
+        this.sequenceWithQuality = sequenceWithQuality;
+        this.description = description;
+    }
+
+    public byte getQualityOffset() {
+        return phredQualityOffset;
+    }
+
+    SingleReadLazy setReadId(long readId) {
+        return new SingleReadLazy(readId, buffer, descriptionFrom, sequenceOffset, qualityOffset,
+                dataLength, descriptionLength, replaceWildcards, phredQualityOffset, sequenceWithQuality, description);
+    }
 
     @Override
     public String getDescription() {
@@ -117,20 +144,10 @@ public abstract class SingleReadLazy implements SingleRead {
                                         boolean replaceWildcards) {
         if (format == QualityFormat.Phred33)
             return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength,
-                    descriptionLength, replaceWildcards) {
-                @Override
-                byte getQualityOffset() {
-                    return 33;
-                }
-            };
+                    descriptionLength, replaceWildcards, (byte) 33);
         else if (format == QualityFormat.Phred64)
             return new SingleReadLazy(id, buffer, descriptionFrom, dataOffset, qualityOffset, dataLength,
-                    descriptionLength, replaceWildcards) {
-                @Override
-                byte getQualityOffset() {
-                    return 64;
-                }
-            };
+                    descriptionLength, replaceWildcards, (byte) 64);
         throw new IllegalArgumentException("Unknown quality format.");
     }
 

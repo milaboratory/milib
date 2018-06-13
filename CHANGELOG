@@ -1,4 +1,14 @@
 
+MiLib 1.8.4 (14 Jun 2018)
+========================
+
+-- Major revision and fix for affine scoring alignment algorithms
+-- Tools for (low) quality trimming
+-- `setFloatingRightBound` and `setFloatingLeftBound` generalized on `AbstractKAlignerParameters`
+-- Fix for `setReadId` for `SingleReadLazy`
+-- Fixes IllegalState exception in Sorter with empty input
+
+
 MiLib 1.8.3 (30 Mar 2018)
 ========================
 

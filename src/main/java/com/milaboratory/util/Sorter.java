@@ -24,6 +24,7 @@ public final class Sorter<T> {
     private final ObjectSerializer<T> serializer;
     private final File tempFile;
     private final TLongArrayList chunkOffsets = new TLongArrayList();
+    private boolean built = false;
     private int lastChunkSize = -1;
     /**
      * Amount of memory that can be used during read stage. Determined automatically as maximal block size during block
@@ -82,12 +83,27 @@ public final class Sorter<T> {
             }
             memoryBudget = maxBlockSize;
         }
+        built = true;
     }
 
     public OutputPortCloseable<T> getSorted() throws IOException {
+        if (!built)
+            throw new IllegalStateException("Invoke build before requesting results.");
         if (lastChunkSize == -1)
-            throw new IllegalStateException();
-        return new MergeSortingPort();
+            // Empty output port removing temp file on close.
+            return new OutputPortCloseable<T>() {
+                @Override
+                public void close() {
+                    tempFile.delete();
+                }
+
+                @Override
+                public T take() {
+                    return null;
+                }
+            };
+        else
+            return new MergeSortingPort();
     }
 
     private final class MergeSortingPort implements OutputPortCloseable<T> {

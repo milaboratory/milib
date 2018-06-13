@@ -456,6 +456,7 @@ public final class KAlignerParameters implements Cloneable, java.io.Serializable
      * @param floatingLeftBound {@code true} if left bound of alignment could be floating
      * @return parameters object
      */
+    @Override
     public KAlignerParameters setFloatingLeftBound(boolean floatingLeftBound) {
         this.floatingLeftBound = floatingLeftBound;
         return this;
@@ -477,6 +478,7 @@ public final class KAlignerParameters implements Cloneable, java.io.Serializable
      * @param floatingRightBound {@code true} if right bound of alignment could be floating
      * @return parameters object
      */
+    @Override
     public KAlignerParameters setFloatingRightBound(boolean floatingRightBound) {
         this.floatingRightBound = floatingRightBound;
         return this;
