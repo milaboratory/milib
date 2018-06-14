@@ -11,13 +11,13 @@
 <dependency>
     <groupId>com.milaboratory</groupId>
     <artifactId>milib</artifactId>
-    <version>1.4</version>
+    <version>1.8.4</version>
 </dependency>
 ```
 
 ## License
 
-   Copyright 2015 MiLaboratory.com
+   Copyright 2018 MiLaboratory.com
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
