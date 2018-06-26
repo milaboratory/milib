@@ -340,7 +340,7 @@ public class BandedLinearAlignerTest {
         int width;
         Alignment<NucleotideSequence> alignment;
         RandomDataGenerator random = new RandomDataGenerator(new Well19937c());
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 30000; ++i) {
             seq1 = randomSequence(NucleotideSequence.ALPHABET, random, 1, 100);
             GenericNucleotideMutationModel model = new GenericNucleotideMutationModel(
                     SubstitutionModels.getUniformNucleotideSubstitutionModel(.05),
@@ -355,7 +355,7 @@ public class BandedLinearAlignerTest {
             width = random.nextInt(1, 6);
             alignment = BandedLinearAligner.alignLocalGlobal(scoring, new NSequenceWithQuality(seq1.toString()),
                     new NSequenceWithQuality(seq2.toString()), width);
-            if (width >= mut.countOfIndels())
+            if ((width >= mut.countOfIndels()) && (Math.min(seq1.size(), seq2.size()) <= 63))
                 assertTrue(alignment.score >= expectedScore);
             AlignerTest.assertAlignment(alignment, seq2);
         }
