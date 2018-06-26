@@ -19,9 +19,15 @@ import com.milaboratory.core.Range;
 import com.milaboratory.core.motif.BitapMatcher;
 import com.milaboratory.core.motif.BitapPattern;
 import com.milaboratory.core.mutations.MutationsBuilder;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 
 public final class BandedLinearAligner {
+    private static final Range RANGE0 = new Range(0, 0);
+    private static final Range RANGE1 = new Range(0, 1);
+    private static final Alignment<NucleotideSequence> EMPTY_ALIGNMENT = new Alignment<>(NucleotideSequence.EMPTY,
+            new MutationsBuilder<>(NucleotideSequence.ALPHABET).createAndDestroy(), RANGE0, RANGE0, 0);
+
     private BandedLinearAligner() {
     }
 
@@ -769,19 +775,24 @@ public final class BandedLinearAligner {
      * considered shorter.
      *
      * @param scoring   scoring system
-     * @param seq1      first sequence
-     * @param seq2      second sequence
+     * @param seq1      first sequence with quality
+     * @param seq2      second sequence with quality
      * @param width     width of banded alignment matrix. In other terms max allowed number of indels
-     * @return          alignment objects which contains mutations and aligned ranges in sequences
+     * @return          alignment object which contains mutations and aligned ranges in sequences
      */
     public static Alignment<NucleotideSequence> alignLocalGlobal(LinearGapAlignmentScoring scoring,
-                                                                 NucleotideSequence seq1, NucleotideSequence seq2,
+                                                                 NSequenceWithQuality seq1, NSequenceWithQuality seq2,
                                                                  int width) {
+        if ((seq1.size() <= 1) && (seq2.size() <= 1))
+            return alignLocalGlobalQuick(scoring, seq1.getSequence(),
+                    (seq1.size() == 0) ? -1 : seq1.getSequence().codeAt(0),
+                    (seq2.size() == 0) ? -1 : seq2.getSequence().codeAt(0));
+
         boolean seq1IsShorter = seq1.size() <= seq2.size();
         Range bestRange = findBestRange(seq1IsShorter ? seq1 : seq2, seq1IsShorter ? seq2 : seq1, width,
                 scoring.getMaximalMatchScore() > 0);
-        NucleotideSequence currentSeq1 = seq1IsShorter ? seq1 : seq1.getRange(bestRange);
-        NucleotideSequence currentSeq2 = seq1IsShorter ? seq2.getRange(bestRange) : seq2;
+        NucleotideSequence currentSeq1 = seq1IsShorter ? seq1.getSequence() : seq1.getSequence().getRange(bestRange);
+        NucleotideSequence currentSeq2 = seq1IsShorter ? seq2.getSequence().getRange(bestRange) : seq2.getSequence();
         int size1 = currentSeq1.size() + 1;
         int size2 = currentSeq2.size() + 1;
         int mutOffset = seq1IsShorter ? 0 : bestRange.getLower();
@@ -870,10 +881,40 @@ public final class BandedLinearAligner {
             else
                 seq1RangeLower = i - j + bestRange.getLower();
             mutations.reverseRange(0, mutations.size());
-            return new Alignment<>(seq1, mutations.createAndDestroy(), new Range(seq1RangeLower, seq1RangeUpper),
-                    new Range(seq2RangeLower, seq2RangeUpper), maxScore);
+            return new Alignment<>(seq1.getSequence(), mutations.createAndDestroy(),
+                    new Range(seq1RangeLower, seq1RangeUpper), new Range(seq2RangeLower, seq2RangeUpper), maxScore);
         } finally {
             AlignmentCache.release();
+        }
+    }
+
+    /**
+     * Quick alignment for alignLocalGlobal, for cases when both sequences have length 0 or 1.
+     *
+     * @param scoring       scoring system
+     * @param seq1          first sequence, used in generated alignment
+     * @param c1            code of character from first sequence, or -1 if first sequence have length 0
+     * @param c2            code of character from second sequence, or -1 if second sequence have length 0
+     * @return              alignment object which contains mutations and aligned ranges in sequences
+     */
+    private static Alignment<NucleotideSequence> alignLocalGlobalQuick(LinearGapAlignmentScoring scoring,
+                                                                       NucleotideSequence seq1, byte c1, byte c2) {
+        if ((c1 == -1) && (c2 == -1))
+            return EMPTY_ALIGNMENT;
+        else {
+            MutationsBuilder<NucleotideSequence> mutations = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
+            if ((c1 != -1) && (c2 != -1)) {
+                if (c1 != c2)
+                    mutations.appendSubstitution(0, c1, c2);
+                return new Alignment<>(seq1, mutations.createAndDestroy(), RANGE1, RANGE1, scoring.getScore(c1, c2));
+            } else if (c1 == -1) {
+                mutations.appendInsertion(0, c2);
+                return new Alignment<>(NucleotideSequence.EMPTY, mutations.createAndDestroy(), RANGE0, RANGE1,
+                        scoring.getGapPenalty());
+            } else {
+                mutations.appendDeletion(0, c1);
+                return new Alignment<>(seq1, mutations.createAndDestroy(), RANGE1, RANGE0, scoring.getGapPenalty());
+            }
         }
     }
 
@@ -894,37 +935,56 @@ public final class BandedLinearAligner {
     /**
      * Detect best range in long sequence for local-global aligner.
      *
-     * @param shortSeq              short sequence
-     * @param longSeq               long sequence
+     * @param shortSeq              short sequence with quality
+     * @param longSeq               long sequence with quality
      * @param width                 width of banded alignment matrix: max allowed number of indels
      * @param matchScoreIsPositive  true if match score is positive in alignment scoring
      * @return                      best range in long sequence to align short sequence
      */
-    private static Range findBestRange(NucleotideSequence shortSeq, NucleotideSequence longSeq, int width,
+    private static Range findBestRange(NSequenceWithQuality shortSeq, NSequenceWithQuality longSeq, int width,
                                        boolean matchScoreIsPositive) {
         final int BITAP_MAX_LENGTH = 63;
         int estimatedMaxErrors = width * 2;
-        if (shortSeq.size() <= BITAP_MAX_LENGTH) {
-            BitapPattern bitapPattern = shortSeq.toMotif().getBitapPattern();
-            BitapMatcher bitapMatcher = bitapPattern.substitutionAndIndelMatcherFirst(estimatedMaxErrors, longSeq);
-            int bitapPos = bitapMatcher.findNext();
-            int startPos = bitapPos;
-            int minNumberOfErrors = Integer.MAX_VALUE;
-            while (bitapPos != -1) {
-                if (bitapMatcher.getNumberOfErrors() < minNumberOfErrors) {
-                    minNumberOfErrors = bitapMatcher.getNumberOfErrors();
-                    startPos = bitapPos;
+        int shortSeqLeftTail = 0;
+        BitapPattern bitapPattern;
+        if (shortSeq.size() > BITAP_MAX_LENGTH) {
+            int currentSumQuality = 0;
+            for (int i = 0; i < BITAP_MAX_LENGTH; i++)
+                currentSumQuality += shortSeq.getQuality().value(i);
+            int currentPosition = 0;
+            int bestQuality = currentSumQuality;
+            while (currentPosition + BITAP_MAX_LENGTH + 1 < shortSeq.size()) {
+                currentSumQuality -= shortSeq.getQuality().value(currentPosition);
+                currentPosition++;
+                currentSumQuality += shortSeq.getQuality().value(currentPosition + BITAP_MAX_LENGTH);
+                if (currentSumQuality > bestQuality) {
+                    bestQuality = currentSumQuality;
+                    shortSeqLeftTail = currentPosition;
                 }
-                bitapPos = bitapMatcher.findNext();
             }
-            if (startPos != -1) {
-                int currentSeqWidth = shortSeq.size() + (matchScoreIsPositive ? width
-                        : Math.min(width, minNumberOfErrors));
-                int endPos = Math.min(longSeq.size(), startPos + currentSeqWidth);
-                startPos = Math.max(0, endPos - currentSeqWidth);
-                return new Range(startPos, endPos);
+            bitapPattern = shortSeq.getSequence().getRange(shortSeqLeftTail, shortSeqLeftTail + BITAP_MAX_LENGTH)
+                    .toMotif().getBitapPattern();
+        } else
+            bitapPattern = shortSeq.getSequence().toMotif().getBitapPattern();
+        BitapMatcher bitapMatcher = bitapPattern.substitutionAndIndelMatcherFirst(estimatedMaxErrors,
+                longSeq.getSequence());
+        int bitapPos = bitapMatcher.findNext();
+        int startPos = (bitapPos == -1) ? -1 : Math.max(0, bitapPos - shortSeqLeftTail);
+        int minNumberOfErrors = Integer.MAX_VALUE;
+        while (bitapPos != -1) {
+            if (bitapMatcher.getNumberOfErrors() < minNumberOfErrors) {
+                minNumberOfErrors = bitapMatcher.getNumberOfErrors();
+                startPos = Math.max(0, bitapPos - shortSeqLeftTail);
             }
+            bitapPos = bitapMatcher.findNext();
         }
-        return new Range(0, longSeq.size());
+        if (startPos != -1) {
+            int currentSeqWidth = shortSeq.size() + (matchScoreIsPositive ? width
+                    : Math.min(width, minNumberOfErrors));
+            int endPos = Math.min(longSeq.size(), startPos + currentSeqWidth);
+            startPos = Math.max(0, endPos - currentSeqWidth);
+            return new Range(startPos, endPos);
+        } else
+            return new Range(0, longSeq.size());
     }
 }

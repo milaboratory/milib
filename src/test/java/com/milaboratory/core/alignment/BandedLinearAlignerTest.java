@@ -20,6 +20,7 @@ import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
 import com.milaboratory.core.mutations.generator.MutationsGenerator;
 import com.milaboratory.core.mutations.generator.SubstitutionModels;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
@@ -311,24 +312,24 @@ public class BandedLinearAlignerTest {
 
     @Test
     public void alignLocalGlobalTest() throws Exception {
-        NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA");
-        NucleotideSequence seq2 = new NucleotideSequence("ATTATACAT");
-        NucleotideSequence seq3 = new NucleotideSequence("GCTACTAGCACT");
-        NucleotideSequence seq4 = new NucleotideSequence("TT");
-        NucleotideSequence seq5 = new NucleotideSequence(
+        NSequenceWithQuality seq1 = new NSequenceWithQuality("ATTAGACA");
+        NSequenceWithQuality seq2 = new NSequenceWithQuality("ATTATACAT");
+        NSequenceWithQuality seq3 = new NSequenceWithQuality("GCTACTAGCACT");
+        NSequenceWithQuality seq4 = new NSequenceWithQuality("TT");
+        NSequenceWithQuality seq5 = new NSequenceWithQuality(
                 "ATGTGGGGTAACACGGCTCCTCGGAATATAGCTTCAGGGCCCAGAACCTGTGGCGCGTACCCGTATGAATCAGGA");
-        NucleotideSequence seq6 = new NucleotideSequence(
+        NSequenceWithQuality seq6 = new NSequenceWithQuality(
                 "ATGTGGGGTAACAGCTCTGTCCTAGGATCTAAGCTTTAGGCCCGTGAACCCGTGCGCGTACCGTATGATCGG");
         LinearGapAlignmentScoring<NucleotideSequence> scoring = new LinearGapAlignmentScoring<>(
                 NucleotideSequence.ALPHABET, 0, -4, -5);
         Alignment<NucleotideSequence> alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, 2);
-        AlignerTest.assertAlignment(alignment, seq2);
+        AlignerTest.assertAlignment(alignment, seq2.getSequence());
         alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq3, 3);
-        AlignerTest.assertAlignment(alignment, seq3);
+        AlignerTest.assertAlignment(alignment, seq3.getSequence());
         alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq3, seq4, 1);
-        AlignerTest.assertAlignment(alignment, seq4);
+        AlignerTest.assertAlignment(alignment, seq4.getSequence());
         alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq5, seq6, 4);
-        AlignerTest.assertAlignment(alignment, seq6);
+        AlignerTest.assertAlignment(alignment, seq6.getSequence());
     }
 
     @Test
@@ -352,7 +353,8 @@ public class BandedLinearAlignerTest {
             scoring = new LinearGapAlignmentScoring<>(NucleotideSequence.ALPHABET, matchScore, mismatchScore, gapScore);
             int expectedScore = AlignmentUtils.calculateScore(seq1, new Range(0, seq1.size()), mut, scoring);
             width = random.nextInt(1, 6);
-            alignment = BandedLinearAligner.alignLocalGlobal(scoring, seq1, seq2, width);
+            alignment = BandedLinearAligner.alignLocalGlobal(scoring, new NSequenceWithQuality(seq1.toString()),
+                    new NSequenceWithQuality(seq2.toString()), width);
             if (width >= mut.countOfIndels())
                 assertTrue(alignment.score >= expectedScore);
             AlignerTest.assertAlignment(alignment, seq2);
