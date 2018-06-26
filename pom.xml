@@ -19,7 +19,7 @@
 
     <groupId>com.milaboratory</groupId>
     <artifactId>milib</artifactId>
-    <version>1.8.5-SNAPSHOT</version>
+    <version>1.9-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>MiLib</name>
     <url>https://milaboratory.com/</url>

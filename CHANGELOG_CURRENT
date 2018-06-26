@@ -1,0 +1,2 @@
+New `knownObject` record type for `PrimitivIO` (:warning: stream format changed, not backward compatible)
+`Clustering` class code cleanup
