@@ -21,7 +21,9 @@ import java.util.ArrayList;
 public final class PrimitivI implements DataInput, AutoCloseable {
     final DataInput input;
     final SerializersManager manager;
-    final ArrayList<Object> references = new ArrayList<>(), putKnownAfterReset = new ArrayList<>(), knownObjects = new ArrayList<>();
+    final ArrayList<Object> knownReferences = new ArrayList<>();
+    final ArrayList<Object> knownObjects = new ArrayList<>();
+    final ArrayList<Object> putKnownAfterReset = new ArrayList<>();
     int knownReferencesCount = 0;
     int depth = 0;
 
@@ -51,21 +53,21 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         if (depth > 0) {
             putKnownAfterReset.add(ref);
         } else {
-            references.add(ref);
+            knownReferences.add(ref);
             ++knownReferencesCount;
         }
     }
 
     public void readReference(Object ref) {
         int id = readVarInt();
-        if (id != references.size())
+        if (id != knownReferences.size())
             throw new RuntimeException("wrong reference id.");
-        references.add(ref);
+        knownReferences.add(ref);
     }
 
     private void reset() {
-        for (int i = references.size() - 1; i >= knownReferencesCount; --i)
-            references.remove(i);
+        for (int i = knownReferences.size() - 1; i >= knownReferencesCount; --i)
+            knownReferences.remove(i);
         if (!putKnownAfterReset.isEmpty()) {
             for (Object ref : putKnownAfterReset)
                 putKnownReference(ref);
@@ -96,7 +98,7 @@ public final class PrimitivI implements DataInput, AutoCloseable {
                         reset();
                 }
             } else if ((id & 1) == 0) {
-                Object obj = references.get((id >>> 1) - 1);
+                Object obj = knownReferences.get((id >>> 1) - 1);
                 if (!type.isInstance(obj))
                     throw new RuntimeException("Wrong file format.");
                 return (T) obj;

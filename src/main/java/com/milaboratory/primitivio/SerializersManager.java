@@ -27,8 +27,18 @@ import java.util.Objects;
 import static com.milaboratory.primitivio.Util.findSerializableParent;
 
 public final class SerializersManager {
-    final DefaultSerializersProvider defaultSerializersProvider = new DefaultSerializersProviderImpl();
-    final HashMap<Class<?>, Serializer> registeredHelpers = new HashMap<>();
+    final DefaultSerializersProvider defaultSerializersProvider;
+    final HashMap<Class<?>, Serializer> registeredHelpers;
+
+    public SerializersManager() {
+        this(new DefaultSerializersProviderImpl(), new HashMap<>());
+    }
+
+    public SerializersManager(DefaultSerializersProvider defaultSerializersProvider,
+                              HashMap<Class<?>, Serializer> registeredHelpers) {
+        this.defaultSerializersProvider = defaultSerializersProvider;
+        this.registeredHelpers = registeredHelpers;
+    }
 
     public <T> Serializer<? super T> getSerializer(Class<T> type) {
         Serializer serializer = registeredHelpers.get(type);
@@ -114,6 +124,14 @@ public final class SerializersManager {
                 throw new RuntimeException("No serializer for " + type);
             return defaultSerializer;
         }
+    }
+
+    @Override
+    protected SerializersManager clone() {
+        return new SerializersManager(
+                defaultSerializersProvider,
+                new HashMap<>(registeredHelpers)
+        );
     }
 
     static Serializer instantiate(Class<? extends Serializer> cl) {
