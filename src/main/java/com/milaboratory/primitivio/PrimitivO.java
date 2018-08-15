@@ -99,6 +99,8 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
      * known objects, known references and serialization manager.
      */
     public PrimitivOState getState() {
+        if (depth != 0)
+            throw new IllegalStateException("Can't return state during serialization transaction.");
         return new PrimitivOState(manager, knownReferences, knownObjects);
     }
 
