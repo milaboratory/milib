@@ -131,7 +131,9 @@ public final class RandomAccessFastqReader
             if (!recordsReader.nextRecord(true))
                 return null;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("While reading fastq record with id=" + currentRecordNumber +
+                    " (line number = " + (currentRecordNumber * 4) + ")",
+                    e);
         }
         return recordsReader.createRead(currentRecordNumber, qualityFormat);
     }
@@ -141,7 +143,9 @@ public final class RandomAccessFastqReader
         try {
             recordsReader.nextRecord(true);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("While reading fastq record with id=" + currentRecordNumber +
+                    " (line number = " + (currentRecordNumber * 4) + ")",
+                    e);
         }
     }
 

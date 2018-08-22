@@ -110,7 +110,7 @@ public final class FastqRecordsReader implements AutoCloseable {
             return;
         byte[] newBuffer;
         if (lazyReads)
-            newBuffer = new byte[size];//if lazy reads, we can not overwrite buffer content!
+            newBuffer = new byte[size];//if lazy reads, we shall not overwrite buffer content!
         else {
             if (buffer == null)
                 buffer = new byte[size];
@@ -157,7 +157,7 @@ public final class FastqRecordsReader implements AutoCloseable {
                 } else return false;
 
             if (buffer[pointer] != '@') // fastq specification
-                throw new IllegalFileFormatException();
+                throw new IllegalFileFormatException("No '@' character found in the beginning of fastq description line." );
 
             //standard fastq reading:
 
@@ -187,8 +187,8 @@ public final class FastqRecordsReader implements AutoCloseable {
                 } else return false;
             }
 
-            if (buffer[pointer] != '+')
-                throw new IllegalFileFormatException();
+            if (buffer[pointer] != '+') // fastq specification
+                throw new IllegalFileFormatException("No '+' character found in the beginning of the third line of the fastq record.");
 
             for (; pointer < currentBufferSize && buffer[pointer] != DELIMITER; ++pointer) ;
             if (pointer == buffer.length) {
