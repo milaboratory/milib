@@ -236,7 +236,8 @@ public class PrimitivIOTest {
             po.writeObject(2);
         }
 
-        Assert.assertEquals(cc * 4, bos.size());
+        // 1 byte for "New Object" marker + 4 bytes for integer + 1 byte for reference id
+        Assert.assertEquals(cc * 6, bos.size());
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
         PrimitivI pi = new PrimitivI(bis);
