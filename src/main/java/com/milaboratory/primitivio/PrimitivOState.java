@@ -30,7 +30,7 @@ import java.io.OutputStream;
  *
  * PrimitivO always return new instance of the object, that has no references to the original stream.
  *
- * Immutable object.
+ * Objects of this class are immutable.
  */
 public final class PrimitivOState {
     private final SerializersManager manager;

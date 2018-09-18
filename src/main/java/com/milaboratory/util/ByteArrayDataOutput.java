@@ -46,15 +46,23 @@ public final class ByteArrayDataOutput implements DataOutput {
     }
 
     public ByteArrayDataOutput(int initialSize) {
-        this(initialSize, DEFAULT_GROW_MULTIPLIER, DEFAULT_GROW_DIVISOR, DEFAULT_GROW_SUMMAND, DEFAULT_GROW_MAXIMUM_CHUNK);
+        this(new byte[initialSize]);
+    }
+
+    public ByteArrayDataOutput(byte[] buffer) {
+        this(buffer, DEFAULT_GROW_MULTIPLIER, DEFAULT_GROW_DIVISOR, DEFAULT_GROW_SUMMAND, DEFAULT_GROW_MAXIMUM_CHUNK);
     }
 
     public ByteArrayDataOutput(int initialSize, int growMultiplier, int growDivisor, int growSummand, int growMaximumChunk) {
+        this(new byte[initialSize], growMultiplier, growDivisor, growSummand, growMaximumChunk);
+    }
+
+    public ByteArrayDataOutput(byte[] buffer, int growMultiplier, int growDivisor, int growSummand, int growMaximumChunk) {
         this.growMultiplier = growMultiplier;
         this.growDivisor = growDivisor;
         this.growSummand = growSummand;
         this.growMaximumChunk = growMaximumChunk;
-        this.buffer = new byte[initialSize];
+        this.buffer = buffer;
         this.byteBuffer = ByteBuffer.wrap(buffer);
     }
 
@@ -82,6 +90,10 @@ public final class ByteArrayDataOutput implements DataOutput {
         this.byteBuffer = ByteBuffer.wrap(newBuffer, 0, newBuffer.length);
         // Setting correct position
         byteBuffer.position(currentOffset);
+    }
+
+    public int size() {
+        return byteBuffer.position();
     }
 
     public byte[] getBuffer() {

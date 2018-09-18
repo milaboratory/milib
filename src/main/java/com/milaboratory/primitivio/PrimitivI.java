@@ -21,8 +21,8 @@ import java.util.ArrayList;
 public final class PrimitivI implements DataInput, AutoCloseable {
     final DataInput input;
     final SerializersManager manager;
-    final ArrayList<Object> knownReferences = new ArrayList<>();
-    final ArrayList<Object> knownObjects = new ArrayList<>();
+    final ArrayList<Object> knownReferences;
+    final ArrayList<Object> knownObjects;
     final ArrayList<Object> putKnownAfterReset = new ArrayList<>();
     int knownReferencesCount = 0;
     int depth = 0;
@@ -37,12 +37,27 @@ public final class PrimitivI implements DataInput, AutoCloseable {
     }
 
     public PrimitivI(DataInput input, SerializersManager manager) {
+        this(input, manager, new ArrayList<>(), new ArrayList<>());
+    }
+
+    public PrimitivI(DataInput input, SerializersManager manager,
+                     ArrayList<Object> knownReferences, ArrayList<Object> knownObjects) {
         this.input = input;
         this.manager = manager;
+        this.knownReferences = knownReferences;
+        this.knownObjects = knownObjects;
     }
 
     public SerializersManager getSerializersManager() {
         return manager;
+    }
+
+    /**
+     * Returns a copy of current PrimitivI state. The state can then be used to create PrimitivI with the same state of
+     * known objects, known references and serialization manager.
+     */
+    public PrimitivIState getState() {
+        return new PrimitivIState(manager, knownReferences, knownObjects);
     }
 
     public void putKnownObject(Object ref) {
