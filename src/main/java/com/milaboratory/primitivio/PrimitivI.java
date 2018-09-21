@@ -46,6 +46,7 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         this.manager = manager;
         this.knownReferences = knownReferences;
         this.knownObjects = knownObjects;
+        this.knownReferencesCount = knownReferences.size();
     }
 
     public SerializersManager getSerializersManager() {
