@@ -299,7 +299,9 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
             if (!recordsReader.nextRecord(true))
                 return null;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("While reading fastq record with id=" + idCounter +
+                    " (line number = " + (idCounter * 4) + ")",
+                    e);
         }
         return recordsReader.createRead(idCounter++, format);
     }

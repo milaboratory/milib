@@ -17,14 +17,26 @@ package com.milaboratory.cli;
 
 import com.beust.jcommander.Parameter;
 
+import java.util.Collections;
+import java.util.List;
+
 public abstract class ActionParameters {
     @Parameter(names = {"-h", "--help"}, help = true, description = "Displays help for this command.")
-    public Boolean help = false;
+    public boolean help = false;
 
     public boolean help() {
-        return help != null && help;
+        return help;
     }
 
-    public void validate() {
+    public void validate() {}
+
+    /**
+     * Force to hide some parameters. The use case if when {@code ActionParameters} class is derived from some super
+     * class which already defines some parameters that should be hidden in the inherited action.
+     *
+     * @return a list of valid parameter names (longest name should be used)
+     */
+    public List<String> forceHideParameters() {
+        return Collections.emptyList();
     }
 }

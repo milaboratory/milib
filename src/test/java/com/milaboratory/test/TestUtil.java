@@ -21,6 +21,8 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
 import com.milaboratory.core.sequence.SequenceBuilder;
+import com.milaboratory.primitivio.PrimitivI;
+import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.util.GlobalObjectMappers;
 import com.milaboratory.util.RandomUtil;
 import org.apache.commons.math3.random.RandomDataGenerator;
@@ -30,6 +32,8 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.junit.internal.AssumptionViolatedException;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
@@ -106,6 +110,20 @@ public class TestUtil {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void assertPrimitivIO(Object object) {
+        assertPrimitivIO(object, object.getClass());
+    }
+
+    public static void assertPrimitivIO(Object object, Class clazz) {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO o = new PrimitivO(bos);
+        o.writeObject(object);
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI i = new PrimitivI(bis);
+        Object o1 = i.readObject(clazz);
+        Assert.assertEquals(object, o1);
     }
 
     public static void assertJson(Object object) {

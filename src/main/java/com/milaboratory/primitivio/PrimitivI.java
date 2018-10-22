@@ -21,7 +21,9 @@ import java.util.ArrayList;
 public final class PrimitivI implements DataInput, AutoCloseable {
     final DataInput input;
     final SerializersManager manager;
-    final ArrayList<Object> references = new ArrayList<>(), putKnownAfterReset = new ArrayList<>();
+    final ArrayList<Object> knownReferences;
+    final ArrayList<Object> knownObjects;
+    final ArrayList<Object> putKnownAfterReset = new ArrayList<>();
     int knownReferencesCount = 0;
     int depth = 0;
 
@@ -35,33 +37,53 @@ public final class PrimitivI implements DataInput, AutoCloseable {
     }
 
     public PrimitivI(DataInput input, SerializersManager manager) {
+        this(input, manager, new ArrayList<>(), new ArrayList<>());
+    }
+
+    public PrimitivI(DataInput input, SerializersManager manager,
+                     ArrayList<Object> knownReferences, ArrayList<Object> knownObjects) {
         this.input = input;
         this.manager = manager;
+        this.knownReferences = knownReferences;
+        this.knownObjects = knownObjects;
+        this.knownReferencesCount = knownReferences.size();
     }
 
     public SerializersManager getSerializersManager() {
         return manager;
     }
 
+    /**
+     * Returns a copy of current PrimitivI state. The state can then be used to create PrimitivI with the same state of
+     * known objects, known references and serialization manager.
+     */
+    public PrimitivIState getState() {
+        return new PrimitivIState(manager, knownReferences, knownObjects);
+    }
+
+    public void putKnownObject(Object ref) {
+        knownObjects.add(ref);
+    }
+
     public void putKnownReference(Object ref) {
         if (depth > 0) {
             putKnownAfterReset.add(ref);
         } else {
-            references.add(ref);
+            knownReferences.add(ref);
             ++knownReferencesCount;
         }
     }
 
     public void readReference(Object ref) {
         int id = readVarInt();
-        if (id != references.size())
+        if (id != knownReferences.size())
             throw new RuntimeException("wrong reference id.");
-        references.add(ref);
+        knownReferences.add(ref);
     }
 
     private void reset() {
-        for (int i = references.size() - 1; i >= knownReferencesCount; --i)
-            references.remove(i);
+        for (int i = knownReferences.size() - 1; i >= knownReferencesCount; --i)
+            knownReferences.remove(i);
         if (!putKnownAfterReset.isEmpty()) {
             for (Object ref : putKnownAfterReset)
                 putKnownReference(ref);
@@ -91,8 +113,13 @@ public final class PrimitivI implements DataInput, AutoCloseable {
                     if (depth == 0)
                         reset();
                 }
+            } else if ((id & 1) == 0) {
+                Object obj = knownReferences.get((id >>> 1) - 1);
+                if (!type.isInstance(obj))
+                    throw new RuntimeException("Wrong file format.");
+                return (T) obj;
             } else {
-                Object obj = references.get(id - PrimitivO.ID_OFFSET);
+                Object obj = knownObjects.get((id >>> 1) - 1);
                 if (!type.isInstance(obj))
                     throw new RuntimeException("Wrong file format.");
                 return (T) obj;

@@ -43,6 +43,9 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
         if (type == Integer.class)
             return new IntegerSerializer();
 
+        if (type == Long.class)
+            return new LongSerializer();
+
         if (type == UUID.class)
             return new UUIDSerializer();
 
@@ -65,7 +68,29 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
 
         @Override
         public boolean isReference() {
+            return true;
+        }
+
+        @Override
+        public boolean handlesReference() {
             return false;
+        }
+    }
+
+    private static class LongSerializer implements Serializer<Long> {
+        @Override
+        public void write(PrimitivO output, Long object) {
+            output.writeLong(object);
+        }
+
+        @Override
+        public Long read(PrimitivI input) {
+            return input.readLong();
+        }
+
+        @Override
+        public boolean isReference() {
+            return true;
         }
 
         @Override
@@ -87,7 +112,7 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
 
         @Override
         public boolean isReference() {
-            return false;
+            return true;
         }
 
         @Override
@@ -139,7 +164,7 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
 
         @Override
         public boolean isReference() {
-            return false;
+            return true;
         }
 
         @Override
@@ -256,7 +281,7 @@ public class DefaultSerializersProviderImpl implements DefaultSerializersProvide
 
         @Override
         public boolean isReference() {
-            return false;
+            return true;
         }
 
         @Override

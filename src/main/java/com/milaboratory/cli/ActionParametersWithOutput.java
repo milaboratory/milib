@@ -23,25 +23,32 @@ import java.util.List;
 
 public abstract class ActionParametersWithOutput extends ActionParameters {
     @Parameter(names = {"-f", "--force"}, description = "Force overwrite of output file(s).")
-    public Boolean force;
+    public boolean force = false;
 
     protected abstract List<String> getOutputFiles();
 
     public boolean isForceOverwrite() {
-        return force != null && force;
+        return force;
     }
 
     @Override
     public void validate() {
         if (help)
             return;
+        for (String fileName : getOutputFiles()) {
+            if (fileName.equals("."))
+                continue;
+            File file = new File(fileName);
+            if (file.exists())
+                handleExistenceOfOutputFile(fileName);
+        }
+    }
+
+    /**
+     * Specifies behaviour in the case with output exists (default is to throw exception)
+     */
+    public void handleExistenceOfOutputFile(String outFileName) {
         if (!isForceOverwrite())
-            for (String fileName : getOutputFiles()) {
-                if (fileName.equals("."))
-                    continue;
-                File file = new File(fileName);
-                if (file.exists())
-                    throw new ParameterException("File " + fileName + " already exists. Use -f option to overwrite it.");
-            }
+            throw new ParameterException("File " + outFileName + " already exists. Use -f option to overwrite it.");
     }
 }

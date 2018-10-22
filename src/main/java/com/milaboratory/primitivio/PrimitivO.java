@@ -15,7 +15,7 @@
  */
 package com.milaboratory.primitivio;
 
-import gnu.trove.impl.Constants;
+import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
 
@@ -28,28 +28,80 @@ import static com.milaboratory.primitivio.Util.zigZagEncodeLong;
 public final class PrimitivO implements DataOutput, AutoCloseable {
     static final int NULL_ID = 0;
     static final int NEW_OBJECT_ID = 1;
-    static final int ID_OFFSET = 2;
     private static final float RELOAD_FACTOR = 0.5f;
+
+    /**
+     * Underlying output stream
+     */
     final DataOutput output;
+
+    /**
+     * Holds serializers for this stream
+     */
     final SerializersManager manager;
+
+    /**
+     * This array holds references that were explicitly added during this serialization round, will be flushed to
+     * knownReferences after reset
+     */
     final ArrayList<Object> putKnownAfterReset = new ArrayList<>();
-    final TObjectIntCustomHashMap<Object> knownReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE,
-            Constants.DEFAULT_CAPACITY, Constants.DEFAULT_LOAD_FACTOR, Integer.MIN_VALUE);
+
+    /**
+     * List of references added during this serialization round
+     */
     final ArrayList<Object> addedReferences = new ArrayList<>();
+
+    /**
+     * This REFERENCES will be replaced by "known reference token". This map holds references between serialization
+     * rounds (more persistent then currentReferences).
+     */
+    final TObjectIntCustomHashMap<Object> knownReferences;
+
+    /**
+     * These OBJECTS will be replaced by "known object token"
+     */
+    final TObjectIntMap<Object> knownObjects;
+
+    /**
+     * Serialization depth
+     */
     int depth = 0;
+
+    /**
+     * This map holds references during single serialization round, its state returns to knownReferences, after reset.
+     */
     TObjectIntCustomHashMap<Object> currentReferences = null;
 
-    public PrimitivO(OutputStream output) {
-        this(new DataOutputStream(output), new SerializersManager());
+    PrimitivO(DataOutput output, SerializersManager manager,
+              TObjectIntCustomHashMap<Object> knownReferences, TObjectIntMap<Object> knownObjects) {
+        this.output = output;
+        this.manager = manager;
+        this.knownReferences = knownReferences;
+        this.knownObjects = knownObjects;
+    }
+
+    public PrimitivO(DataOutput output, SerializersManager manager) {
+        this(output, manager,
+                PrimitivOState.newKnownReferenceHashMap(), PrimitivOState.newKnownObjectHashMap()
+        );
     }
 
     public PrimitivO(DataOutput output) {
         this(output, new SerializersManager());
     }
 
-    public PrimitivO(DataOutput output, SerializersManager manager) {
-        this.output = output;
-        this.manager = manager;
+    public PrimitivO(OutputStream output) {
+        this(new DataOutputStream(output), new SerializersManager());
+    }
+
+    /**
+     * Returns copy of current PrimitivO state. The state can then be used to create PrimitivO with the same state of
+     * known objects, known references and serialization manager.
+     */
+    public PrimitivOState getState() {
+        if (depth != 0)
+            throw new IllegalStateException("Can't return state during serialization transaction.");
+        return new PrimitivOState(manager, knownReferences, knownObjects);
     }
 
     public SerializersManager getSerializersManager() {
@@ -59,6 +111,13 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
     private void ensureCurrentReferencesInitialized() {
         if (currentReferences == null)
             currentReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE, knownReferences);
+    }
+
+    public int putKnownObject(Object object) {
+        // Sequential id
+        int id = knownObjects.size();
+        knownObjects.put(object, id);
+        return id;
     }
 
     public void putKnownReference(Object object) {
@@ -78,7 +137,8 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
             else
                 for (Object ref : addedReferences)
                     currentReferences.remove(ref);
-            //Resetting list of references added in this serialization round
+
+            // Resetting list of knownReferences added in this serialization round
             addedReferences.clear();
         }
         if (!putKnownAfterReset.isEmpty()) {
@@ -114,15 +174,23 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
             boolean writeIdAfter = false;
             if (serializer.isReference()) {
-                int id = currentReferences.get(object);
+                // Checking if it is a known object
+                int id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object);
+                if (id != Integer.MIN_VALUE) {
+                    writeKnownObject(id);
+                    return;
+                }
+
+                // Checking if it is a known reference
+                id = currentReferences.get(object);
                 if (id != Integer.MIN_VALUE) {
                     writeObjectReference(id);
                     return;
-                } else {
-                    // Write just new object header to tell the reader that this object has no id yet
-                    writeNewObject();
-                    writeIdAfter = !serializer.handlesReference();
                 }
+
+                // Write just new object header to tell the reader that this object has no id yet
+                writeNewObject();
+                writeIdAfter = !serializer.handlesReference();
             }
 
             ++depth;
@@ -147,7 +215,11 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
     }
 
     private void writeObjectReference(int value) {
-        writeVarInt(value + ID_OFFSET);
+        writeVarInt((value + 1) << 1);
+    }
+
+    private void writeKnownObject(int value) {
+        writeVarInt(((value + 1) << 1) | 1);
     }
 
     public void writeVarIntZigZag(int value) {

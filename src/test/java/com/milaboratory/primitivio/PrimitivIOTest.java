@@ -24,6 +24,7 @@ import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static com.milaboratory.primitivio.test.TestEnum1.*;
@@ -78,7 +79,7 @@ public class PrimitivIOTest {
         PrimitivI pi = new PrimitivI(bis);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.isEmpty());
+            Assert.assertTrue(pi.knownReferences.isEmpty());
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);
@@ -106,7 +107,7 @@ public class PrimitivIOTest {
         PrimitivI pi = new PrimitivI(bis);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.isEmpty());
+            Assert.assertTrue(pi.knownReferences.isEmpty());
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);
@@ -163,7 +164,7 @@ public class PrimitivIOTest {
         pi.putKnownReference(objr);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.size() == 1);
+            Assert.assertTrue(pi.knownReferences.size() == 1);
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);
@@ -179,6 +180,53 @@ public class PrimitivIOTest {
         }
     }
 
+    public static class StringWrapper {
+        final String str;
+
+        public StringWrapper(String str) {
+            this.str = str;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof StringWrapper)) return false;
+            StringWrapper that = (StringWrapper) o;
+            return Objects.equals(str, that.str);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(str);
+        }
+    }
+
+    @Test
+    public void testKnownObject1() throws Exception {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        PrimitivO po = new PrimitivO(bos);
+        po.getSerializersManager().registerCustomSerializer(StringWrapper.class, PrimitivIO.dummySerializer());
+        int cc = 10;
+
+        for (int i = 0; i < cc; ++i)
+            po.putKnownObject(new StringWrapper("HiThere" + i));
+
+        for (int i = 0; i < cc; ++i)
+            po.writeObject(new StringWrapper("HiThere" + i));
+
+        ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
+        PrimitivI pi = new PrimitivI(bis);
+        pi.getSerializersManager().registerCustomSerializer(StringWrapper.class, PrimitivIO.dummySerializer());
+        for (int i = 0; i < cc; ++i)
+            pi.putKnownObject(new StringWrapper("HiThere" + i));
+
+        StringWrapper obj;
+        for (int i = 0; i < cc; ++i) {
+            obj = pi.readObject(StringWrapper.class);
+            Assert.assertEquals(new StringWrapper("HiThere" + i), obj);
+        }
+    }
+
     @Test
     public void testNonReferenceSerialization1() throws Exception {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -188,7 +236,8 @@ public class PrimitivIOTest {
             po.writeObject(2);
         }
 
-        Assert.assertEquals(cc * 4, bos.size());
+        // 1 byte for "New Object" marker + 4 bytes for integer + 1 byte for reference id
+        Assert.assertEquals(cc * 6, bos.size());
 
         ByteArrayInputStream bis = new ByteArrayInputStream(bos.toByteArray());
         PrimitivI pi = new PrimitivI(bis);

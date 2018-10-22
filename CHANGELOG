@@ -1,4 +1,18 @@
 
+MiLib 1.9 (23 Oct 2018)
+========================
+
+-- JDK 8
+-- New `knownObject` record type for `PrimitivIO` (:warning: stream format changed, not backward 
+   compatible)
+-- Separate PrimitivI/O state objects
+-- Better error messaging for fastq reader
+-- SequenceTreeMap cleanup
+-- `Clustering` class code cleanup
+-- Serializers for some meta object types
+-- Minor fixes and enhancements
+
+
 MiLib 1.8.4 (14 Jun 2018)
 ========================
 
