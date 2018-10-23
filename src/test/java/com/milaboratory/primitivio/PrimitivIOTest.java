@@ -79,7 +79,7 @@ public class PrimitivIOTest {
         PrimitivI pi = new PrimitivI(bis);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.isEmpty());
+            Assert.assertTrue(pi.knownReferences.isEmpty());
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);
@@ -107,7 +107,7 @@ public class PrimitivIOTest {
         PrimitivI pi = new PrimitivI(bis);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.isEmpty());
+            Assert.assertTrue(pi.knownReferences.isEmpty());
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);
@@ -164,7 +164,7 @@ public class PrimitivIOTest {
         pi.putKnownReference(objr);
         TestClass1 dobj2;
         for (int i = 0; i < cc; ++i) {
-            Assert.assertTrue(pi.references.size() == 1);
+            Assert.assertTrue(pi.knownReferences.size() == 1);
             dobj2 = pi.readObject(TestClass1.class);
             Assert.assertEquals(dobj2.i, obj2.i);
             Assert.assertEquals(dobj2.k, obj2.k);

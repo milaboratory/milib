@@ -15,16 +15,30 @@
  */
 package com.milaboratory.util;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.milaboratory.primitivio.annotations.Serializable;
+
 import java.io.InputStream;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Properties;
 
+@JsonAutoDetect(
+        fieldVisibility = JsonAutoDetect.Visibility.ANY,
+        isGetterVisibility = JsonAutoDetect.Visibility.NONE,
+        getterVisibility = JsonAutoDetect.Visibility.NONE)
+@Serializable(asJson = true)
 public class VersionInfo {
     final String version, revision, name, branch, host;
     final Date timestamp;
 
-    public VersionInfo(String version, String revision, String name, String branch, String host,
-                       Date timestamp) {
+    public VersionInfo(@JsonProperty("version") String version,
+                       @JsonProperty("revision") String revision,
+                       @JsonProperty("name") String name,
+                       @JsonProperty("branch") String branch,
+                       @JsonProperty("host") String host,
+                       @JsonProperty("timestamp") Date timestamp) {
         this.version = version;
         this.revision = revision;
         this.name = name;
@@ -55,6 +69,24 @@ public class VersionInfo {
 
     public Date getTimestamp() {
         return timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        VersionInfo that = (VersionInfo) o;
+        return Objects.equals(version, that.version) &&
+                Objects.equals(revision, that.revision) &&
+                Objects.equals(name, that.name) &&
+                Objects.equals(branch, that.branch) &&
+                Objects.equals(host, that.host) &&
+                Objects.equals(timestamp, that.timestamp);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(version, revision, name, branch, host, timestamp);
     }
 
     @Override
