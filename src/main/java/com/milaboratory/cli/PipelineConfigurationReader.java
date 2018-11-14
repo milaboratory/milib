@@ -15,35 +15,11 @@
  */
 package com.milaboratory.cli;
 
-public abstract class PipelineConfigurationReader {
-    private final BinaryFileInfoExtractor binaryFileInfoExtractor;
-
-    public PipelineConfigurationReader(BinaryFileInfoExtractor binaryFileInfoExtractor) {
-        this.binaryFileInfoExtractor = binaryFileInfoExtractor;
+public interface PipelineConfigurationReader {
+    default PipelineConfiguration getPipelineConfiguration() {
+        throw new UnsupportedOperationException();
     }
-
-    public abstract PipelineConfiguration getPipelineConfiguration();
-
-    /**
-     * Read pipeline configuration from file or return null
-     */
-    public PipelineConfiguration fromFileOrNull(String fileName, BinaryFileInfo fileInfo) {
-        if (fileInfo == null)
-            return null;
-        if (!fileInfo.valid)
-            return null;
-        try {
-            return fromFile(fileName, fileInfo);
-        } catch (Throwable ignored) {}
-        return null;
-    }
-
-    public PipelineConfiguration fromFile(String fileName) {
-        BinaryFileInfo fileInfo = binaryFileInfoExtractor.getFileInfo(fileName);
-        if (!fileInfo.valid)
-            throw new RuntimeException("File " + fileName + " corrupted.");
-        return fromFile(fileName, fileInfo);
-    }
-
-    public abstract PipelineConfiguration fromFile(String fileName, BinaryFileInfo fileInfo);
+    PipelineConfiguration fromFileOrNull(String fileName, BinaryFileInfo fileInfo);
+    PipelineConfiguration fromFile(String fileName);
+    PipelineConfiguration fromFile(String fileName, BinaryFileInfo fileInfo);
 }

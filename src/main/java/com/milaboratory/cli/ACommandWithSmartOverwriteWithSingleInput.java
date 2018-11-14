@@ -53,10 +53,4 @@ public abstract class ACommandWithSmartOverwriteWithSingleInput extends ACommand
         }
         return inputFileInfo;
     }
-
-    @Override
-    public PipelineConfiguration getFullPipelineConfiguration() {
-        return PipelineConfiguration.appendStep(pipelineConfigurationReader.fromFile(in, getInputFileInfo()),
-                getInputFiles(), getConfiguration(), AppVersionInfo.get());
-    }
 }

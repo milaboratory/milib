@@ -29,8 +29,10 @@ import java.util.Objects;
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @Serializable(asJson = true)
 public abstract class AppVersionInfo {
-    private final HashMap<String, VersionInfo> componentVersions;
-    private final String builtInLibrary;
+    /** get() function must be implemented in child class */
+    protected static volatile AppVersionInfo instance = null;
+    protected final HashMap<String, VersionInfo> componentVersions;
+    protected final String builtInLibrary;
 
     protected AppVersionInfo(@JsonProperty("componentVersions") HashMap<String, VersionInfo> componentVersions,
                              @JsonProperty("builtInLibrary") String builtInLibrary) {
@@ -52,20 +54,6 @@ public abstract class AppVersionInfo {
         return Objects.hash(componentVersions, builtInLibrary);
     }
 
-    private static volatile AppVersionInfo instance = null;
-
-    public synchronized static void init(AppVersionInfo appVersionInfo) {
-        if (instance != null)
-            throw new IllegalStateException("AppVersionInfo initialized twice!");
-        instance = appVersionInfo;
-    }
-
-    public static AppVersionInfo get() {
-        if (instance == null)
-            throw new IllegalStateException("AppVersionInfo not initialized!");
-        return instance;
-    }
-
     public abstract String getShortestVersionString();
 
     public String getVersionString(OutputType outputType) {
@@ -76,8 +64,8 @@ public abstract class AppVersionInfo {
 
     public enum OutputType {
         ToConsole("\n", true), ToFile("; ", false);
-        final String delimiter;
-        final boolean componentsWord;
+        public final String delimiter;
+        public final boolean componentsWord;
 
         OutputType(String delimiter, boolean componentsWord) {
             this.delimiter = delimiter;
