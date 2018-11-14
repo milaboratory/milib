@@ -22,12 +22,12 @@ public abstract class PipelineConfigurationReader {
         this.binaryFileInfoExtractor = binaryFileInfoExtractor;
     }
 
-    abstract PipelineConfiguration getPipelineConfiguration();
+    public abstract PipelineConfiguration getPipelineConfiguration();
 
     /**
      * Read pipeline configuration from file or return null
      */
-    PipelineConfiguration fromFileOrNull(String fileName, BinaryFileInfo fileInfo) {
+    public PipelineConfiguration fromFileOrNull(String fileName, BinaryFileInfo fileInfo) {
         if (fileInfo == null)
             return null;
         if (!fileInfo.valid)
@@ -38,15 +38,12 @@ public abstract class PipelineConfigurationReader {
         return null;
     }
 
-    PipelineConfiguration fromFile(String fileName) {
+    public PipelineConfiguration fromFile(String fileName) {
         BinaryFileInfo fileInfo = binaryFileInfoExtractor.getFileInfo(fileName);
         if (!fileInfo.valid)
             throw new RuntimeException("File " + fileName + " corrupted.");
         return fromFile(fileName, fileInfo);
     }
 
-    /**
-     * Read pipeline configuration from file or throw exception
-     */
-    abstract PipelineConfiguration fromFile(String fileName, BinaryFileInfo fileInfo);
+    public abstract PipelineConfiguration fromFile(String fileName, BinaryFileInfo fileInfo);
 }
