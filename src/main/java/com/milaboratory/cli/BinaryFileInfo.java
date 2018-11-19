@@ -17,7 +17,7 @@ package com.milaboratory.cli;
 
 import java.util.Objects;
 
-public abstract class BinaryFileInfo {
+public class BinaryFileInfo {
     /**
      * File type, or null if unrecognized format.
      */
