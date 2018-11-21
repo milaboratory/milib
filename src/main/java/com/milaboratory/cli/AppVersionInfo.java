@@ -32,12 +32,12 @@ public abstract class AppVersionInfo {
     /** get() function must be implemented in child class */
     protected static volatile AppVersionInfo instance = null;
     protected final HashMap<String, VersionInfo> componentVersions;
-    protected final String builtInLibrary;
+    protected final HashMap<String, String> componentStringVersions;
 
     protected AppVersionInfo(@JsonProperty("componentVersions") HashMap<String, VersionInfo> componentVersions,
-                             @JsonProperty("builtInLibrary") String builtInLibrary) {
+                             @JsonProperty("componentStringVersions") HashMap<String, String> componentStringVersions) {
         this.componentVersions = componentVersions;
-        this.builtInLibrary = builtInLibrary;
+        this.componentStringVersions = componentStringVersions;
     }
 
     @Override
@@ -46,12 +46,12 @@ public abstract class AppVersionInfo {
         if (o == null || getClass() != o.getClass()) return false;
         AppVersionInfo that = (AppVersionInfo) o;
         return Objects.equals(componentVersions, that.componentVersions) &&
-                Objects.equals(builtInLibrary, that.builtInLibrary);
+                Objects.equals(componentStringVersions, that.componentStringVersions);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(componentVersions, builtInLibrary);
+        return Objects.hash(componentVersions, componentStringVersions);
     }
 
     public abstract String getShortestVersionString();
