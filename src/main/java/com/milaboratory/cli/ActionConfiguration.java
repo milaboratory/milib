@@ -26,10 +26,7 @@ import com.milaboratory.primitivio.annotations.Serializable;
         fieldVisibility = JsonAutoDetect.Visibility.ANY,
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
-        include = JsonTypeInfo.As.PROPERTY,
-        property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @Serializable(asJson = true)
 public interface ActionConfiguration<Conf extends ActionConfiguration<Conf>> {
     String actionName();

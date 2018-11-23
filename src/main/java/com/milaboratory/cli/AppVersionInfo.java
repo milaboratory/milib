@@ -15,8 +15,7 @@
  */
 package com.milaboratory.cli;
 
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.*;
 import com.milaboratory.primitivio.annotations.Serializable;
 import com.milaboratory.util.VersionInfo;
 
@@ -27,6 +26,7 @@ import java.util.Objects;
         fieldVisibility = JsonAutoDetect.Visibility.ANY,
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 @Serializable(asJson = true)
 public abstract class AppVersionInfo {
     /** get() function must be implemented in child class */
