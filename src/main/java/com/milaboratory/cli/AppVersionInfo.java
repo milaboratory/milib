@@ -19,25 +19,52 @@ import com.fasterxml.jackson.annotation.*;
 import com.milaboratory.primitivio.annotations.Serializable;
 import com.milaboratory.util.VersionInfo;
 
-import java.util.HashMap;
-import java.util.Objects;
+import java.util.*;
 
 @JsonAutoDetect(
         fieldVisibility = JsonAutoDetect.Visibility.ANY,
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@JsonTypeInfo(
+        use = JsonTypeInfo.Id.CLASS,
+        include = JsonTypeInfo.As.PROPERTY,
+        property = "type")
 @Serializable(asJson = true)
-public abstract class AppVersionInfo {
-    /** get() function must be implemented in child class */
-    protected static volatile AppVersionInfo instance = null;
-    protected final HashMap<String, VersionInfo> componentVersions;
-    protected final HashMap<String, String> componentStringVersions;
+public final class AppVersionInfo {
+    private static volatile AppVersionInfo instance = null;
+    private final HashMap<String, VersionInfo> componentVersions;
+    private final HashMap<String, String> componentStringVersions;
 
-    protected AppVersionInfo(@JsonProperty("componentVersions") HashMap<String, VersionInfo> componentVersions,
-                             @JsonProperty("componentStringVersions") HashMap<String, String> componentStringVersions) {
+    private AppVersionInfo(@JsonProperty("componentVersions") HashMap<String, VersionInfo> componentVersions,
+                           @JsonProperty("componentStringVersions") HashMap<String, String> componentStringVersions) {
         this.componentVersions = componentVersions;
         this.componentStringVersions = componentStringVersions;
+    }
+
+    public synchronized static void init(HashMap<String, VersionInfo> componentVersions,
+                            HashMap<String, String> componentStringVersions) {
+        if (instance == null)
+            instance = new AppVersionInfo(componentVersions, componentStringVersions);
+        else
+            throw new IllegalStateException("Initialization of already initialized AppVersionInfo: "
+                    + "componentVersions = " + componentVersions + ", componentStringVersions = "
+                    + componentStringVersions + ", instance.componentVersions = " + instance.componentVersions
+                    + ", instance.componentStringVersions = " + instance.componentStringVersions);
+    }
+
+    public synchronized static AppVersionInfo get() {
+        if (instance == null)
+            throw new IllegalStateException("AppVersionInfo not initialized!");
+        else
+            return instance;
+    }
+
+    public Map<String, VersionInfo> getComponentVersions() {
+        return Collections.unmodifiableMap(componentVersions);
+    }
+
+    public Map<String, String> getComponentStringVersions() {
+        return Collections.unmodifiableMap(componentStringVersions);
     }
 
     @Override
@@ -53,14 +80,6 @@ public abstract class AppVersionInfo {
     public int hashCode() {
         return Objects.hash(componentVersions, componentStringVersions);
     }
-
-    public abstract String getShortestVersionString();
-
-    public String getVersionString(OutputType outputType) {
-        return getVersionString(outputType, false);
-    }
-
-    public abstract String getVersionString(OutputType outputType, boolean full);
 
     public enum OutputType {
         ToConsole("\n", true), ToFile("; ", false);

@@ -19,19 +19,39 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.milaboratory.util.GlobalObjectMappers;
 
 import java.io.IOException;
+import java.util.Objects;
+import java.util.function.Function;
 
 public final class JSONSerializer implements Serializer {
     final Class<?> type;
+    final Function<String, String> preprocessor;
 
+    /**
+     * Constructor for backward-compatibility mocking serializers
+     *
+     * @param type         target type
+     * @param preprocessor JSON string content preprocessor
+     */
+    public JSONSerializer(Class<?> type, Function<String, String> preprocessor) {
+        this.type = Objects.requireNonNull(type);
+        this.preprocessor = preprocessor;
+    }
+
+    /**
+     * Normal constructor, not intended for direct use,
+     * use com.milaboratory.primitivio.annotations.Serializable#asJson() instead.
+     *
+     * @param type target type
+     */
     public JSONSerializer(Class<?> type) {
-        if (type == null)
-            throw new NullPointerException();
-        this.type = type;
+        this(type, null);
     }
 
     @Override
     public void write(PrimitivO output, Object object) {
         try {
+            if (preprocessor != null)
+                throw new IllegalStateException("");
             output.writeUTF(GlobalObjectMappers.ONE_LINE.writeValueAsString(object));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
@@ -42,7 +62,11 @@ public final class JSONSerializer implements Serializer {
     public Object read(PrimitivI input) {
         String str = input.readUTF();
         try {
-            return GlobalObjectMappers.ONE_LINE.readValue(str, type);
+            return GlobalObjectMappers.ONE_LINE.readValue(
+                    preprocessor != null
+                            ? preprocessor.apply(str)
+                            : str,
+                    type);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
