@@ -26,7 +26,7 @@ import java.util.*;
         isGetterVisibility = JsonAutoDetect.Visibility.NONE,
         getterVisibility = JsonAutoDetect.Visibility.NONE)
 @JsonTypeInfo(
-        use = JsonTypeInfo.Id.NAME,
+        use = JsonTypeInfo.Id.CLASS,
         include = JsonTypeInfo.As.PROPERTY,
         property = "type")
 @Serializable(asJson = true)
