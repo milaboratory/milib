@@ -21,11 +21,14 @@ import picocli.CommandLine.*;
         versionProvider = CommandMain.VersionProvider.class,
         separator = " ")
 public class CommandMain extends ABaseCommand {
-    private final String[] versionInfo;
+    private static String[] versionInfo = null;
 
-    public CommandMain(String appName, String[] versionInfo) {
+    public CommandMain(String appName) {
         super(appName);
-        this.versionInfo = versionInfo;
+    }
+
+    public static void init(String[] versionInfoArg) {
+        versionInfo = versionInfoArg;
     }
 
     @Option(names = {"-v", "--version"},
@@ -40,9 +43,11 @@ public class CommandMain extends ABaseCommand {
         throwValidationException("ERROR: -h / --help is not supported: use `" + appName + " help` for usage.");
     }
 
-    final class VersionProvider implements IVersionProvider {
+    public static final class VersionProvider implements IVersionProvider {
         @Override
         public String[] getVersion() {
+            if (versionInfo == null)
+                throw new RuntimeException("getVersion() called while versionInfo is not initialized!");
             return versionInfo;
         }
     }
