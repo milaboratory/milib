@@ -31,7 +31,7 @@ public abstract class ACommand extends ABaseCommand implements Runnable {
     private boolean running;
 
     @Option(names = {"-nw", "--no-warnings"},
-            description = "suppress all warning messages")
+            description = "Suppress all warning messages.")
     public boolean quiet = false;
 
     @Option(description = "Verbose warning messages.",
@@ -56,7 +56,7 @@ public abstract class ACommand extends ABaseCommand implements Runnable {
             System.err.println(message);
     }
 
-    /** list of intput files */
+    /** list of input files */
     protected List<String> getInputFiles() {
         return Collections.emptyList();
     }
