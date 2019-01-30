@@ -101,10 +101,14 @@ public class BlastDB<S extends Sequence<S>> {
         super.finalize();
     }
 
+    private static final int
+            DATABASE_INDEX = 0,
+            STAT_INDEX = 1,
+            VOLUMES_INDEX = 2;
+
     private static final Pattern[] linePatterns = {
             Pattern.compile("^Database: (.*)$"),
             Pattern.compile("^\\s*([0-9,]+)\\s*sequences;\\s*([0-9,]+)\\s*total .*$"),
-            null, null, null,
             Pattern.compile("^\\s*Volumes:\\s*$")
     };
 
@@ -122,6 +126,7 @@ public class BlastDB<S extends Sequence<S>> {
                 throw new RuntimeException("Error: " + error);
             }
 
+            // Previous
             /*
              * Database: rnd
              * 	6,298 sequences; 2,974,038 total residues
@@ -132,22 +137,43 @@ public class BlastDB<S extends Sequence<S>> {
              * 	/Volumes/Data/tools/ncbi-blast-2.2.31+/db/yeast
              */
 
-            List<Matcher> matchers = new ArrayList<>();
-            for (int i = 0; i < linePatterns.length; i++) {
-                if (linePatterns[i] == null)
-                    continue;
+
+            // Upgrade
+            /*
+             * Database: 1f0a83a9195ab6b7aecded3fb535bfc21d2fd988
+             * 	2 sequences; 67 total bases
+             *
+             * Date: Jan 30, 2019  6:49 PM	Longest sequence: 51 bases
+             *
+             * BLASTDB Version: 4
+             *
+             * Volumes:
+             * 	/private/var/folders/6q/jtkhqqw55rg102dplq_396y40000gn/T/milib_50f9e9bcf14f2b676fcd97ec2e7ca5aabd52415c8026027369250916275/1f0a83a9195ab6b7aecded3fb535bfc21d2fd988
+             */
+
+            LineMatch[] matchers = new LineMatch[linePatterns.length];
+            int patternIndex = 0;
+            for (int i = 0; i < lines.size(); i++) {
                 String line = lines.get(i);
-                Matcher m = linePatterns[i].matcher(line);
+                Matcher m = linePatterns[patternIndex].matcher(line);
                 if (!m.matches())
-                    throw new RuntimeException("Line " + i + " don't matches pattern " + linePatterns[i].pattern() + ". Line: " + line);
-                matchers.add(m);
+                    continue;
+
+                matchers[patternIndex] = new LineMatch(i, m);
+                ++patternIndex;
+
+                if (patternIndex == linePatterns.length)
+                    // All required patterns are found
+                    break;
             }
+            if (patternIndex != linePatterns.length)
+                throw new RuntimeException("Pattern " + patternIndex + " not matched.");
 
-            String dbTitle = matchers.get(0).group(1);
-            long records = Long.parseLong(matchers.get(1).group(1).replace(",", ""));
-            long letters = Long.parseLong(matchers.get(1).group(2).replace(",", ""));
+            String dbTitle = matchers[DATABASE_INDEX].matcher.group(1);
+            long records = Long.parseLong(matchers[STAT_INDEX].matcher.group(1).replace(",", ""));
+            long letters = Long.parseLong(matchers[STAT_INDEX].matcher.group(2).replace(",", ""));
 
-            List<String> volumes = new ArrayList<>(lines.subList(6, lines.size()));
+            List<String> volumes = new ArrayList<>(lines.subList(matchers[VOLUMES_INDEX].lineNumber + 1, lines.size()));
             for (int i = 0; i < volumes.size(); i++)
                 volumes.set(i, volumes.get(i).trim());
 
@@ -169,6 +195,16 @@ public class BlastDB<S extends Sequence<S>> {
             return new BlastDB(name, dbTitle, records, letters, alphabet, volumes, temp);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private static final class LineMatch {
+        final int lineNumber;
+        final Matcher matcher;
+
+        public LineMatch(int lineNumber, Matcher matcher) {
+            this.lineNumber = lineNumber;
+            this.matcher = matcher;
         }
     }
 }

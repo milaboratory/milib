@@ -24,7 +24,6 @@ import com.milaboratory.primitivio.Serializer;
 import com.milaboratory.primitivio.annotations.Serializable;
 import org.apache.commons.io.IOUtils;
 
-import javax.xml.bind.DatatypeConverter;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -35,6 +34,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Objects;
 
 /**
@@ -199,7 +199,7 @@ public class LightFileDescriptor {
      */
     public String toBase64() {
         return name
-                + (checksum == null ? "null" : DatatypeConverter.printBase64Binary(checksum))
+                + (checksum == null ? "null" : Base64.getDecoder().decode(checksum))
                 + (lastModified == null ? "null" : lastModified);
     }
 
