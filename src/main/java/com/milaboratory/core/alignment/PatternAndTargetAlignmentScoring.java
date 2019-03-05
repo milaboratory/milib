@@ -17,8 +17,10 @@ package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.milaboratory.core.sequence.NucleotideAlphabetCaseSensitive;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive;
+import com.milaboratory.util.GlobalObjectMappers;
 
 import java.io.ObjectStreamException;
 
@@ -46,7 +48,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     /**
      * Creates new PatternAndTargetAlignmentScoring. Required for deserialization defaults.
      */
-    @SuppressWarnings("unchecked")
     private PatternAndTargetAlignmentScoring() {
         super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(Integer.MIN_VALUE, Integer.MIN_VALUE));
         matchScore = Integer.MIN_VALUE;
@@ -61,7 +62,8 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
 
     @JsonCreator
     public PatternAndTargetAlignmentScoring(
-            @JsonProperty("alphabet") NucleotideAlphabetCaseSensitive alphabet,
+            @JsonProperty("alphabet") Alphabet alphabet,
+            @JsonProperty("subsMatrix") SubstitutionMatrix subsMatrix,
             @JsonProperty("matchScore") int matchScore,
             @JsonProperty("mismatchScore") int mismatchScore,
             @JsonProperty("gapPenalty") int gapPenalty,
@@ -70,7 +72,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
             @JsonProperty("badQuality") byte badQuality,
             @JsonProperty("maxQualityPenalty") int maxQualityPenalty,
             @JsonProperty("qualityPenaltyForN") boolean qualityPenaltyForN) {
-        super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
+        super(NucleotideSequenceCaseSensitive.ALPHABET, subsMatrix);
         if ((matchScore > 0) || (mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
             throw new IllegalArgumentException();
         this.matchScore = matchScore;
@@ -167,6 +169,15 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     }
 
     @Override
+    public String toString() {
+        try {
+            return GlobalObjectMappers.PRETTY.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
@@ -201,28 +212,33 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     /* Internal methods for Java Serialization */
 
     protected Object writeReplace() throws ObjectStreamException {
-        return new SerializationObject(matchScore, mismatchScore, gapPenalty, uppercaseMismatchScore,
-                goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
+        return new SerializationObject(alphabet, subsMatrix, matchScore, mismatchScore,
+                gapPenalty, uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
     }
 
     protected static class SerializationObject implements java.io.Serializable {
-        final int matchScore;
-        final int mismatchScore;
-        final int gapPenalty;
-        final int uppercaseMismatchScore;
-        final byte goodQuality;
-        final byte badQuality;
-        final int maxQualityPenalty;
-        final boolean qualityPenaltyForN;
+        final Alphabet alphabet;
+        final SubstitutionMatrix matrix;
+        private final int matchScore;
+        private final int mismatchScore;
+        private final int gapPenalty;
+        private final int uppercaseMismatchScore;
+        private final byte goodQuality;
+        private final byte badQuality;
+        private final int maxQualityPenalty;
+        private final boolean qualityPenaltyForN;
 
         public SerializationObject() {
-            this(0, 0, 0, 0, (byte)0, (byte)0,
-                    0, false);
+            this(null, null, 0, 0, 0, 0,
+                    (byte)0, (byte)0, 0, false);
         }
 
-        public SerializationObject(int matchScore, int mismatchScore, int gapPenalty, int uppercaseMismatchScore,
-                                   byte goodQuality, byte badQuality, int maxQualityPenalty,
-                                   boolean qualityPenaltyForN) {
+        public SerializationObject(
+                Alphabet alphabet, SubstitutionMatrix matrix, int matchScore, int mismatchScore, int gapPenalty,
+                int uppercaseMismatchScore, byte goodQuality, byte badQuality, int maxQualityPenalty,
+                boolean qualityPenaltyForN) {
+            this.alphabet = alphabet;
+            this.matrix = matrix;
             this.matchScore = matchScore;
             this.mismatchScore = mismatchScore;
             this.gapPenalty = gapPenalty;
@@ -233,11 +249,9 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
             this.qualityPenaltyForN = qualityPenaltyForN;
         }
 
-        @SuppressWarnings("unchecked")
         private Object readResolve() throws ObjectStreamException {
-            return new PatternAndTargetAlignmentScoring(NucleotideSequenceCaseSensitive.ALPHABET, matchScore,
-                    mismatchScore, gapPenalty, uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty,
-                    qualityPenaltyForN);
+            return new PatternAndTargetAlignmentScoring(alphabet, matrix, matchScore, mismatchScore, gapPenalty,
+                    uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
         }
     }
 }
