@@ -17,6 +17,7 @@ package com.milaboratory.core.alignment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.milaboratory.core.sequence.NucleotideAlphabetCaseSensitive;
 import com.milaboratory.core.sequence.NucleotideSequenceCaseSensitive;
 
 import java.io.ObjectStreamException;
@@ -58,6 +59,30 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         qualityPenaltyForN = false;
     }
 
+    @JsonCreator
+    public PatternAndTargetAlignmentScoring(
+            @JsonProperty("alphabet") NucleotideAlphabetCaseSensitive alphabet,
+            @JsonProperty("matchScore") int matchScore,
+            @JsonProperty("mismatchScore") int mismatchScore,
+            @JsonProperty("gapPenalty") int gapPenalty,
+            @JsonProperty("uppercaseMismatchScore") int uppercaseMismatchScore,
+            @JsonProperty("goodQuality") byte goodQuality,
+            @JsonProperty("badQuality") byte badQuality,
+            @JsonProperty("maxQualityPenalty") int maxQualityPenalty,
+            @JsonProperty("qualityPenaltyForN") boolean qualityPenaltyForN) {
+        super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
+        if ((matchScore > 0) || (mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
+            throw new IllegalArgumentException();
+        this.matchScore = matchScore;
+        this.mismatchScore = mismatchScore;
+        this.gapPenalty = gapPenalty;
+        this.uppercaseMismatchScore = uppercaseMismatchScore;
+        this.goodQuality = goodQuality;
+        this.badQuality = badQuality;
+        this.maxQualityPenalty = maxQualityPenalty;
+        this.qualityPenaltyForN = qualityPenaltyForN;
+    }
+
     /**
      * Creates new PatternAndTargetAlignmentScoring.
      *
@@ -70,16 +95,9 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
      * @param maxQualityPenalty score penalty value for badQuality or worse, <= 0
      * @param qualityPenaltyForN true if we will use quality penalty for N letters in pattern, otherwise false
      */
-    @JsonCreator
-    public PatternAndTargetAlignmentScoring(
-            @JsonProperty("matchScore") int matchScore,
-            @JsonProperty("mismatchScore") int mismatchScore,
-            @JsonProperty("gapPenalty") int gapPenalty,
-            @JsonProperty("uppercaseMismatchScore") int uppercaseMismatchScore,
-            @JsonProperty("goodQuality") byte goodQuality,
-            @JsonProperty("badQuality") byte badQuality,
-            @JsonProperty("maxQualityPenalty") int maxQualityPenalty,
-            @JsonProperty("qualityPenaltyForN") boolean qualityPenaltyForN) {
+    public PatternAndTargetAlignmentScoring(int matchScore, int mismatchScore, int gapPenalty,
+                                            int uppercaseMismatchScore, byte goodQuality, byte badQuality,
+                                            int maxQualityPenalty, boolean qualityPenaltyForN) {
         super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
         if ((mismatchScore >= Math.min(0, matchScore)) || (gapPenalty >= Math.min(0, matchScore))
                 || (maxQualityPenalty > 0) || (uppercaseMismatchScore > mismatchScore))
@@ -216,10 +234,10 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         }
 
         @SuppressWarnings("unchecked")
-        private Object readResolve()
-                throws ObjectStreamException {
-            return new PatternAndTargetAlignmentScoring(matchScore, mismatchScore, gapPenalty, uppercaseMismatchScore,
-                    goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
+        private Object readResolve() throws ObjectStreamException {
+            return new PatternAndTargetAlignmentScoring(NucleotideSequenceCaseSensitive.ALPHABET, matchScore,
+                    mismatchScore, gapPenalty, uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty,
+                    qualityPenaltyForN);
         }
     }
 }

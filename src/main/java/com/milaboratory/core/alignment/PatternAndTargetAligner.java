@@ -169,7 +169,7 @@ public final class PatternAndTargetAligner {
         SequenceQuality targetPartQuality = targetPart.getQuality();
         int matrixSize1 = patternSize + 1;
         int matrixSize2 = targetPartSize + 1;
-        int matrix[] = new int[matrixSize1 * matrixSize2];
+        int[] matrix = new int[matrixSize1 * matrixSize2];
         int i1, i2, match, delete, insert;
 
         matrix[0] = 0;
