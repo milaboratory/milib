@@ -43,7 +43,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
     private final byte goodQuality;
     private final byte badQuality;
     private final int maxQualityPenalty;
-    private final boolean qualityPenaltyForN;
 
     /**
      * Creates new PatternAndTargetAlignmentScoring. Required for deserialization defaults.
@@ -57,7 +56,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         goodQuality = GOOD_QUALITY_VALUE;
         badQuality = BAD_QUALITY_VALUE;
         maxQualityPenalty = 0;
-        qualityPenaltyForN = false;
     }
 
     @JsonCreator
@@ -70,8 +68,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
             @JsonProperty("uppercaseMismatchScore") int uppercaseMismatchScore,
             @JsonProperty("goodQuality") byte goodQuality,
             @JsonProperty("badQuality") byte badQuality,
-            @JsonProperty("maxQualityPenalty") int maxQualityPenalty,
-            @JsonProperty("qualityPenaltyForN") boolean qualityPenaltyForN) {
+            @JsonProperty("maxQualityPenalty") int maxQualityPenalty) {
         super(NucleotideSequenceCaseSensitive.ALPHABET, subsMatrix);
         if ((matchScore > 0) || (mismatchScore >= 0) || (gapPenalty >= 0) || (maxQualityPenalty > 0))
             throw new IllegalArgumentException();
@@ -82,7 +79,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         this.goodQuality = goodQuality;
         this.badQuality = badQuality;
         this.maxQualityPenalty = maxQualityPenalty;
-        this.qualityPenaltyForN = qualityPenaltyForN;
     }
 
     /**
@@ -95,11 +91,10 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
      * @param goodQuality this or better quality will not get score penalty
      * @param badQuality this or worse quality will get maximal score penalty
      * @param maxQualityPenalty score penalty value for badQuality or worse, <= 0
-     * @param qualityPenaltyForN true if we will use quality penalty for N letters in pattern, otherwise false
      */
     public PatternAndTargetAlignmentScoring(int matchScore, int mismatchScore, int gapPenalty,
                                             int uppercaseMismatchScore, byte goodQuality, byte badQuality,
-                                            int maxQualityPenalty, boolean qualityPenaltyForN) {
+                                            int maxQualityPenalty) {
         super(NucleotideSequenceCaseSensitive.ALPHABET, new SubstitutionMatrix(matchScore, mismatchScore));
         if ((mismatchScore >= Math.min(0, matchScore)) || (gapPenalty >= Math.min(0, matchScore))
                 || (maxQualityPenalty > 0) || (uppercaseMismatchScore > mismatchScore))
@@ -113,7 +108,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         this.goodQuality = goodQuality;
         this.badQuality = badQuality;
         this.maxQualityPenalty = maxQualityPenalty;
-        this.qualityPenaltyForN = qualityPenaltyForN;
     }
 
     /**
@@ -150,7 +144,8 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         int basicScore = super.getScore(from, to);
         // for case sensitive alphabet, possible results for basicScore are only matchScore and mismatchScore
         boolean isMismatch = (basicScore == mismatchScore);
-        return (isMismatch && Character.isUpperCase(alphabet.codeToSymbol(from))) ? uppercaseMismatchScore : basicScore;
+        return (isMismatch && Character.isUpperCase(alphabet.codeToSymbol(from)))
+                ? uppercaseMismatchScore : basicScore;
     }
 
     /**
@@ -163,9 +158,13 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
      */
     public int getScore(byte from, byte to, byte quality) {
         int basicScore = getScore(from, to);
-        int extraQualityPenalty = maxQualityPenalty * (goodQuality
+        int extraQualityPenalty = isN(from) ? 0 : maxQualityPenalty * (goodQuality
                 - Math.min(goodQuality, Math.max(badQuality, quality))) / Math.max(1, goodQuality - badQuality);
         return basicScore + extraQualityPenalty;
+    }
+
+    private boolean isN(byte symbolCode) {
+        return Character.toUpperCase(alphabet.codeToSymbol(symbolCode)) == 'N';
     }
 
     @Override
@@ -182,17 +181,14 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
-
         PatternAndTargetAlignmentScoring that = (PatternAndTargetAlignmentScoring)o;
-
         if (matchScore != that.matchScore) return false;
         if (mismatchScore != that.mismatchScore) return false;
         if (gapPenalty != that.gapPenalty) return false;
         if (uppercaseMismatchScore != that.uppercaseMismatchScore) return false;
         if (goodQuality != that.goodQuality) return false;
         if (badQuality != that.badQuality) return false;
-        if (maxQualityPenalty != that.maxQualityPenalty) return false;
-        return qualityPenaltyForN == that.qualityPenaltyForN;
+        return maxQualityPenalty == that.maxQualityPenalty;
     }
 
     @Override
@@ -205,7 +201,6 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         result = 31 * result + (int)goodQuality;
         result = 31 * result + (int)badQuality;
         result = 31 * result + maxQualityPenalty;
-        result = 31 * result + (qualityPenaltyForN ? 1 : 0);
         return result;
     }
 
@@ -213,7 +208,7 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
 
     protected Object writeReplace() throws ObjectStreamException {
         return new SerializationObject(alphabet, subsMatrix, matchScore, mismatchScore,
-                gapPenalty, uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
+                gapPenalty, uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty);
     }
 
     protected static class SerializationObject implements java.io.Serializable {
@@ -226,17 +221,15 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
         private final byte goodQuality;
         private final byte badQuality;
         private final int maxQualityPenalty;
-        private final boolean qualityPenaltyForN;
 
         public SerializationObject() {
             this(null, null, 0, 0, 0, 0,
-                    (byte)0, (byte)0, 0, false);
+                    (byte)0, (byte)0, 0);
         }
 
         public SerializationObject(
                 Alphabet alphabet, SubstitutionMatrix matrix, int matchScore, int mismatchScore, int gapPenalty,
-                int uppercaseMismatchScore, byte goodQuality, byte badQuality, int maxQualityPenalty,
-                boolean qualityPenaltyForN) {
+                int uppercaseMismatchScore, byte goodQuality, byte badQuality, int maxQualityPenalty) {
             this.alphabet = alphabet;
             this.matrix = matrix;
             this.matchScore = matchScore;
@@ -246,12 +239,11 @@ public final class PatternAndTargetAlignmentScoring extends AbstractAlignmentSco
             this.goodQuality = goodQuality;
             this.badQuality = badQuality;
             this.maxQualityPenalty = maxQualityPenalty;
-            this.qualityPenaltyForN = qualityPenaltyForN;
         }
 
         private Object readResolve() throws ObjectStreamException {
             return new PatternAndTargetAlignmentScoring(alphabet, matrix, matchScore, mismatchScore, gapPenalty,
-                    uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty, qualityPenaltyForN);
+                    uppercaseMismatchScore, goodQuality, badQuality, maxQualityPenalty);
         }
     }
 }
