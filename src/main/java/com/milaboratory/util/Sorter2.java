@@ -45,7 +45,7 @@ public class Sorter2<K, O> {
     }
 
     @SuppressWarnings("unchecked")
-    public void run() throws IOException {
+    public OutputPortCloseable<O> run() throws IOException {
 
         ArrayList<KO> koChunk = new ArrayList<>();
         List<KO> koChunkSync = Collections.synchronizedList(koChunk);
@@ -58,54 +58,60 @@ public class Sorter2<K, O> {
         chunkOffsets.add(0);
 
         AtomicBoolean sourceIsEmpty = new AtomicBoolean(false);
-        do {
-            OutputStream tempFileStream = new BufferedOutputStream(new FileOutputStream(tempFile));
-            koChunk.clear();
+        try (OutputStream tempFileStream = new BufferedOutputStream(new FileOutputStream(tempFile));) {
+            do {
+                koChunk.clear();
 
-            AtomicLong bytesWritten = new AtomicLong(0);
-            Arrays.stream(workers)
-                    .map(w -> executor.submit(w.serialize(koChunkSync, bytesWritten, sourceIsEmpty)))
-                    .forEach(f -> {
-                        try {
-                            f.get();
-                        } catch (InterruptedException | ExecutionException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+                AtomicLong bytesWritten = new AtomicLong(0);
+                Arrays.stream(workers)
+                        .map(w -> executor.submit(w.serialize(koChunkSync, bytesWritten, sourceIsEmpty)))
+                        .forEach(f -> {
+                            try {
+                                f.get();
+                            } catch (InterruptedException | ExecutionException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
 
-            // sorting
-            KO[] kos = koChunk.toArray(new Sorter2.KO[0]);
-            Arrays.parallelSort(kos, (a, b) -> comparator.compare(a.k, b.k));
+                // sorting
+                KO[] kos = koChunk.toArray(new Sorter2.KO[0]);
+                Arrays.parallelSort(kos, (a, b) -> comparator.compare(a.key, b.key));
 
-            long offset = 0;
-            for (KO ko : kos) {
-                offset += ko.data.length;
-                tempFileStream.write(ko.data);
-            }
+                long offset = 0;
+                for (KO ko : kos) {
+                    offset += ko.data.length;
+                    tempFileStream.write(ko.data);
+                }
 
-            tempFileStream.write(0);
-            tempFileStream.write(0);
-            tempFileStream.write(0);
-            tempFileStream.write(0);
+                tempFileStream.write(0);
+                tempFileStream.write(0);
+                tempFileStream.write(0);
+                tempFileStream.write(0);
 
-            chunkOffsets.add(offset);
-        } while (!sourceIsEmpty.get());
+                chunkOffsets.add(offset);
+            } while (!sourceIsEmpty.get());
+        }
 
+        if (nOpenFileStreams < chunkOffsets.size()) {
+            throw new RuntimeException();
+        }
 
-        // io-io-io
-    }
+        Serializer<K> kSerializer = kSerializerSupplier.get();
+        Serializer<O> oSerializer = oSerializerSupplier.get();
 
-    public OutputPortCloseable<KO> getSorted(File tempFile) {
-        // Empty output port removing temp file on close.
-        return new OutputPortCloseable<KO>() {
+        MergeSortingPort r = new MergeSortingPort(tempFile, chunkOffsets, 0, chunkOffsets.size(), kSerializer, oSerializer);
+        return new OutputPortCloseable<O>() {
             @Override
             public void close() {
-                tempFile.delete();
+                r.close();
             }
 
             @Override
-            public KO take() {
-                return null;
+            public O take() {
+                KO ko = r.take();
+                if (ko == null)
+                    return null;
+                return ko.obj;
             }
         };
     }
@@ -113,11 +119,9 @@ public class Sorter2<K, O> {
     private final class MergeSortingPort implements OutputPortCloseable<KO> {
         final PriorityQueue<Sorter2.SortedBlockReader> queue = new PriorityQueue<>();
 
-        public MergeSortingPort(File tempFile, TLongArrayList chunkOffsets, int firstChunk, int nChunks, Serializer<K> kSerializer) throws IOException {
-            // There will be chunkOffsets.size() separate readers =>
-            // chunkOffsets.size() separate buffered streams =>
-            // consuming memoryBudget / chunkOffsets.size() bytes each, will give
-            // ~ memoryBudget bytes consumed in total
+        public MergeSortingPort(File tempFile, TLongArrayList chunkOffsets, int firstChunk, int nChunks,
+                                Serializer<K> kSerializer,
+                                Serializer<O> oSerializer) throws IOException {
             int bufferSize = (int) Math.min(
                     Math.max(1024, chunkSize / nChunks),
                     Integer.MAX_VALUE);
@@ -125,7 +129,7 @@ public class Sorter2<K, O> {
             for (int i = 0; i < nChunks; i++) {
                 SortedBlockReader block = new SortedBlockReader(tempFile,
                         chunkOffsets.get(firstChunk + i),
-                        bufferSize, kSerializer);
+                        bufferSize, kSerializer, oSerializer);
                 block.advance();
                 queue.add(block);
             }
@@ -179,17 +183,20 @@ public class Sorter2<K, O> {
         final DataInputStream input;
         final int bufferSize;
         final Serializer<K> kSerializer;
+        final Serializer<O> oSerializer;
         private KO current = null;
 
         public SortedBlockReader(File file,
                                  long chunkOffset,
                                  int bufferSize,
-                                 Serializer<K> kSerializer) throws IOException {
+                                 Serializer<K> kSerializer,
+                                 Serializer<O> oSerializer) throws IOException {
 
             final FileInputStream fo = new FileInputStream(file);
             // Setting file position to the beginning of the chunkId-th chunk
             fo.getChannel().position(chunkOffset);
             this.kSerializer = kSerializer;
+            this.oSerializer = oSerializer;
             this.bufferSize = bufferSize;
             this.in = new BufferedInputStream(fo, bufferSize);
             this.input = new DataInputStream(in);
@@ -197,19 +204,30 @@ public class Sorter2<K, O> {
 
         public void advance() {
             try {
-                in.mark(bufferSize);
-                int len = input.readInt();
-                if (len == 0) {
-                    current = null;
-                    return;
+                if (oSerializer != null) {
+                    int len = input.readInt();
+                    if (len == 0) {
+                        current = null;
+                        return;
+                    }
+                    K k = kSerializer.deserialize(this.input);
+                    O o = oSerializer.deserialize(this.input);
+                    current = new KO(k, o);
+                } else {
+                    in.mark(bufferSize);
+                    int len = input.readInt();
+                    if (len == 0) {
+                        current = null;
+                        return;
+                    }
+                    K k = kSerializer.deserialize(this.input);
+                    in.reset();
+                    byte[] data = new byte[len];
+                    input.readFully(data);
+                    current = new KO(k, data);
                 }
-                K k = kSerializer.deserialize(SortedBlockReader.this.input);
-                in.reset();
-                byte[] data = new byte[len];
-                input.readFully(data);
-                current = new KO(k, data);
             } catch (IOException e) {
-                throw new RuntimeException();
+                throw new RuntimeException(e);
             }
         }
 
@@ -224,7 +242,7 @@ public class Sorter2<K, O> {
 
         @Override
         public int compareTo(SortedBlockReader o) {
-            return comparator.compare(current.k, o.current.k);
+            return comparator.compare(current.key, o.current.key);
         }
     }
 
@@ -232,7 +250,6 @@ public class Sorter2<K, O> {
         final Serializer<O> oSerializer = oSerializerSupplier.get();
         final Serializer<K> kSerializer = kSerializerSupplier.get();
         final ByteArrayOutputStream bb = new ByteArrayOutputStream();
-
 
         Runnable serialize(List<KO> dest, AtomicLong bytesWritten, AtomicBoolean sourceEmpty) {
             return () -> {
@@ -247,16 +264,14 @@ public class Sorter2<K, O> {
                     bb.write(0);
                     bb.write(0);
 
-                    kSerializer.serialize(key, dos);
-
-                    oSerializer.serialize(obj, dos);
+                    try {
+                        kSerializer.serialize(key, dos);
+                        oSerializer.serialize(obj, dos);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
                     byte[] data = bb.toByteArray();
-                    int len = data.length;
-
-                    data[0] = (byte) ((len >>> 24) & 0xFF);
-                    data[1] = (byte) ((len >>> 16) & 0xFF);
-                    data[2] = (byte) ((len >>> 8) & 0xFF);
-                    data[3] = (byte) ((len >>> 0) & 0xFF);
+                    writeInt(data, 0, data.length);
 
                     dest.add(new KO(key, data));
                     if (bytesWritten.addAndGet(data.length) > chunkSize)
@@ -267,20 +282,34 @@ public class Sorter2<K, O> {
         }
     }
 
+    private static void writeInt(byte[] data, int index, int value) {
+        data[index + 0] = (byte) ((value >>> 24) & 0xFF);
+        data[index + 1] = (byte) ((value >>> 16) & 0xFF);
+        data[index + 2] = (byte) ((value >>> 8) & 0xFF);
+        data[index + 3] = (byte) ((value >>> 0) & 0xFF);
+    }
 
     private final class KO {
-        final K k;
+        final K key;
+        final O obj;
         final byte[] data;
 
-        KO(K k, byte[] data) {
-            this.k = k;
+        KO(K key, byte[] data) {
+            this.key = key;
+            this.obj = null;
             this.data = data;
+        }
+
+        KO(K key, O o) {
+            this.key = key;
+            this.obj = o;
+            this.data = null;
         }
     }
 
     public interface Serializer<T> {
-        void serialize(T t, DataOutput dest);
+        void serialize(T t, DataOutput dest) throws IOException;
 
-        T deserialize(DataInput source);
+        T deserialize(DataInput source) throws IOException;
     }
 }
