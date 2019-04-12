@@ -1,10 +1,12 @@
 package com.milaboratory.util;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.OutputPortCloseable;
 import gnu.trove.list.array.TLongArrayList;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -29,9 +31,13 @@ public class Sorter2<K, O> {
     private final int nOpenFileStreams; // number of open reads from temp file
     private final long chunkSize; // in bytes
 
-    private final File tempFile;
+    private final Path tempFilePrefix;
 
-    public Sorter2(OutputPort<O> initialSource, Function<O, K> keyExtractor, Comparator<K> comparator, Supplier<Serializer<O>> oSerializerSupplier, Supplier<Serializer<K>> kSerializerSupplier, ExecutorService executor, int nThreads, int nOpenFileStreams, long chunkSize, File tempFile) {
+    public Sorter2(OutputPort<O> initialSource, Function<O, K> keyExtractor,
+                   Comparator<K> comparator, Supplier<Serializer<O>> oSerializerSupplier,
+                   Supplier<Serializer<K>> kSerializerSupplier, ExecutorService executor,
+                   int nThreads, int nOpenFileStreams, long chunkSize,
+                   Path tempFilePrefix) {
         this.initialSource = initialSource;
         this.keyExtractor = keyExtractor;
         this.comparator = comparator;
@@ -41,7 +47,7 @@ public class Sorter2<K, O> {
         this.nThreads = nThreads;
         this.nOpenFileStreams = nOpenFileStreams;
         this.chunkSize = chunkSize;
-        this.tempFile = tempFile;
+        this.tempFilePrefix = tempFilePrefix;
     }
 
     @SuppressWarnings("unchecked")
@@ -57,8 +63,14 @@ public class Sorter2<K, O> {
         TLongArrayList chunkOffsets = new TLongArrayList();
         chunkOffsets.add(0);
 
-        AtomicBoolean sourceIsEmpty = new AtomicBoolean(false);
-        try (OutputStream tempFileStream = new BufferedOutputStream(new FileOutputStream(tempFile));) {
+        int fileIndex = 0;
+
+        File initialFile = tempFilePrefix.resolveSibling(tempFilePrefix.getFileName().toString() + (fileIndex++)).toFile();
+
+        try (OutputStream tempFileStream = new BufferedOutputStream(new FileOutputStream(initialFile))) {
+            AtomicBoolean sourceIsEmpty = new AtomicBoolean(false);
+            long offset = 0;
+
             do {
                 koChunk.clear();
 
@@ -73,11 +85,13 @@ public class Sorter2<K, O> {
                             }
                         });
 
+                if (koChunk.isEmpty())
+                    break;
+
                 // sorting
                 KO[] kos = koChunk.toArray(new Sorter2.KO[0]);
                 Arrays.parallelSort(kos, (a, b) -> comparator.compare(a.key, b.key));
 
-                long offset = 0;
                 for (KO ko : kos) {
                     offset += ko.data.length;
                     tempFileStream.write(ko.data);
@@ -87,23 +101,56 @@ public class Sorter2<K, O> {
                 tempFileStream.write(0);
                 tempFileStream.write(0);
                 tempFileStream.write(0);
+                offset += 4;
 
                 chunkOffsets.add(offset);
             } while (!sourceIsEmpty.get());
+
         }
 
-        if (nOpenFileStreams < chunkOffsets.size()) {
-            throw new RuntimeException();
-        }
+        chunkOffsets.removeAt(chunkOffsets.size() - 1);
+
+        File sourceFile = initialFile;
 
         Serializer<K> kSerializer = kSerializerSupplier.get();
         Serializer<O> oSerializer = oSerializerSupplier.get();
 
-        MergeSortingPort r = new MergeSortingPort(tempFile, chunkOffsets, 0, chunkOffsets.size(), kSerializer, oSerializer);
+        while (nOpenFileStreams < chunkOffsets.size()) {
+            TLongArrayList newChunkOffsets = new TLongArrayList();
+            File destFile = tempFilePrefix.resolveSibling(tempFilePrefix.getFileName().toString() + (fileIndex++)).toFile();
+            try (OutputStream os = new BufferedOutputStream(new FileOutputStream(destFile))) {
+                int lastChunk = 0;
+                long offset = 0;
+                newChunkOffsets.add(offset);
+                while (lastChunk < chunkOffsets.size()) {
+                    int nChunks = Math.min(nOpenFileStreams, chunkOffsets.size() - lastChunk);
+                    MergeSortingPort r = new MergeSortingPort(sourceFile, chunkOffsets, lastChunk, nChunks, kSerializer, null);
+                    for (KO ko : CUtils.it(r)) {
+                        os.write(ko.data);
+                        offset += ko.data.length;
+                    }
+                    os.write(0);
+                    os.write(0);
+                    os.write(0);
+                    os.write(0);
+                    offset += 4;
+                    newChunkOffsets.add(offset);
+                    lastChunk += nChunks;
+                }
+            }
+            sourceFile.delete();
+            sourceFile = destFile;
+            chunkOffsets = newChunkOffsets;
+            chunkOffsets.removeAt(chunkOffsets.size() - 1);
+        }
+
+        File finalSourceFiles = sourceFile;
+        MergeSortingPort r = new MergeSortingPort(finalSourceFiles, chunkOffsets, 0, chunkOffsets.size(), kSerializer, oSerializer);
         return new OutputPortCloseable<O>() {
             @Override
             public void close() {
                 r.close();
+                finalSourceFiles.delete();
             }
 
             @Override
@@ -166,6 +213,7 @@ public class Sorter2<K, O> {
         public synchronized void close() {
             if (closed)
                 return;
+
             for (SortedBlockReader block : queue)
                 try {
                     block.close();
@@ -173,7 +221,6 @@ public class Sorter2<K, O> {
                     throw new RuntimeException(e);
                 }
 
-            tempFile.delete();
             closed = true;
         }
     }

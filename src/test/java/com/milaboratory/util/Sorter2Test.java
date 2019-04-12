@@ -1,6 +1,8 @@
 package com.milaboratory.util;
 
 import cc.redberry.pipe.CUtils;
+import cc.redberry.pipe.OutputPort;
+import cc.redberry.pipe.util.CountLimitingOutputPort;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -8,11 +10,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  *
@@ -39,37 +40,91 @@ public class Sorter2Test {
     private static void testWithInts(int nElements, long chunkSize, int nOpenFileStreams) throws Exception {
         File tmpFile = TempFileManager.getTempFile();
 
-        ArrayList<Integer> source = new ArrayList<>();
-        for (int i = 0; i < nElements; i++) {
-            int e = RandomUtil.getThreadLocalRandom().nextInt();
-            source.add(e);
-        }
+        AtomicInteger hash = new AtomicInteger();
 
-        Sorter2.Serializer<Integer> ser = new Sorter2.Serializer<Integer>() {
+        OutputPort<TestObject> source = new OutputPort<TestObject>() {
             @Override
-            public void serialize(Integer integer, DataOutput dest) throws IOException {
-                dest.writeInt(integer);
-            }
-
-            @Override
-            public Integer deserialize(DataInput source) throws IOException {
-                return source.readInt();
+            public synchronized TestObject take() {
+                int e = RandomUtil.getThreadLocalRandom().nextInt();
+                byte[] aaa = new byte[256];
+                RandomUtil.getThreadLocalRandom().nextBytes(aaa);
+                TestObject testObject = new TestObject(RandomUtil.getThreadLocalRandom().nextLong(), Arrays.toString(aaa));
+                hash.addAndGet(testObject.hashCode());
+                return testObject;
             }
         };
 
-        Sorter2<Integer, Integer> sorter = new Sorter2<>(CUtils.asOutputPort(source),
-                Function.identity(), Integer::compareTo,
-                () -> ser, () -> ser,
+        source = new CountLimitingOutputPort<>(source, nElements);
+
+        Sorter2.Serializer<Long> serK = new Sorter2.Serializer<Long>() {
+            @Override
+            public void serialize(Long l, DataOutput dest) throws IOException {
+                dest.writeUTF("" + l);
+            }
+
+            @Override
+            public Long deserialize(DataInput source) throws IOException {
+                return Long.valueOf(source.readUTF());
+            }
+        };
+
+        Sorter2.Serializer<TestObject> serO = new Sorter2.Serializer<TestObject>() {
+            @Override
+            public void serialize(TestObject testObject, DataOutput dest) throws IOException {
+                dest.writeLong(testObject.l);
+                dest.writeUTF(testObject.string);
+            }
+
+            @Override
+            public TestObject deserialize(DataInput source) throws IOException {
+                long l = source.readLong();
+                String string = source.readUTF();
+                return new TestObject(l, string);
+            }
+        };
+
+        Sorter2<Long, TestObject> sorter = new Sorter2<>(source,
+                o -> o.l, Long::compareTo,
+                () -> serO, () -> serK,
                 Executors.newCachedThreadPool(),
                 8,
-                nOpenFileStreams, chunkSize, tmpFile);
+                nOpenFileStreams, chunkSize, tmpFile.toPath());
 
-        List<Integer> result = new ArrayList<>();
-        for (Integer integer : CUtils.it(sorter.run()))
-            result.add(integer);
+        int count = 0, hash1 = 0;
+        TestObject prev = null;
+        for (TestObject o : CUtils.it(sorter.run())) {
+            if (prev != null)
+                Assert.assertTrue(prev.l <= o.l);
+            prev = o;
+            ++count;
+            hash1 += o.hashCode();
+        }
 
+        Assert.assertEquals(count, nElements);
+        Assert.assertEquals(hash.get(), hash1);
+    }
 
-        Collections.sort(source);
-        Assert.assertEquals(source, result);
+    public static final class TestObject {
+        long l;
+        String string;
+
+        public TestObject(long l, String string) {
+            this.l = l;
+            this.string = string;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof TestObject)) return false;
+            TestObject that = (TestObject) o;
+            return l == that.l &&
+                    Objects.equals(string, that.string);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(l, string);
+        }
     }
 }
