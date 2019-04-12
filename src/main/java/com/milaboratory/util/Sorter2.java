@@ -171,7 +171,7 @@ public class Sorter2<K, O> {
                                 Serializer<O> oSerializer) throws IOException {
             int bufferSize = (int) Math.min(
                     Math.max(1024, chunkSize / nChunks),
-                    Integer.MAX_VALUE);
+                    Integer.MAX_VALUE >> 2);
 
             for (int i = 0; i < nChunks; i++) {
                 SortedBlockReader block = new SortedBlockReader(tempFile,
