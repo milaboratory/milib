@@ -15,17 +15,17 @@
  */
 package com.milaboratory.primitivio;
 
+import org.apache.commons.io.input.NullInputStream;
+
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 
 /**
- * Holds PrimitivI stream state (known objects, known references and serialization manager).
+ * Immutable object that holds PrimitivI stream state (known objects, known references and serialization manager).
  *
- * PrimitivI always return new instance of the object, that has no references to the original stream.
- *
- * Objects of this class are immutable.
+ * PrimitivI always return new instance of the object. This object preserves no references to the original stream.
  */
 public final class PrimitivIState {
     private final SerializersManager manager;
@@ -38,6 +38,10 @@ public final class PrimitivIState {
         this.manager = manager.clone();
         this.knownReferences = new ArrayList<>(knownReferences);
         this.knownObjects = new ArrayList<>(knownObjects);
+    }
+
+    public PrimitivI createPrimitivI() {
+        return createPrimitivI(new NullInputStream(0));
     }
 
     public PrimitivI createPrimitivI(DataInput output) {

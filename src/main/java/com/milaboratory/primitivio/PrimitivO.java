@@ -18,6 +18,7 @@ package com.milaboratory.primitivio;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
+import org.apache.commons.io.output.NullOutputStream;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -53,7 +54,7 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
     /**
      * This REFERENCES will be replaced by "known reference token". This map holds references between serialization
-     * rounds (more persistent then currentReferences).
+     * rounds ("more persistent" then currentReferences).
      */
     final TObjectIntCustomHashMap<Object> knownReferences;
 
@@ -72,6 +73,18 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
      */
     TObjectIntCustomHashMap<Object> currentReferences = null;
 
+    public PrimitivO() {
+        this(new NullOutputStream());
+    }
+
+    public PrimitivO(DataOutput output) {
+        this(output, new SerializersManager());
+    }
+
+    public PrimitivO(OutputStream output) {
+        this(new DataOutputStream(output), new SerializersManager());
+    }
+
     PrimitivO(DataOutput output, SerializersManager manager,
               TObjectIntCustomHashMap<Object> knownReferences, TObjectIntMap<Object> knownObjects) {
         this.output = output;
@@ -86,14 +99,6 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         );
     }
 
-    public PrimitivO(DataOutput output) {
-        this(output, new SerializersManager());
-    }
-
-    public PrimitivO(OutputStream output) {
-        this(new DataOutputStream(output), new SerializersManager());
-    }
-
     /**
      * Returns copy of current PrimitivO state. The state can then be used to create PrimitivO with the same state of
      * known objects, known references and serialization manager.
@@ -102,6 +107,25 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         if (depth != 0)
             throw new IllegalStateException("Can't return state during serialization transaction.");
         return new PrimitivOState(manager, knownReferences, knownObjects);
+    }
+
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivO substituteStream(OutputStream output) {
+        return substituteStream((DataOutput) new DataOutputStream(output));
+    }
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivO substituteStream(DataOutput output) {
+        if (depth != 0)
+            throw new IllegalStateException("Can't substitute stream during serialization.");
+        return new PrimitivO(output, manager, knownReferences, knownObjects);
     }
 
     public SerializersManager getSerializersManager() {
