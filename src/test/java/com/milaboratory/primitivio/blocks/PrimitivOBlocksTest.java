@@ -21,9 +21,9 @@ import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.test.TestUtil;
+import com.milaboratory.util.FormatUtils;
 import com.milaboratory.util.RandomUtil;
 import com.milaboratory.util.TempFileManager;
-import com.milaboratory.util.TimeUtils;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import org.junit.AfterClass;
@@ -63,13 +63,13 @@ public class PrimitivOBlocksTest {
     @Test
     public void benchmark1() throws IOException {
         for (int i = 0; i < 10; i++) {
-            runTest(false, 1, 100000, 1);
-            runTest(false, 2, 100000, 1);
-            runTest(false, 3, 100000, 1);
-            runTest(false, 4, 100000, 1);
-            // runTest(true, 1, 100000, 2);
+            runTest(false, 1, 1000000, 1);
+            // runTest(false, 2, 100000, 1);
+            // runTest(false, 3, 100000, 1);
+            runTest(false, 4, 1000000, 1);
+            runTest(true, 1, 1000000, 2);
             // runTest(true, 2, 100000, 2);
-            // runTest(true, 3, 100000, 2);
+            runTest(true, 4, 1000000, 2);
         }
     }
 
@@ -77,11 +77,12 @@ public class PrimitivOBlocksTest {
 
     public void runTest(boolean highCompression,
                         int concurrency,
-                        long elements,
+                        int elements,
                         int checksumSlot) throws IOException {
-        LZ4Factory lz4Factory = LZ4Factory.fastestJavaInstance();
+        // LZ4Factory lz4Factory = LZ4Factory.fastestJavaInstance();
+        LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
         LZ4Compressor compressor = highCompression
-                ? lz4Factory.highCompressor()
+                ? lz4Factory.highCompressor(1)
                 : lz4Factory.fastCompressor();
 
         Path target = TempFileManager.getTempFile().toPath();
@@ -92,19 +93,23 @@ public class PrimitivOBlocksTest {
 
         List<SingleRead> sr = new ArrayList<>();
 
-        for (int i = 0; i < elements; i++) {
+        int elementsInRepeat = 1000;
+        int repeats = elements / elementsInRepeat;
+
+        for (int i = 0; i < elementsInRepeat; i++) {
             NucleotideSequence seq = TestUtil.randomSequence(NucleotideSequence.ALPHABET, 100, 2000);
             SingleReadImpl test = new SingleReadImpl(0, new NSequenceWithQuality(seq), "Test");
             sr.add(test);
         }
 
         long startTimestamp = System.nanoTime();
+        o.resetStats();
         try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(target, EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE,
                 StandardOpenOption.SYNC), executorService, new FileAttribute[0]);
              PrimitivOBlocks<SingleRead>.Writer writer = o.newWriter(channel, 0)) {
-            for (int i = 0; i < elements; i++) {
-                writer.write(sr.get(i));
-            }
+            for (int i = 0; i < repeats; i++)
+                for (int j = 0; j < elementsInRepeat; j++)
+                    writer.write(sr.get(j));
         }
         long elapsed = System.nanoTime() - startTimestamp;
         System.out.println();
@@ -112,9 +117,9 @@ public class PrimitivOBlocksTest {
         System.out.println("High compression: " + highCompression);
         System.out.println("Concurrency: " + concurrency);
         System.out.println("File size: " + Files.size(target));
-        System.out.println("Write time: " + TimeUtils.nanoTimeToString(elapsed));
+        System.out.println("Write time: " + FormatUtils.nanoTimeToString(elapsed));
         System.out.println("Stats:");
-        System.out.println(o.getStatsString());
+        System.out.println(o.getStats());
 
         byte[] checksum;
         try (InputStream in = new FileInputStream(target.toFile())) {

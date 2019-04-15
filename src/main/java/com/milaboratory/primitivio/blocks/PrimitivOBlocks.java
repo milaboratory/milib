@@ -18,7 +18,6 @@ package com.milaboratory.primitivio.blocks;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.LambdaLatch;
-import com.milaboratory.util.TimeUtils;
 import com.milaboratory.util.io.ByteArrayDataOutput;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.xxhash.XXHash32;
@@ -91,6 +90,11 @@ public final class PrimitivOBlocks<O> {
      */
     private volatile Throwable exception = null;
 
+    /**
+     * Concurrency
+     */
+    private final int concurrency;
+
     // Statistics
     // throttlingNanos = new AtomicLong(),
     private final AtomicLong
@@ -104,6 +108,8 @@ public final class PrimitivOBlocks<O> {
             concurrencyOverhead = new AtomicLong(),
             blockCount = new AtomicLong();
 
+    private long initializationTimestamp = System.nanoTime();
+
     /**
      * @param executor
      * @param compressor
@@ -114,12 +120,26 @@ public final class PrimitivOBlocks<O> {
         this.executor = executor;
         this.compressor = compressor;
         this.outputState = outputState;
-        this.concurrencyLimiter = concurrency >= 1 ? new Semaphore(concurrency) : null;
+        this.concurrency = concurrency;
+        this.concurrencyLimiter = new Semaphore(concurrency);
+    }
+
+    public void resetStats() {
+        initializationTimestamp = System.nanoTime();
+        totalSerializationNanos.set(0);
+        serializationNanos.set(0);
+        checksumNanos.set(0);
+        compressionNanos.set(0);
+        ioDelayNanos.set(0);
+        uncompressedBytes.set(0);
+        outputSize.set(0);
+        concurrencyOverhead.set(0);
+        blockCount.set(0);
     }
 
     private boolean blockIsFull(int numberOfObjects) {
         // TODO add logic here....
-        return numberOfObjects > 8000;
+        return numberOfObjects > 1000;
     }
 
     private void checkException() {
@@ -239,8 +259,7 @@ public final class PrimitivOBlocks<O> {
 
             // Concurrency limits the whole block lifecycle (serialization + IO)
             // so operations will be throttled both on IO and CPU
-            if (concurrencyLimiter != null)
-                concurrencyLimiter.acquireUninterruptibly();
+            concurrencyLimiter.acquireUninterruptibly();
 
             // Checking for errors before and after throttling
             checkException();
@@ -276,8 +295,7 @@ public final class PrimitivOBlocks<O> {
                                                     exception = new RuntimeException("Wrong block size.");
                                                     exception.printStackTrace();
                                                     // Releasing a permit for the next operation to detect the error
-                                                    if (concurrencyLimiter != null)
-                                                        concurrencyLimiter.release();
+                                                    concurrencyLimiter.release();
                                                     return;
                                                 }
 
@@ -287,8 +305,7 @@ public final class PrimitivOBlocks<O> {
                                                 position += blockSize;
 
                                                 // Releasing a permit for the next serialization (CPU intensive) operation
-                                                if (concurrencyLimiter != null)
-                                                    concurrencyLimiter.release();
+                                                concurrencyLimiter.release();
 
                                                 // Opening latch for the next IO operation
                                                 nextLatch.open();
@@ -328,17 +345,11 @@ public final class PrimitivOBlocks<O> {
         }
     }
 
-    public String getStatsString() {
-        return "totalSerializationNanos: " + TimeUtils.nanoTimeToString(totalSerializationNanos.get()) + "\n" +
-                "serializationNanos: " + TimeUtils.nanoTimeToString(serializationNanos.get()) + "\n" +
-                "checksumNanos: " + TimeUtils.nanoTimeToString(checksumNanos.get()) + "\n" +
-                "compressionNanos: " + TimeUtils.nanoTimeToString(compressionNanos.get()) + "\n" +
-                "ioDelayNanos: " + TimeUtils.nanoTimeToString(ioDelayNanos.get()) + "\n" +
-                "concurrencyOverhead: " + TimeUtils.nanoTimeToString(concurrencyOverhead.get()) + "\n" +
-                "uncompressedBytes: " + uncompressedBytes.get() + "\n" +
-                "outputSize: " + outputSize.get() + "\n" +
-                "blockCount: " + blockCount.get();
-
+    public PrimitivOBlocksStat getStats() {
+        return new PrimitivOBlocksStat(System.nanoTime() - initializationTimestamp,
+                totalSerializationNanos.get(), serializationNanos.get(), checksumNanos.get(),
+                compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(), concurrencyOverhead.get(),
+                outputSize.get(), blockCount.get(), concurrency);
     }
 
     private abstract class CHAbstract implements CompletionHandler<Integer, Object> {
