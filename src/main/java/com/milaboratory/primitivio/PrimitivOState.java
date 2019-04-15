@@ -32,6 +32,12 @@ import java.io.OutputStream;
  * PrimitivO always return new instance of the object. This object preserves no references to the original stream.
  */
 public final class PrimitivOState {
+    /**
+     * Initial PrimitivO state
+     */
+    public static final PrimitivOState INITIAL = new PrimitivOState(new SerializersManager(),
+            new TObjectIntCustomHashMap<>(), new TObjectIntCustomHashMap<>());
+
     private final SerializersManager manager;
 
     private final TObjectIntCustomHashMap<Object> knownReferences;
