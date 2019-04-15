@@ -83,8 +83,8 @@ public class PrimitivOBlocksTest {
 
         Path target = TempFileManager.getTempFile().toPath();
 
-        PrimitivOBlocks<SingleRead> o = new PrimitivOBlocks<>(executorService, compressor, PrimitivOState.INITIAL,
-                1024, concurrency);
+        PrimitivOBlocks<SingleRead> o = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, 1024, compressor
+        );
 
         RandomUtil.reseedThreadLocal(12341);
 

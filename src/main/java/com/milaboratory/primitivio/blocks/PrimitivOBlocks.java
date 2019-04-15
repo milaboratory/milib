@@ -20,18 +20,16 @@ import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.LambdaLatch;
 import com.milaboratory.util.io.ByteArrayDataOutput;
 import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.xxhash.XXHash32;
-import net.jpountz.xxhash.XXHashFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
@@ -56,26 +54,13 @@ import static com.milaboratory.util.io.IOUtil.writeIntBE;
  * Data:
  * [ dataSize bytes ] (compressed, if bit1 of header is 1; uncompressed, if bit1 is 0; no bytes for special blocks )
  */
-public final class PrimitivOBlocks<O> {
-    static final int HASH_SEED = 0xD5D20F71;
-    static final int BLOCK_HEADER_SIZE = 17;
-
+public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     private static final byte[] LAST_HEADER = new byte[BLOCK_HEADER_SIZE];
-
-    /**
-     * Executor for the deserialization routines
-     */
-    final ExecutorService executor;
 
     /**
      * LZ4 compressor to compress data blocks
      */
     private final LZ4Compressor compressor;
-
-    /**
-     * LZ4 hash function
-     */
-    private final XXHash32 xxHash32 = XXHashFactory.fastestJavaInstance().hash32();
 
     /**
      * PrimitivO stream state
@@ -91,16 +76,6 @@ public final class PrimitivOBlocks<O> {
      * Block size
      */
     private final int blockSize;
-
-    /**
-     * Concurrency
-     */
-    private final int concurrency;
-
-    /**
-     * Signal the error in one of the asynchronous actions
-     */
-    private volatile Throwable exception = null;
 
 
     // Statistics
@@ -121,19 +96,17 @@ public final class PrimitivOBlocks<O> {
 
     /**
      * @param executor
-     * @param compressor
+     * @param concurrency
      * @param outputState
-     * @param concurrency 0 for unlimited concurrency
+     * @param blockSize   number of objects in a block
+     * @param compressor
      */
-    public PrimitivOBlocks(ExecutorService executor,
-                           LZ4Compressor compressor,
-                           PrimitivOState outputState,
-                           int blockSize, int concurrency) {
-        this.executor = executor;
+    public PrimitivOBlocks(ExecutorService executor, int concurrency,
+                           PrimitivOState outputState, int blockSize, LZ4Compressor compressor) {
+        super(executor, concurrency);
         this.compressor = compressor;
         this.outputState = outputState;
         this.blockSize = blockSize;
-        this.concurrency = concurrency;
         this.concurrencyLimiter = new Semaphore(concurrency);
     }
 
@@ -153,11 +126,6 @@ public final class PrimitivOBlocks<O> {
 
     private boolean blockIsFull(int numberOfObjects) {
         return numberOfObjects >= blockSize;
-    }
-
-    private void checkException() {
-        if (exception != null)
-            throw new RuntimeException(exception);
     }
 
     /**
@@ -239,10 +207,7 @@ public final class PrimitivOBlocks<O> {
      * Helper method to create async channel for writing with this object's execution service
      */
     public AsynchronousFileChannel createAsyncChannel(Path path, OpenOption... additionalOptions) throws IOException {
-        Set<OpenOption> opts = new HashSet<>(Arrays.asList(additionalOptions));
-        opts.add(StandardOpenOption.CREATE);
-        opts.add(StandardOpenOption.WRITE);
-        return AsynchronousFileChannel.open(path, opts, executor);
+        return createAsyncChannel(path, additionalOptions, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
     }
 
     public Writer newWriter(Path channel) throws IOException {
@@ -394,11 +359,4 @@ public final class PrimitivOBlocks<O> {
                 outputSize.get(), blockCount.get(), objectCount.get(), concurrency);
     }
 
-    private abstract class CHAbstract implements CompletionHandler<Integer, Object> {
-        @Override
-        public void failed(Throwable exc, Object attachment) {
-            exc.printStackTrace();
-            exception = exc;
-        }
-    }
 }
