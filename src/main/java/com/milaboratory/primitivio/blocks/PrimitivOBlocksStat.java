@@ -28,15 +28,15 @@ public final class PrimitivOBlocksStat {
             uncompressedBytes,
             outputSize,
             concurrencyOverhead,
-            blockCount;
+            blockCount,
+            objectCount;
     private final int concurrency;
 
     public PrimitivOBlocksStat(long wallClockTime,
                                long totalSerializationNanos, long serializationNanos, long checksumNanos,
                                long compressionNanos, long ioDelayNanos, long uncompressedBytes,
-                               long concurrencyOverhead,
-                               long outputSize, long blockCount,
-                               int concurrency) {
+                               long concurrencyOverhead, long outputSize, long blockCount,
+                               long objectCount, int concurrency) {
         this.wallClockTime = wallClockTime;
         this.totalSerializationNanos = totalSerializationNanos;
         this.serializationNanos = serializationNanos;
@@ -47,6 +47,7 @@ public final class PrimitivOBlocksStat {
         this.uncompressedBytes = uncompressedBytes;
         this.outputSize = outputSize;
         this.blockCount = blockCount;
+        this.objectCount = objectCount;
         this.concurrency = concurrency;
     }
 
@@ -54,19 +55,22 @@ public final class PrimitivOBlocksStat {
     public String toString() {
         long totalTimeNano = totalSerializationNanos + ioDelayNanos + concurrencyOverhead;
         long concurrencyAdjustedNanos = (totalSerializationNanos + ioDelayNanos) / concurrency + concurrencyOverhead;
-        return "Total CPU time: " + nanoTimeToString(totalSerializationNanos) + "\n" +
+        return "Wall clock time: " + nanoTimeToString(wallClockTime) + "\n" +
+                "Total CPU time: " + nanoTimeToString(totalSerializationNanos) + "\n" +
                 "Serialization time: " + nanoTimeToString(serializationNanos) + " (" + percent(serializationNanos, totalSerializationNanos) + ")\n" +
                 "Checksum calculation time: " + nanoTimeToString(checksumNanos) + " (" + percent(checksumNanos, totalSerializationNanos) + ")\n" +
                 "Compression time: " + nanoTimeToString(compressionNanos) + " (" + percent(compressionNanos, totalSerializationNanos) + ")\n" +
                 "Total IO delay: " + nanoTimeToString(ioDelayNanos) + "\n" +
                 "Concurrency overhead: " + nanoTimeToString(concurrencyOverhead) + "\n" +
                 "Uncompressed size: " + bytesToString(uncompressedBytes) + "\n" +
-                "Output size: " + bytesToString(outputSize) + "\n" +
-                "Wall clock time: " + nanoTimeToString(wallClockTime) + "\n" +
+                "Output size: " + bytesToString(outputSize) + " (compression = " + percent(outputSize, uncompressedBytes) + ")\n" +
                 "IO speed: " + bytesToString(NANOSECONDS_IN_SECOND * outputSize / ioDelayNanos) + "/s\n" +
                 "Concurrency adjusted uncompressed speed: " + bytesToString(NANOSECONDS_IN_SECOND * uncompressedBytes / concurrencyAdjustedNanos) + "/s\n" +
                 "Actual uncompressed speed: " + bytesToString(NANOSECONDS_IN_SECOND * uncompressedBytes / wallClockTime) + "/s\n" +
                 "Actual speed: " + bytesToString(NANOSECONDS_IN_SECOND * outputSize / wallClockTime) + "/s\n" +
+                "Objects: " + objectCount + "\n" +
+                "Average object size uncompressed: " + bytesToString(uncompressedBytes / objectCount) + "\n" +
+                "Average object size compressed: " + bytesToString(outputSize / objectCount) + "\n" +
                 "Blocks: " + blockCount + " (~" + bytesToString(outputSize / blockCount) + " each)";
     }
 }

@@ -34,14 +34,10 @@ import org.junit.Test;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.FileAttribute;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -87,7 +83,8 @@ public class PrimitivOBlocksTest {
 
         Path target = TempFileManager.getTempFile().toPath();
 
-        PrimitivOBlocks<SingleRead> o = new PrimitivOBlocks<>(executorService, compressor, PrimitivOState.INITIAL, concurrency);
+        PrimitivOBlocks<SingleRead> o = new PrimitivOBlocks<>(executorService, compressor, PrimitivOState.INITIAL,
+                1024, concurrency);
 
         RandomUtil.reseedThreadLocal(12341);
 
@@ -104,9 +101,7 @@ public class PrimitivOBlocksTest {
 
         long startTimestamp = System.nanoTime();
         o.resetStats();
-        try (AsynchronousFileChannel channel = AsynchronousFileChannel.open(target, EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.WRITE,
-                StandardOpenOption.SYNC), executorService, new FileAttribute[0]);
-             PrimitivOBlocks<SingleRead>.Writer writer = o.newWriter(channel, 0)) {
+        try (PrimitivOBlocks<SingleRead>.Writer writer = o.newWriter(target)) {
             for (int i = 0; i < repeats; i++)
                 for (int j = 0; j < elementsInRepeat; j++)
                     writer.write(sr.get(j));

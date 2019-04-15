@@ -28,8 +28,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
@@ -86,14 +88,20 @@ public final class PrimitivOBlocks<O> {
     private final Semaphore concurrencyLimiter;
 
     /**
-     * Signal the error in one of the asynchronous actions
+     * Block size
      */
-    private volatile Throwable exception = null;
+    private final int blockSize;
 
     /**
      * Concurrency
      */
     private final int concurrency;
+
+    /**
+     * Signal the error in one of the asynchronous actions
+     */
+    private volatile Throwable exception = null;
+
 
     // Statistics
     // throttlingNanos = new AtomicLong(),
@@ -106,7 +114,8 @@ public final class PrimitivOBlocks<O> {
             uncompressedBytes = new AtomicLong(),
             outputSize = new AtomicLong(),
             concurrencyOverhead = new AtomicLong(),
-            blockCount = new AtomicLong();
+            blockCount = new AtomicLong(),
+            objectCount = new AtomicLong();
 
     private long initializationTimestamp = System.nanoTime();
 
@@ -116,10 +125,14 @@ public final class PrimitivOBlocks<O> {
      * @param outputState
      * @param concurrency 0 for unlimited concurrency
      */
-    public PrimitivOBlocks(ExecutorService executor, LZ4Compressor compressor, PrimitivOState outputState, int concurrency) {
+    public PrimitivOBlocks(ExecutorService executor,
+                           LZ4Compressor compressor,
+                           PrimitivOState outputState,
+                           int blockSize, int concurrency) {
         this.executor = executor;
         this.compressor = compressor;
         this.outputState = outputState;
+        this.blockSize = blockSize;
         this.concurrency = concurrency;
         this.concurrencyLimiter = new Semaphore(concurrency);
     }
@@ -135,11 +148,11 @@ public final class PrimitivOBlocks<O> {
         outputSize.set(0);
         concurrencyOverhead.set(0);
         blockCount.set(0);
+        objectCount.set(0);
     }
 
     private boolean blockIsFull(int numberOfObjects) {
-        // TODO add logic here....
-        return numberOfObjects > 1000;
+        return numberOfObjects >= blockSize;
     }
 
     private void checkException() {
@@ -215,18 +228,34 @@ public final class PrimitivOBlocks<O> {
         // Writing checksum
         writeIntBE(checksum, block, 13);
 
+        objectCount.addAndGet(content.size());
         outputSize.addAndGet(blockSize);
         blockCount.incrementAndGet();
 
         return ByteBuffer.wrap(block, 0, blockSize);
     }
 
+    /**
+     * Helper method to create async channel for writing with this object's execution service
+     */
+    public AsynchronousFileChannel createAsyncChannel(Path path, OpenOption... additionalOptions) throws IOException {
+        Set<OpenOption> opts = new HashSet<>(Arrays.asList(additionalOptions));
+        opts.add(StandardOpenOption.CREATE);
+        opts.add(StandardOpenOption.WRITE);
+        return AsynchronousFileChannel.open(path, opts, executor);
+    }
+
+    public Writer newWriter(Path channel) throws IOException {
+        return new Writer(createAsyncChannel(channel), 0, true);
+    }
+
     public Writer newWriter(AsynchronousFileChannel channel, long position) {
-        return new Writer(channel, position);
+        return new Writer(channel, position, false);
     }
 
     public final class Writer implements AutoCloseable, Closeable {
         final AsynchronousFileChannel channel;
+        final boolean closeUnderlyingChannel;
 
         // Accessed from synchronized method
         LambdaLatch currentWriteLatch;
@@ -236,8 +265,9 @@ public final class PrimitivOBlocks<O> {
         // Accessed from async operations
         volatile long position;
 
-        Writer(AsynchronousFileChannel channel, long position) {
+        Writer(AsynchronousFileChannel channel, long position, boolean closeUnderlyingChannel) {
             this.channel = channel;
+            this.closeUnderlyingChannel = closeUnderlyingChannel;
             this.position = position;
 
             // Creating opened latch
@@ -323,12 +353,18 @@ public final class PrimitivOBlocks<O> {
         public synchronized void close() throws IOException {
             try {
                 closed = true;
-                checkException();
+
+                if (!buffer.isEmpty())
+                    // Writing leftovers
+                    writeBlock(buffer);
+                else
+                    // Anyway check for errors before proceed
+                    checkException();
+
+                // Writing final block
                 LambdaLatch previousLatch = currentWriteLatch;
                 LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
-
                 outputSize.addAndGet(BLOCK_HEADER_SIZE);
-
                 previousLatch.setCallback(() -> channel.write(ByteBuffer.wrap(LAST_HEADER),
                         position, null,
                         new CHAbstract() {
@@ -338,7 +374,13 @@ public final class PrimitivOBlocks<O> {
                                 nextLatch.open();
                             }
                         }));
+
+                // Waiting EOF header to be flushed to the stream
                 nextLatch.await();
+
+                if (closeUnderlyingChannel)
+                    channel.close();
+
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -349,7 +391,7 @@ public final class PrimitivOBlocks<O> {
         return new PrimitivOBlocksStat(System.nanoTime() - initializationTimestamp,
                 totalSerializationNanos.get(), serializationNanos.get(), checksumNanos.get(),
                 compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(), concurrencyOverhead.get(),
-                outputSize.get(), blockCount.get(), concurrency);
+                outputSize.get(), blockCount.get(), objectCount.get(), concurrency);
     }
 
     private abstract class CHAbstract implements CompletionHandler<Integer, Object> {
