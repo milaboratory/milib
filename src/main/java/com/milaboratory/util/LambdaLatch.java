@@ -46,8 +46,22 @@ public final class LambdaLatch {
      */
     private static final int STATE_DONE = 3;
 
-    private final AtomicInteger state = new AtomicInteger();
+    /**
+     * Atomic state of the latch
+     */
+    private final AtomicInteger state;
+    /**
+     * Callback
+     */
     private final AtomicReference<Runnable> callback = new AtomicReference<>();
+
+    public LambdaLatch() {
+        this.state = new AtomicInteger(STATE_CLOSED);
+    }
+
+    public LambdaLatch(boolean opened) {
+        this.state = new AtomicInteger(opened ? STATE_OPENED : STATE_CLOSED);
+    }
 
     /**
      * Atomically opens the latch.

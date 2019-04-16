@@ -46,7 +46,7 @@ import static com.milaboratory.util.io.IOUtil.writeIntBE;
  * bit2 = (0 = data block ; 1 = special block) ]
  * ( [ 4 bytes : int : number of objects ]
  * [ 4 bytes : int : rawDataSize ]
- * [ 4 bytes : int : compressedDataSize ]
+ * [ 4 bytes : int : compressedDataSize / blockSize ]
  * [ 4 bytes : int : checksum for the raw data ] )
  * |
  * ( [ 16 bytes : special block ] )
@@ -129,7 +129,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     /**
-     * Write CPU intensive part
+     * Block serialization, CPU intensive part
      */
     private ByteBuffer serializeBlock(List<O> content) {
         // // Assert
@@ -182,12 +182,12 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         if (compressedLength > dataOutput.size()) {
             // Compression increased data size -> writing uncompressed block
             System.arraycopy(dataOutput.getBuffer(), 0, block, BLOCK_HEADER_SIZE, dataOutput.size());
-            block[0] = 0x1; // bit0 = 1, bit0 = 0
+            block[0] = 0x1; // bit0 = 1, bit1 = 0
             writeIntBE(dataOutput.size(), block, 5);
             writeIntBE(dataOutput.size(), block, 9);
             blockSize = BLOCK_HEADER_SIZE + dataOutput.size();
         } else {
-            block[0] = 0x3; // bit0 = 1, bit0 = 1
+            block[0] = 0x3; // bit0 = 1, bit1 = 1
             writeIntBE(dataOutput.size(), block, 5);
             writeIntBE(compressedLength, block, 9);
             blockSize = BLOCK_HEADER_SIZE + compressedLength;
@@ -222,8 +222,8 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         final AsynchronousFileChannel channel;
         final boolean closeUnderlyingChannel;
 
-        // Accessed from synchronized method
-        LambdaLatch currentWriteLatch;
+        // Accessed from synchronized method, initially opened
+        LambdaLatch currentWriteLatch = new LambdaLatch(true);
         List<O> buffer = new ArrayList<>();
         boolean closed = false;
 
@@ -234,10 +234,6 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             this.channel = channel;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
             this.position = position;
-
-            // Creating opened latch
-            this.currentWriteLatch = new LambdaLatch();
-            this.currentWriteLatch.open();
         }
 
         public synchronized void write(O obj) {
