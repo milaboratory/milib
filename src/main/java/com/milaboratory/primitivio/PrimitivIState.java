@@ -28,6 +28,9 @@ import java.util.ArrayList;
  * PrimitivI always return new instance of the object. This object preserves no references to the original stream.
  */
 public final class PrimitivIState {
+    public static final PrimitivIState INITIAL = new PrimitivIState(new SerializersManager(), new ArrayList<>(),
+            new ArrayList<>());
+
     private final SerializersManager manager;
 
     private final ArrayList<Object> knownReferences;

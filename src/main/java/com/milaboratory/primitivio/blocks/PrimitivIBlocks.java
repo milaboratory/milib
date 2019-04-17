@@ -15,7 +15,9 @@
  */
 package com.milaboratory.primitivio.blocks;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
+import cc.redberry.pipe.OutputPortCloseable;
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
 import com.milaboratory.util.LambdaLatch;
@@ -83,7 +85,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         byte[] data;
         int dataLen;
         if ((header[0] & 0x2) != 0) { // Compressed block
-            int decompressedLength = readIntBE(header, 9);
+            int decompressedLength = readIntBE(header, 5);
             data = new byte[decompressedLength];
             // TODO correct method ???
             decompressor.decompress(blockAndNextHeader, data);
@@ -124,7 +126,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         return new Reader(channel, readAheadBlocks, position, false);
     }
 
-    public final class Reader {
+    public final class Reader implements OutputPortCloseable<O> {
         final AsynchronousFileChannel channel;
         final int readAheadBlocks;
         final boolean closeUnderlyingChannel;
@@ -151,8 +153,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
          * Blocks being red ahead
          */
         final ArrayDeque<Block<O>> blocks = new ArrayDeque<>();
-
         OutputPort<O> currentBlock = null;
+        volatile boolean closed = false;
 
         public Reader(AsynchronousFileChannel channel, int readAheadBlocks, long position, boolean closeUnderlyingChannel) {
             this.channel = channel;
@@ -170,11 +172,17 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             LambdaLatch nextLatch = currentIOLatch = new LambdaLatch();
 
             previousLatch.setCallback(() -> {
+                if (closed)
+                    return;
+
                 byte[] header = new byte[BLOCK_HEADER_SIZE];
                 ByteBuffer buffer = ByteBuffer.wrap(header);
                 channel.read(buffer, position, null, new CHAbstract() {
                     @Override
                     public void completed(Integer result, Object attachment) {
+                        if (closed)
+                            return;
+
                         // Assert
                         if (result != BLOCK_HEADER_SIZE) {
                             exception = new RuntimeException("Premature EOF.");
@@ -215,44 +223,68 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             previousLatch.setCallback(() -> // IO operation will be enqueued after the previous one finished
                     concurrencyLimiter.acquire( // and after there will be an execution slot available
                             () -> {
+                                if (closed)
+                                    return;
+
+                                // Cancel all block deserialization requests if EOF was detected in the previous thread
+                                if (eof) {
+                                    block.eof = true;
+                                    block.latch.countDown();
+                                    // Do not release next latch
+                                    return;
+                                }
+
                                 byte[] currentHeader = nextHeader;
                                 byte[] blockAndNextHeader = new byte[getNextBlockLength() + BLOCK_HEADER_SIZE];
                                 ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
                                 channel.read(buffer, position, null, new CHAbstract() {
                                     @Override
                                     public void completed(Integer result, Object attachment) {
-                                        // Assert
-                                        if (result != blockAndNextHeader.length) {
-                                            exception = new RuntimeException("Premature EOF.");
-                                            exception.printStackTrace();
+                                        try {
+                                            if (closed)
+                                                return;
 
-                                            // TODO ?????????
-                                            // Releasing a permit for the next operation to detect the error
+                                            // Assert
+                                            if (result != blockAndNextHeader.length) {
+                                                exception = new RuntimeException("Premature EOF.");
+                                                exception.printStackTrace();
+
+                                                // TODO ?????????
+                                                // Releasing a permit for the next operation to detect the error
+                                                concurrencyLimiter.release();
+
+                                                return;
+                                            }
+
+                                            // Extracting next header from the blob
+                                            byte[] header = Arrays.copyOfRange(
+                                                    blockAndNextHeader,
+                                                    blockAndNextHeader.length - BLOCK_HEADER_SIZE,
+                                                    blockAndNextHeader.length);
+                                            setHeader(header);
+
+                                            // Because write operations are serialized using latches,
+                                            // there is no concurrent access to the position variable here
+                                            // noinspection NonAtomicOperationOnVolatileField
+                                            position += blockAndNextHeader.length;
+
+                                            // Releasing next IO operation
+                                            nextLatch.open();
+
+                                            // CPU intensive task
+                                            block.content = deserializeBlock(currentHeader, blockAndNextHeader);
+
+                                            // Signaling that this block is populated
+                                            block.latch.countDown();
+
+                                            // Releasing acquired concurrency unit
                                             concurrencyLimiter.release();
-
-                                            return;
+                                        } catch (Exception e) {
+                                            exception = e;
+                                            // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
+                                            block.latch.countDown();
+                                            throw new RuntimeException(e);
                                         }
-
-                                        // Extracting next header from the blob
-                                        byte[] header = Arrays.copyOfRange(
-                                                blockAndNextHeader,
-                                                blockAndNextHeader.length - BLOCK_HEADER_SIZE,
-                                                blockAndNextHeader.length);
-                                        setHeader(header);
-
-                                        // Because write operations are serialized using latches,
-                                        // there is no concurrent access to the position variable here
-                                        // noinspection NonAtomicOperationOnVolatileField
-                                        position += blockAndNextHeader.length;
-
-                                        // Releasing next IO operation
-                                        nextLatch.open();
-
-                                        // CPU intensive task
-                                        block.content = deserializeBlock(currentHeader, blockAndNextHeader);
-
-                                        // Signaling that this block is populated
-                                        block.latch.countDown();
                                     }
                                 });
                             })
@@ -274,10 +306,64 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             if (header[0] == 0)
                 eof = true;
         }
+
+        private void nextBlockOrClose() {
+            checkException();
+
+            try {
+                Block<O> block = blocks.pop();
+                readBlocksIfNeeded();
+                block.latch.await();
+                checkException();
+                if (block.eof)
+                    close();
+                else
+                    currentBlock = CUtils.asOutputPort(block.content);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        @Override
+        public synchronized O take() {
+            while (true) {
+                if (closed)
+                    return null;
+
+                if (currentBlock == null) {
+                    nextBlockOrClose();
+                    if (closed)
+                        return null;
+                }
+
+                O obj = currentBlock.take();
+                if (obj == null) {
+                    nextBlockOrClose();
+                    continue;
+                }
+                return obj;
+            }
+
+        }
+
+        @Override
+        public synchronized void close() {
+            closed = true;
+
+            try {
+                if (closeUnderlyingChannel)
+                    channel.close();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            checkException();
+        }
     }
 
     private static final class Block<O> {
         final CountDownLatch latch = new CountDownLatch(1);
+        volatile boolean eof;
         volatile List<O> content;
     }
 }

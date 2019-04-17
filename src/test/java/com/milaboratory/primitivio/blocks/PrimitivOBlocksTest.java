@@ -19,6 +19,7 @@ import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.primitivio.PrimitivIState;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.test.TestUtil;
 import com.milaboratory.util.FormatUtils;
@@ -134,6 +135,17 @@ public class PrimitivOBlocksTest {
             checksums.put(checksumSlot, checksum);
         else
             Assert.assertArrayEquals(checksum, expectedChecksum);
+
+        PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(executorService, concurrency, SingleRead.class,
+                lz4Factory.fastDecompressor(), PrimitivIState.INITIAL);
+
+        try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2)) {
+            for (int i = 0; i < repeats; i++)
+                for (int j = 0; j < elementsInRepeat; j++) {
+                    final SingleRead obj = reader.take();
+                    Assert.assertEquals(sr.get(j), obj);
+                }
+        }
 
         Files.delete(target);
     }
