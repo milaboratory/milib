@@ -59,14 +59,11 @@ public class PrimitivOBlocksTest {
 
     @Test
     public void benchmark1() throws IOException {
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             runTest(false, 1, 1000000, 1);
-            // runTest(false, 2, 100000, 1);
-            // runTest(false, 3, 100000, 1);
             runTest(false, 4, 1000000, 1);
-            runTest(true, 1, 1000000, 2);
-            // runTest(true, 2, 100000, 2);
-            runTest(true, 4, 1000000, 2);
+            runTest(true, 1, 100000, 2);
+            runTest(true, 4, 100000, 2);
         }
     }
 
@@ -79,12 +76,12 @@ public class PrimitivOBlocksTest {
         // LZ4Factory lz4Factory = LZ4Factory.fastestJavaInstance();
         LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
         LZ4Compressor compressor = highCompression
-                ? lz4Factory.highCompressor(1)
+                ? lz4Factory.highCompressor()
                 : lz4Factory.fastCompressor();
 
         Path target = TempFileManager.getTempFile().toPath();
 
-        PrimitivOBlocks<SingleRead> o = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, 1024, compressor
+        PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, 1024, compressor
         );
 
         RandomUtil.reseedThreadLocal(12341);
@@ -101,8 +98,8 @@ public class PrimitivOBlocksTest {
         }
 
         long startTimestamp = System.nanoTime();
-        o.resetStats();
-        try (PrimitivOBlocks<SingleRead>.Writer writer = o.newWriter(target)) {
+        io.resetStats();
+        try (PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target)) {
             for (int i = 0; i < repeats; i++)
                 for (int j = 0; j < elementsInRepeat; j++)
                     writer.write(sr.get(j));
@@ -114,8 +111,9 @@ public class PrimitivOBlocksTest {
         System.out.println("Concurrency: " + concurrency);
         System.out.println("File size: " + Files.size(target));
         System.out.println("Write time: " + FormatUtils.nanoTimeToString(elapsed));
-        System.out.println("Stats:");
-        System.out.println(o.getStats());
+        System.out.println();
+        System.out.println("O. Stats:");
+        System.out.println(io.getStats());
 
         byte[] checksum;
         try (InputStream in = new FileInputStream(target.toFile())) {
@@ -146,6 +144,10 @@ public class PrimitivOBlocksTest {
                     Assert.assertEquals(sr.get(j), obj);
                 }
         }
+
+        System.out.println();
+        System.out.println("I. Stats:");
+        System.out.println(pi.getStats());
 
         Files.delete(target);
     }

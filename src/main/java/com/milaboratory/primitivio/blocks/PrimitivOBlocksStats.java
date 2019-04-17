@@ -17,7 +17,7 @@ package com.milaboratory.primitivio.blocks;
 
 import static com.milaboratory.util.FormatUtils.*;
 
-public final class PrimitivOBlocksStat {
+public final class PrimitivOBlocksStats {
     private final long
             wallClockTime,
             totalSerializationNanos,
@@ -32,11 +32,11 @@ public final class PrimitivOBlocksStat {
             objectCount;
     private final int concurrency;
 
-    public PrimitivOBlocksStat(long wallClockTime,
-                               long totalSerializationNanos, long serializationNanos, long checksumNanos,
-                               long compressionNanos, long ioDelayNanos, long uncompressedBytes,
-                               long concurrencyOverhead, long outputSize, long blockCount,
-                               long objectCount, int concurrency) {
+    public PrimitivOBlocksStats(long wallClockTime,
+                                long totalSerializationNanos, long serializationNanos, long checksumNanos,
+                                long compressionNanos, long ioDelayNanos, long uncompressedBytes,
+                                long concurrencyOverhead, long outputSize, long blockCount,
+                                long objectCount, int concurrency) {
         this.wallClockTime = wallClockTime;
         this.totalSerializationNanos = totalSerializationNanos;
         this.serializationNanos = serializationNanos;

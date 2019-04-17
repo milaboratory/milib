@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static com.milaboratory.util.io.IOUtil.readIntBE;
 
@@ -63,6 +64,20 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
      */
     private final LambdaSemaphore concurrencyLimiter;
 
+    // Stats
+    private final AtomicLong
+            totalDeserializationNanos = new AtomicLong(),
+            deserializationNanos = new AtomicLong(),
+            checksumNanos = new AtomicLong(),
+            decompressionNanos = new AtomicLong(),
+            ioDelayNanos = new AtomicLong(),
+            uncompressedBytes = new AtomicLong(),
+            inputSize = new AtomicLong(),
+            blockCount = new AtomicLong(),
+            objectCount = new AtomicLong();
+
+    private long initializationTimestamp = System.nanoTime();
+
     public PrimitivIBlocks(ExecutorService executor, int concurrency, Class<O> clazz, LZ4FastDecompressor decompressor, PrimitivIState inputState) {
         super(executor, concurrency);
         this.clazz = clazz;
@@ -71,16 +86,34 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         this.concurrencyLimiter = new LambdaSemaphore(concurrency);
     }
 
+    public void resetStats() {
+        initializationTimestamp = System.nanoTime();
+        totalDeserializationNanos.set(0);
+        deserializationNanos.set(0);
+        checksumNanos.set(0);
+        decompressionNanos.set(0);
+        ioDelayNanos.set(0);
+        uncompressedBytes.set(0);
+        inputSize.set(0);
+        blockCount.set(0);
+        objectCount.set(0);
+    }
+
     /**
      * Block deserialization, CPU intensive part
      */
     private List<O> deserializeBlock(byte[] header, byte[] blockAndNextHeader) {
-
         // Reading header
         int numberOfObjects = readIntBE(header, 1);
         int checksum = readIntBE(header, 13);
         int blockLength = blockAndNextHeader.length - BLOCK_HEADER_SIZE;
         assert blockLength == readIntBE(header, 9);
+
+        inputSize.addAndGet(blockAndNextHeader.length);
+
+        // Stats {
+        long start = System.nanoTime();
+        // }
 
         byte[] data;
         int dataLen;
@@ -95,7 +128,18 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             dataLen = blockLength;
         }
 
+        // Stats {
+        decompressionNanos.addAndGet(System.nanoTime() - start);
+        uncompressedBytes.addAndGet(dataLen);
+        start = System.nanoTime();
+        // }
+
         int actualChecksum = xxHash32.hash(data, 0, dataLen, HASH_SEED);
+
+        // Stats {
+        checksumNanos.addAndGet(System.nanoTime() - start);
+        start = System.nanoTime();
+        // }
 
         if (actualChecksum != checksum)
             throw new RuntimeException("Checksum mismatch. Malformed file.");
@@ -108,7 +152,29 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         for (int i = 0; i < numberOfObjects; i++)
             content.add(primitivI.readObject(clazz));
 
+        // Stats {
+        deserializationNanos.addAndGet(System.nanoTime() - start);
+        // }
+
+        blockCount.incrementAndGet();
+        objectCount.addAndGet(content.size());
+
         return content;
+    }
+
+    public PrimitivIBlocksStats getStats() {
+        return new PrimitivIBlocksStats(
+                System.nanoTime() - initializationTimestamp,
+                totalDeserializationNanos.get(),
+                deserializationNanos.get(),
+                checksumNanos.get(),
+                decompressionNanos.get(),
+                ioDelayNanos.get(),
+                uncompressedBytes.get(),
+                inputSize.get(),
+                blockCount.get(),
+                objectCount.get(),
+                concurrency);
     }
 
     /**
@@ -177,9 +243,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                 byte[] header = new byte[BLOCK_HEADER_SIZE];
                 ByteBuffer buffer = ByteBuffer.wrap(header);
+                long ioStart = System.nanoTime();
                 channel.read(buffer, position, null, new CHAbstract() {
                     @Override
                     public void completed(Integer result, Object attachment) {
+                        // Recording time spent waiting for io operation completion
+                        ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+
                         if (closed)
                             return;
 
@@ -194,6 +264,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                             return;
                         }
+
+                        inputSize.addAndGet(header.length);
 
                         setHeader(header);
 
@@ -237,10 +309,16 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                 byte[] currentHeader = nextHeader;
                                 byte[] blockAndNextHeader = new byte[getNextBlockLength() + BLOCK_HEADER_SIZE];
                                 ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
+                                long ioStart = System.nanoTime();
                                 channel.read(buffer, position, null, new CHAbstract() {
                                     @Override
                                     public void completed(Integer result, Object attachment) {
+                                        // Recording time spent waiting for io operation completion
+                                        ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+
                                         try {
+                                            long start = System.nanoTime();
+
                                             if (closed)
                                                 return;
 
@@ -273,6 +351,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                                             // CPU intensive task
                                             block.content = deserializeBlock(currentHeader, blockAndNextHeader);
+
+                                            // Recording total deserialization time
+                                            totalDeserializationNanos.addAndGet(System.nanoTime() - start);
 
                                             // Signaling that this block is populated
                                             block.latch.countDown();

@@ -15,6 +15,7 @@
  */
 package com.milaboratory.primitivio.blocks;
 
+import cc.redberry.pipe.InputPort;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.LambdaLatch;
@@ -76,7 +77,6 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
      * Block size
      */
     private final int blockSize;
-
 
     // Statistics
     // throttlingNanos = new AtomicLong(),
@@ -218,7 +218,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         return new Writer(channel, position, false);
     }
 
-    public final class Writer implements AutoCloseable, Closeable {
+    public final class Writer implements InputPort<O>, AutoCloseable, Closeable {
         final AsynchronousFileChannel channel;
         final boolean closeUnderlyingChannel;
 
@@ -234,6 +234,14 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             this.channel = channel;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
             this.position = position;
+        }
+
+        @Override
+        public void put(O object) {
+            if (object != null)
+                write(object);
+            else
+                close();
         }
 
         public synchronized void write(O obj) {
@@ -311,7 +319,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         @Override
-        public synchronized void close() throws IOException {
+        public synchronized void close() {
             try {
                 closed = true;
 
@@ -342,14 +350,14 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 if (closeUnderlyingChannel)
                     channel.close();
 
-            } catch (InterruptedException e) {
+            } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
             }
         }
     }
 
-    public PrimitivOBlocksStat getStats() {
-        return new PrimitivOBlocksStat(System.nanoTime() - initializationTimestamp,
+    public PrimitivOBlocksStats getStats() {
+        return new PrimitivOBlocksStats(System.nanoTime() - initializationTimestamp,
                 totalSerializationNanos.get(), serializationNanos.get(), checksumNanos.get(),
                 compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(), concurrencyOverhead.get(),
                 outputSize.get(), blockCount.get(), objectCount.get(), concurrency);
