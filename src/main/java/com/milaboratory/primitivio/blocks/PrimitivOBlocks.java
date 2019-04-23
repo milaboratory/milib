@@ -242,6 +242,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             this.closeUnderlyingChannel = closeUnderlyingChannel;
         }
 
+        public PrimitivOBlocks<O> getParent() {
+            return PrimitivOBlocks.this;
+        }
+
         @Override
         public void put(O object) {
             if (object != null)
