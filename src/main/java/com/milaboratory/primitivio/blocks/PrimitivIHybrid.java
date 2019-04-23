@@ -29,7 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 
-public final class PrimitivIHybrid {
+public final class PrimitivIHybrid implements AutoCloseable {
     final ExecutorService executorService;
     final AsynchronousByteChannel byteChannel;
     PrimitivIState primitivIState;
@@ -78,5 +78,10 @@ public final class PrimitivIHybrid {
     public synchronized void endPrimitivIBlocks() {
         primitivIBlocks.close();
         primitivIBlocks = null;
+    }
+
+    @Override
+    public void close() throws IOException {
+        byteChannel.close();
     }
 }
