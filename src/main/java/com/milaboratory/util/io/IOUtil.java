@@ -15,7 +15,15 @@
  */
 package com.milaboratory.util.io;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousByteChannel;
+import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicLong;
 
 public final class IOUtil {
     private IOUtil() {
@@ -73,5 +81,97 @@ public final class IOUtil {
             value |= 0xFF & buffer.get();
         }
         return value;
+    }
+
+    /**
+     * Creates partial adapter between AsynchronousFileChannel and AsynchronousByteChannel.
+     */
+    public static AsynchronousByteChannel toAsynchronousByteChannel(AsynchronousFileChannel fileChannel, long position) {
+        AtomicLong positionCounter = new AtomicLong(position);
+        return new AsynchronousByteChannel() {
+            @Override
+            public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
+                fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandler<Integer, A>() {
+                    @Override
+                    public void completed(Integer result, A attachment) {
+                        positionCounter.addAndGet(result);
+                        handler.completed(result, attachment);
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, A attachment) {
+                        handler.failed(exc, attachment);
+                    }
+                });
+            }
+
+            @Override
+            public Future<Integer> read(ByteBuffer dst) {
+                FutureCompletable<Integer> future = new FutureCompletable<>();
+                read(dst, null, new CompletionHandler<Integer, Object>() {
+                    @Override
+                    public void completed(Integer result, Object attachment) {
+                        future.set(result);
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, Object attachment) {
+                        future.setException(exc);
+                    }
+                });
+                return future;
+            }
+
+            @Override
+            public <A> void write(ByteBuffer src, A attachment, CompletionHandler<Integer, ? super A> handler) {
+                long position = positionCounter.getAndAdd(src.limit());
+                fileChannel.write(src, position, attachment, handler);
+            }
+
+            @Override
+            public Future<Integer> write(ByteBuffer src) {
+                FutureCompletable<Integer> future = new FutureCompletable<>();
+                read(src, null, new CompletionHandler<Integer, Object>() {
+                    @Override
+                    public void completed(Integer result, Object attachment) {
+                        future.set(result);
+                    }
+
+                    @Override
+                    public void failed(Throwable exc, Object attachment) {
+                        future.setException(exc);
+                    }
+                });
+                return future;
+            }
+
+            @Override
+            public void close() throws IOException {
+                fileChannel.close();
+            }
+
+            @Override
+            public boolean isOpen() {
+                return fileChannel.isOpen();
+            }
+        };
+    }
+
+    static final Callable NOOP = () -> null;
+
+    static final class FutureCompletable<T> extends FutureTask<T> {
+        public FutureCompletable() {
+            super(NOOP);
+        }
+
+        @Override
+        public void set(T aVoid) {
+            super.set(aVoid);
+        }
+
+        @Override
+        public void setException(Throwable t) {
+            super.setException(t);
+        }
     }
 }

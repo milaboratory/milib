@@ -20,11 +20,13 @@ import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.LambdaLatch;
 import com.milaboratory.util.io.ByteArrayDataOutput;
+import com.milaboratory.util.io.IOUtil;
 import net.jpountz.lz4.LZ4Compressor;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -211,15 +213,23 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     public Writer newWriter(Path channel) throws IOException {
-        return new Writer(createAsyncChannel(channel), 0, true);
+        return newWriter(createAsyncChannel(channel), 0, true);
     }
 
     public Writer newWriter(AsynchronousFileChannel channel, long position) {
-        return new Writer(channel, position, false);
+        return newWriter(channel, position, false);
+    }
+
+    public Writer newWriter(AsynchronousFileChannel channel, long position, boolean closeUnderlyingChannel) {
+        return newWriter(IOUtil.toAsynchronousByteChannel(channel, position), closeUnderlyingChannel);
+    }
+
+    public Writer newWriter(AsynchronousByteChannel channel, boolean closeUnderlyingChannel) {
+        return new Writer(channel, closeUnderlyingChannel);
     }
 
     public final class Writer implements InputPort<O>, AutoCloseable, Closeable {
-        final AsynchronousFileChannel channel;
+        final AsynchronousByteChannel channel;
         final boolean closeUnderlyingChannel;
 
         // Accessed from synchronized method, initially opened
@@ -227,13 +237,9 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         List<O> buffer = new ArrayList<>();
         boolean closed = false;
 
-        // Accessed from async operations
-        volatile long position;
-
-        Writer(AsynchronousFileChannel channel, long position, boolean closeUnderlyingChannel) {
+        Writer(AsynchronousByteChannel channel, boolean closeUnderlyingChannel) {
             this.channel = channel;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
-            this.position = position;
         }
 
         @Override
@@ -283,7 +289,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                     previousLatch.setCallback(
                             () -> {
                                 long ioBegin = System.nanoTime();
-                                channel.write(block, position, null,
+                                channel.write(block, null,
                                         new CHAbstract() {
                                             @Override
                                             public void completed(Integer result, Object attachment) {
@@ -297,11 +303,6 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                                                     concurrencyLimiter.release();
                                                     return;
                                                 }
-
-                                                // Because write operations are serialized using latches,
-                                                // there is no concurrent access to the position variable here
-                                                // noinspection NonAtomicOperationOnVolatileField
-                                                position += blockSize;
 
                                                 // Releasing a permit for the next serialization (CPU intensive) operation
                                                 concurrencyLimiter.release();
@@ -334,12 +335,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 LambdaLatch previousLatch = currentWriteLatch;
                 LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
                 outputSize.addAndGet(BLOCK_HEADER_SIZE);
-                previousLatch.setCallback(() -> channel.write(ByteBuffer.wrap(LAST_HEADER),
-                        position, null,
+                previousLatch.setCallback(() -> channel.write(ByteBuffer.wrap(LAST_HEADER), null,
                         new CHAbstract() {
                             @Override
                             public void completed(Integer result, Object attachment) {
-                                position += BLOCK_HEADER_SIZE;
                                 nextLatch.open();
                             }
                         }));

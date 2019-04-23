@@ -27,6 +27,7 @@ import net.jpountz.lz4.LZ4FastDecompressor;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.milaboratory.util.io.IOUtil.readIntBE;
+import static com.milaboratory.util.io.IOUtil.toAsynchronousByteChannel;
 
 public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
@@ -185,25 +187,28 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     public Reader newReader(Path channel, int readAheadBlocks) throws IOException {
-        return new Reader(createAsyncChannel(channel), readAheadBlocks, 0, true);
+        return newReader(createAsyncChannel(channel), readAheadBlocks, 0, true);
     }
 
     public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position) {
-        return new Reader(channel, readAheadBlocks, position, false);
+        return newReader(channel, readAheadBlocks, position, false);
+    }
+
+    public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position, boolean closeUnderlyingChannel) {
+        return newReader(toAsynchronousByteChannel(channel, position), readAheadBlocks, closeUnderlyingChannel);
+    }
+
+    public Reader newReader(AsynchronousByteChannel channel, int readAheadBlocks, boolean closeUnderlyingChannel) {
+        return new Reader(channel, readAheadBlocks, closeUnderlyingChannel);
     }
 
     public final class Reader implements OutputPortCloseable<O> {
-        final AsynchronousFileChannel channel;
+        final AsynchronousByteChannel channel;
         final int readAheadBlocks;
         final boolean closeUnderlyingChannel;
 
         // Accessed from synchronized method, initially opened
         LambdaLatch currentIOLatch = new LambdaLatch(true);
-
-        /**
-         * Current read position
-         */
-        volatile long position;
 
         /**
          * End of stream was detected during previous IO operation
@@ -222,10 +227,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         OutputPort<O> currentBlock = null;
         volatile boolean closed = false;
 
-        public Reader(AsynchronousFileChannel channel, int readAheadBlocks, long position, boolean closeUnderlyingChannel) {
+        public Reader(AsynchronousByteChannel channel, int readAheadBlocks, boolean closeUnderlyingChannel) {
             this.channel = channel;
             this.readAheadBlocks = readAheadBlocks;
-            this.position = position;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
             readHeader();
             readBlocksIfNeeded();
@@ -244,7 +248,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 byte[] header = new byte[BLOCK_HEADER_SIZE];
                 ByteBuffer buffer = ByteBuffer.wrap(header);
                 long ioStart = System.nanoTime();
-                channel.read(buffer, position, null, new CHAbstract() {
+                channel.read(buffer, null, new CHAbstract() {
                     @Override
                     public void completed(Integer result, Object attachment) {
                         // Recording time spent waiting for io operation completion
@@ -268,11 +272,6 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         inputSize.addAndGet(header.length);
 
                         setHeader(header);
-
-                        // Because write operations are serialized using latches,
-                        // there is no concurrent access to the position variable here
-                        // noinspection NonAtomicOperationOnVolatileField
-                        position += BLOCK_HEADER_SIZE;
 
                         // Allowing next IO operation
                         nextLatch.open();
@@ -310,7 +309,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                 byte[] blockAndNextHeader = new byte[getNextBlockLength() + BLOCK_HEADER_SIZE];
                                 ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
                                 long ioStart = System.nanoTime();
-                                channel.read(buffer, position, null, new CHAbstract() {
+                                channel.read(buffer, null, new CHAbstract() {
                                     @Override
                                     public void completed(Integer result, Object attachment) {
                                         // Recording time spent waiting for io operation completion
@@ -340,11 +339,6 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                                     blockAndNextHeader.length - BLOCK_HEADER_SIZE,
                                                     blockAndNextHeader.length);
                                             setHeader(header);
-
-                                            // Because write operations are serialized using latches,
-                                            // there is no concurrent access to the position variable here
-                                            // noinspection NonAtomicOperationOnVolatileField
-                                            position += blockAndNextHeader.length;
 
                                             // Releasing next IO operation
                                             nextLatch.open();
