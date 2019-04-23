@@ -20,19 +20,24 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
+import org.apache.commons.io.output.NullOutputStream;
 
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.OutputStream;
 
 /**
- * Holds PrimitivO stream state (known objects, known references and serialization manager).
+ * Immutable object that holds PrimitivO stream state (known objects, known references and serialization manager).
  *
- * PrimitivO always return new instance of the object, that has no references to the original stream.
- *
- * Objects of this class are immutable.
+ * PrimitivO always return new instance of the object. This object preserves no references to the original stream.
  */
 public final class PrimitivOState {
+    /**
+     * Initial PrimitivO state
+     */
+    public static final PrimitivOState INITIAL = new PrimitivOState(new SerializersManager(),
+            new TObjectIntCustomHashMap<>(), new TObjectIntCustomHashMap<>());
+
     private final SerializersManager manager;
 
     private final TObjectIntCustomHashMap<Object> knownReferences;
@@ -47,6 +52,10 @@ public final class PrimitivOState {
         this.knownReferences.putAll(knownReferences);
         this.knownObjects = newKnownObjectHashMap();
         this.knownObjects.putAll(knownObjects);
+    }
+
+    public PrimitivO createPrimitivO() {
+        return createPrimitivO(new NullOutputStream());
     }
 
     public PrimitivO createPrimitivO(DataOutput output) {
