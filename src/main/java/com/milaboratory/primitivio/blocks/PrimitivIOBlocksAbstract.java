@@ -23,7 +23,6 @@ import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -65,12 +64,15 @@ public class PrimitivIOBlocksAbstract {
             throw new RuntimeException(exception);
     }
 
-    public AsynchronousFileChannel createAsyncChannel(Path path, OpenOption[] additionalOptions, OpenOption... options) throws IOException {
+    public static AsynchronousFileChannel createAsyncChannel(ExecutorService executor, Path path,
+                                                             OpenOption[] additionalOptions, OpenOption... options) throws IOException {
         Set<OpenOption> opts = new HashSet<>(Arrays.asList(options));
         opts.addAll(Arrays.asList(additionalOptions));
-        opts.add(StandardOpenOption.CREATE);
-        opts.add(StandardOpenOption.WRITE);
         return AsynchronousFileChannel.open(path, opts, executor);
+    }
+
+    public AsynchronousFileChannel createAsyncChannel(Path path, OpenOption[] additionalOptions, OpenOption... options) throws IOException {
+        return createAsyncChannel(executor, path, additionalOptions, options);
     }
 
     protected abstract class CHAbstract implements CompletionHandler<Integer, Object> {
