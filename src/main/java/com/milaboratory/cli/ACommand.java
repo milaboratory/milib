@@ -38,6 +38,11 @@ public abstract class ACommand extends ABaseCommand implements Runnable {
             names = {"--verbose"})
     public boolean verbose = false;
 
+    @Option(description = "Enable debug mode.",
+            names = {"--debug"},
+            hidden = true)
+    public boolean debugMode = false;
+
     /** Warning message */
     public void warn(String message) {
         if (quiet)
