@@ -80,6 +80,16 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
     private long initializationTimestamp = System.nanoTime();
 
+    /**
+     * @param executor     executor to execute serialization process in
+     *                     (the same executor service as used in target AsynchronousByteChannels is recommended)
+     * @param concurrency  maximal number of concurrent deserializations, actual concurrency level is also limited by
+     *                     readAheadBlocks parameter (effective concurrency will be ~min(readAheadBlocks, concurrency))
+     *                     and IO speed
+     * @param clazz        class to deserialize
+     * @param decompressor block decompressor
+     * @param inputState   stream state
+     */
     public PrimitivIBlocks(ExecutorService executor, int concurrency, Class<O> clazz, LZ4FastDecompressor decompressor, PrimitivIState inputState) {
         super(executor, concurrency);
         this.clazz = clazz;

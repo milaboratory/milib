@@ -44,9 +44,7 @@ import static com.milaboratory.util.io.IOUtil.writeIntBE;
  * Block:
  *
  * Header (17 bytes total):
- * [ 1 byte : bit0 = (0 = last block ; 1 = data block);
- * bit1 = (0 = raw ; 1 = compressed);
- * bit2 = (0 = data block ; 1 = special block) ]
+ * [ 1 byte : bit0 = (0 = last block ; 1 = data block); bit1 = (0 = raw ; 1 = compressed); bit2 = (0 = data block ; 1 = special block) ]
  * ( [ 4 bytes : int : number of objects ]
  * [ 4 bytes : int : rawDataSize ]
  * [ 4 bytes : int : compressedDataSize / blockSize ]
@@ -97,11 +95,12 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     private long initializationTimestamp = System.nanoTime();
 
     /**
-     * @param executor
-     * @param concurrency
-     * @param outputState
+     * @param executor    executor to execute serialization process in
+     *                    (the same executor service as used in target AsynchronousByteChannels is recommended)
+     * @param concurrency maximal number of concurrent serializations
+     * @param outputState knownReferences and objects, etc.
      * @param blockSize   number of objects in a block
-     * @param compressor
+     * @param compressor  block compressor
      */
     public PrimitivOBlocks(ExecutorService executor, int concurrency,
                            PrimitivOState outputState, int blockSize, LZ4Compressor compressor) {
