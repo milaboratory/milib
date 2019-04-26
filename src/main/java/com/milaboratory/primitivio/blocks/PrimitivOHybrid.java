@@ -29,6 +29,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Helper class to mix synchronous PrimitivO writing with asynchronous / parallel PrimitivOBlocks serialization
+ * for the same AsynchronousByteChannel
+ */
 public final class PrimitivOHybrid implements AutoCloseable {
     final ExecutorService executorService;
     final AsynchronousByteChannel byteChannel;

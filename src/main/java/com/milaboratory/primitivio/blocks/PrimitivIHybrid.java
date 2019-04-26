@@ -29,6 +29,10 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * Helper class to mix synchronous PrimitivI reading with asynchronous / parallel PrimitivIBlocks streaming
+ * for the same AsynchronousByteChannel
+ */
 public final class PrimitivIHybrid implements AutoCloseable {
     final ExecutorService executorService;
     final AsynchronousByteChannel byteChannel;
