@@ -245,6 +245,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             readBlocksIfNeeded();
         }
 
+        public PrimitivIBlocks<O> getParent() {
+            return PrimitivIBlocks.this;
+        }
+
         private synchronized void readHeader() {
             checkException();
 
