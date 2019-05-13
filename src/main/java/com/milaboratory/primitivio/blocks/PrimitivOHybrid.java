@@ -17,7 +17,7 @@ package com.milaboratory.primitivio.blocks;
 
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
-import com.milaboratory.util.io.IOUtil;
+import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 
@@ -45,9 +45,10 @@ public final class PrimitivOHybrid implements AutoCloseable {
     }
 
     public PrimitivOHybrid(ExecutorService executorService, Path file, PrimitivOState state) throws IOException {
-        this(executorService, IOUtil.toAsynchronousByteChannel(
-                PrimitivIOBlocksAbstract.createAsyncChannel(executorService, file, new OpenOption[0], StandardOpenOption.READ),
-                0),
+        this(executorService, new AsynchronousFileChannelAdapter(
+                        PrimitivIOBlocksAbstract.createAsyncChannel(executorService, file,
+                                new OpenOption[0], StandardOpenOption.READ),
+                        0),
                 state);
     }
 

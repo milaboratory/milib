@@ -60,10 +60,11 @@ public class PrimitivOBlocksTest {
     @Test
     public void benchmark1() throws IOException {
         for (int i = 0; i < 2; i++) {
-            runTest(false, 1, 1000000, 1);
-            runTest(false, 4, 1000000, 1);
-            runTest(true, 1, 100000, 2);
-            runTest(true, 4, 100000, 2);
+            // runTest(false, 1, 1000000, 1);
+            // runTest(false, 4, 1000000, 1);
+            runTest(false, 4, 100000, 1);
+            // runTest(true, 1, 100000, 2);
+            // runTest(true, 4, 100000, 2);
         }
     }
 

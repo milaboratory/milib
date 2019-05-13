@@ -22,6 +22,7 @@ import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
 import com.milaboratory.util.LambdaLatch;
 import com.milaboratory.util.LambdaSemaphore;
+import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.ByteBufferDataInputAdapter;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
@@ -41,7 +42,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.milaboratory.util.io.IOUtil.readIntBE;
-import static com.milaboratory.util.io.IOUtil.toAsynchronousByteChannel;
 
 public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
@@ -205,7 +205,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position, boolean closeUnderlyingChannel) {
-        return newReader(toAsynchronousByteChannel(channel, position), readAheadBlocks, closeUnderlyingChannel);
+        return newReader(new AsynchronousFileChannelAdapter(channel, position), readAheadBlocks, closeUnderlyingChannel);
     }
 
     public Reader newReader(AsynchronousByteChannel channel, int readAheadBlocks, boolean closeUnderlyingChannel) {
