@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.AsynchronousFileChannel;
+import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -40,8 +41,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Function;
 
-import static com.milaboratory.util.io.IOUtil.readIntBE;
+import static com.milaboratory.primitivio.blocks.PrimitivIHeaderActions.*;
 
 public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
@@ -81,16 +83,17 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     private long initializationTimestamp = System.nanoTime();
 
     /**
+     * @param clazz        class to deserialize
      * @param executor     executor to execute serialization process in
      *                     (the same executor service as used in target AsynchronousByteChannels is recommended)
      * @param concurrency  maximal number of concurrent deserializations, actual concurrency level is also limited by
      *                     readAheadBlocks parameter (effective concurrency will be ~min(readAheadBlocks, concurrency))
      *                     and IO speed
-     * @param clazz        class to deserialize
-     * @param decompressor block decompressor
      * @param inputState   stream state
+     * @param decompressor block decompressor
      */
-    public PrimitivIBlocks(ExecutorService executor, int concurrency, Class<O> clazz, LZ4FastDecompressor decompressor, PrimitivIState inputState) {
+    public PrimitivIBlocks(Class<O> clazz, ExecutorService executor, int concurrency,
+                           PrimitivIState inputState, LZ4FastDecompressor decompressor) {
         super(executor, concurrency);
         this.clazz = clazz;
         this.decompressor = decompressor;
@@ -114,12 +117,11 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
      * Block deserialization, CPU intensive part
      */
-    private List<O> deserializeBlock(byte[] header, byte[] blockAndNextHeader) {
+    private List<O> deserializeBlock(PrimitivIOBlockHeader header, byte[] blockAndNextHeader) {
         // Reading header
-        int numberOfObjects = readIntBE(header, 1);
-        int checksum = readIntBE(header, 13);
+        int numberOfObjects = header.getNumberOfObjects();
         int blockLength = blockAndNextHeader.length - BLOCK_HEADER_SIZE;
-        assert blockLength == readIntBE(header, 9);
+        assert blockLength == header.getDataSize();
 
         inputSize.addAndGet(blockAndNextHeader.length);
 
@@ -129,8 +131,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
         byte[] data;
         int dataLen;
-        if ((header[0] & 0x2) != 0) { // Compressed block
-            int decompressedLength = readIntBE(header, 5);
+        if (header.isCompressed()) { // Compressed block
+            int decompressedLength = header.getUncompressedDataSize();
             data = new byte[decompressedLength];
             // TODO correct method ???
             decompressor.decompress(blockAndNextHeader, data);
@@ -153,7 +155,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         start = System.nanoTime();
         // }
 
-        if (actualChecksum != checksum)
+        if (actualChecksum != header.getChecksum())
             throw new RuntimeException("Checksum mismatch. Malformed file.");
 
         ByteBufferDataInputAdapter dataInput = new ByteBufferDataInputAdapter(ByteBuffer.wrap(data, 0, dataLen));
@@ -196,25 +198,46 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         return createAsyncChannel(path, additionalOptions, StandardOpenOption.READ);
     }
 
-    public Reader newReader(Path channel, int readAheadBlocks) throws IOException {
-        return newReader(createAsyncChannel(channel), readAheadBlocks, 0, true);
+    public Reader newReader(Path path, int readAheadBlocks) throws IOException {
+        return newReader(path, readAheadBlocks, skipAll());
+    }
+
+    public Reader newReader(Path path, int readAheadBlocks,
+                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) throws IOException {
+        return newReader(createAsyncChannel(path), readAheadBlocks, 0,
+                specialHeaderAction, true);
     }
 
     public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position) {
-        return newReader(channel, readAheadBlocks, position, false);
+        return newReader(channel, readAheadBlocks, position, skipAll(), false);
     }
 
-    public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position, boolean closeUnderlyingChannel) {
-        return newReader(new AsynchronousFileChannelAdapter(channel, position), readAheadBlocks, closeUnderlyingChannel);
+    public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position,
+                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+        return newReader(channel, readAheadBlocks, position, specialHeaderAction, false);
     }
 
-    public Reader newReader(AsynchronousByteChannel channel, int readAheadBlocks, boolean closeUnderlyingChannel) {
-        return new Reader(channel, readAheadBlocks, closeUnderlyingChannel);
+    public Reader newReader(AsynchronousFileChannel channel, int readAheadBlocks, long position,
+                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction,
+                            boolean closeUnderlyingChannel) {
+        return newReader(new AsynchronousFileChannelAdapter(channel, position),
+                readAheadBlocks, specialHeaderAction, closeUnderlyingChannel);
+    }
+
+    public Reader newReader(AsynchronousByteChannel channel, int readAheadBlocks,
+                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction,
+                            boolean closeUnderlyingChannel) {
+        return new Reader(channel, readAheadBlocks, specialHeaderAction, closeUnderlyingChannel);
     }
 
     public final class Reader implements OutputPortCloseable<O> {
+        // Parameters
         final AsynchronousByteChannel channel;
         final int readAheadBlocks;
+        /**
+         * Function that decides which action should be taken if special header is encountered
+         */
+        final Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction;
         final boolean closeUnderlyingChannel;
 
         // Accessed from synchronized method, initially opened
@@ -228,18 +251,21 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         /**
          * Stores current header
          */
-        volatile byte[] nextHeader;
+        volatile PrimitivIOBlockHeader nextHeader;
 
         /**
          * Blocks being red ahead
          */
         final ArrayDeque<Block<O>> blocks = new ArrayDeque<>();
-        OutputPort<O> currentBlock = null;
+        Block<O> currentBlock = null;
         volatile boolean closed = false;
 
-        public Reader(AsynchronousByteChannel channel, int readAheadBlocks, boolean closeUnderlyingChannel) {
+        public Reader(AsynchronousByteChannel channel, int readAheadBlocks,
+                      Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction,
+                      boolean closeUnderlyingChannel) {
             this.channel = channel;
             this.readAheadBlocks = readAheadBlocks;
+            this.specialHeaderAction = specialHeaderAction;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
             readHeader();
             readBlocksIfNeeded();
@@ -259,38 +285,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 if (closed)
                     return;
 
-                byte[] header = new byte[BLOCK_HEADER_SIZE];
-                ByteBuffer buffer = ByteBuffer.wrap(header);
-                long ioStart = System.nanoTime();
-                channel.read(buffer, null, new CHAbstract() {
-                    @Override
-                    public void completed(Integer result, Object attachment) {
-                        // Recording time spent waiting for io operation completion
-                        ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
-
-                        if (closed)
-                            return;
-
-                        // Assert
-                        if (result != BLOCK_HEADER_SIZE) {
-                            exception = new RuntimeException("Premature EOF.");
-                            exception.printStackTrace();
-
-                            // TODO ?????????
-                            // Releasing a permit for the next operation to detect the error
-                            concurrencyLimiter.release();
-
-                            return;
-                        }
-
-                        inputSize.addAndGet(header.length);
-
-                        setHeader(header);
-
-                        // Allowing next IO operation
-                        nextLatch.open();
-                    }
-                });
+                _readHeader(nextLatch);
             });
         }
 
@@ -311,7 +306,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                 if (closed)
                                     return;
 
-                                // Cancel all block deserialization requests if EOF was detected in the previous thread
+                                // Cancel all block deserialization requests if EOF was detected in the previous block
                                 if (eof) {
                                     block.eof = true;
                                     block.latch.countDown();
@@ -319,65 +314,123 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                     return;
                                 }
 
-                                byte[] currentHeader = nextHeader;
-                                byte[] blockAndNextHeader = new byte[getNextBlockLength() + BLOCK_HEADER_SIZE];
-                                ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
-                                long ioStart = System.nanoTime();
-                                channel.read(buffer, null, new CHAbstract() {
-                                    @Override
-                                    public void completed(Integer result, Object attachment) {
-                                        // Recording time spent waiting for io operation completion
-                                        ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
-
-                                        try {
-                                            long start = System.nanoTime();
-
-                                            if (closed)
-                                                return;
-
-                                            // Assert
-                                            if (result != blockAndNextHeader.length) {
-                                                exception = new RuntimeException("Premature EOF.");
-                                                exception.printStackTrace();
-
-                                                // TODO ?????????
-                                                // Releasing a permit for the next operation to detect the error
-                                                concurrencyLimiter.release();
-
-                                                return;
-                                            }
-
-                                            // Extracting next header from the blob
-                                            byte[] header = Arrays.copyOfRange(
-                                                    blockAndNextHeader,
-                                                    blockAndNextHeader.length - BLOCK_HEADER_SIZE,
-                                                    blockAndNextHeader.length);
-                                            setHeader(header);
-
-                                            // Releasing next IO operation
-                                            nextLatch.open();
-
-                                            // CPU intensive task
-                                            block.content = deserializeBlock(currentHeader, blockAndNextHeader);
-
-                                            // Recording total deserialization time
-                                            totalDeserializationNanos.addAndGet(System.nanoTime() - start);
-
-                                            // Signaling that this block is populated
-                                            block.latch.countDown();
-
-                                            // Releasing acquired concurrency unit
-                                            concurrencyLimiter.release();
-                                        } catch (Exception e) {
-                                            exception = e;
-                                            // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
-                                            block.latch.countDown();
-                                            throw new RuntimeException(e);
-                                        }
-                                    }
-                                });
+                                block.header = nextHeader; // read as: current header
+                                if (nextHeader.isSpecial()) {
+                                    // Releasing special block
+                                    block.latch.countDown();
+                                    _readHeader(nextLatch);
+                                } else
+                                    _readBlock(nextHeader, block, nextLatch);
                             })
             );
+        }
+
+        /**
+         * Low level read next header, to be executed from concurrencyLimiter.acquire
+         *
+         * @param nextLatch latch to open after IO is complete
+         */
+        private void _readHeader(LambdaLatch nextLatch) {
+            byte[] headerBytes = new byte[BLOCK_HEADER_SIZE];
+            ByteBuffer buffer = ByteBuffer.wrap(headerBytes);
+            long ioStart = System.nanoTime();
+
+            channel.read(buffer, null, new CHAbstractCL() {
+                @Override
+                public void completed(Integer result, Object attachment) {
+                    try {
+                        // Recording time spent waiting for io operation completion
+                        ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+
+                        if (closed)
+                            return;
+
+                        // Assert
+                        if (result != BLOCK_HEADER_SIZE) {
+                            _ex(new RuntimeException("Premature EOF."));
+                            return;
+                        }
+
+                        inputSize.addAndGet(headerBytes.length);
+
+                        setHeader(headerBytes);
+
+                        // Allowing next IO operation
+                        nextLatch.open();
+
+                        // Releasing acquired concurrency unit
+                        concurrencyLimiter.release();
+                    } catch (Exception e) {
+                        _ex(e);
+
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
+
+        /**
+         * Low level read block, to be executed from concurrencyLimiter.acquire
+         *
+         * @param currentHeader header of current block
+         * @param block         block to populate
+         * @param nextLatch     latch to open after IO is complete
+         */
+        private void _readBlock(PrimitivIOBlockHeader currentHeader,
+                                Block<O> block, LambdaLatch nextLatch) {
+            byte[] blockAndNextHeader = new byte[currentHeader.getDataSize() + BLOCK_HEADER_SIZE];
+            ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
+            long ioStart = System.nanoTime();
+
+            channel.read(buffer, null, new CHAbstractCL() {
+                @Override
+                public void completed(Integer result, Object attachment) {
+                    // Recording time spent waiting for io operation completion
+                    ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+
+                    try {
+                        long start = System.nanoTime();
+
+                        if (closed)
+                            return;
+
+                        // Assert
+                        if (result != blockAndNextHeader.length) {
+                            _ex(new RuntimeException("Premature EOF."));
+                            return;
+                        }
+
+                        // Extracting next header from the blob
+                        byte[] header = Arrays.copyOfRange(
+                                blockAndNextHeader,
+                                blockAndNextHeader.length - BLOCK_HEADER_SIZE,
+                                blockAndNextHeader.length);
+                        setHeader(header);
+
+                        // Releasing next IO operation
+                        nextLatch.open();
+
+                        // CPU intensive task
+                        block.content = deserializeBlock(currentHeader, blockAndNextHeader);
+
+                        // Recording total deserialization time
+                        totalDeserializationNanos.addAndGet(System.nanoTime() - start);
+
+                        // Signaling that the block is populated
+                        block.latch.countDown();
+
+                        // Releasing acquired concurrency unit
+                        concurrencyLimiter.release();
+                    } catch (Exception e) {
+                        _ex(e);
+
+                        // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
+                        block.latch.countDown();
+
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
         }
 
         private synchronized void readBlocksIfNeeded() {
@@ -386,14 +439,14 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             }
         }
 
-        private int getNextBlockLength() {
-            return readIntBE(nextHeader, 9);
-        }
-
-        private void setHeader(byte[] header) {
-            this.nextHeader = header;
-            if (header[0] == 0)
-                eof = true;
+        private void setHeader(byte[] headerBytes) {
+            try {
+                nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
+                if (nextHeader.isLastBlock())
+                    eof = true;
+            } catch (Exception ex) {
+                _ex(ex);
+            }
         }
 
         private void nextBlockOrClose() {
@@ -406,10 +459,26 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 checkException();
                 if (block.eof)
                     close();
-                else
-                    currentBlock = CUtils.asOutputPort(block.content);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                else {
+                    currentBlock = block;
+
+                    // Block processing / initialization
+                    if (currentBlock.header.isSpecial()) {
+                        PrimitivIHeaderAction<O> action = specialHeaderAction.apply(currentBlock.header);
+                        O obj;
+                        if (isSkip(action))
+                            currentBlock.port = CUtils.EMPTY_OUTPUT_PORT;
+                        else if (isStopReading(action))
+                            close();
+                        else if ((obj = tryExtractOutputObject(action)) != null)
+                            currentBlock.port = CUtils.asOutputPort(obj);
+                        else
+                            throw new RuntimeException("Unknown action type: " + action);
+                    } else
+                        currentBlock.port = CUtils.asOutputPort(block.content);
+                }
+            } catch (Exception e) {
+                _ex(e);
             }
         }
 
@@ -419,20 +488,18 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 if (closed)
                     return null;
 
-                if (currentBlock == null) {
+                if (currentBlock == null) { // initial state
                     nextBlockOrClose();
-                    if (closed)
-                        return null;
+                    continue;
                 }
 
-                O obj = currentBlock.take();
+                O obj = currentBlock.port.take();
                 if (obj == null) {
                     nextBlockOrClose();
                     continue;
                 }
                 return obj;
             }
-
         }
 
         @Override
@@ -450,9 +517,30 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
     }
 
+    private void _ex(Throwable ex) {
+        exception = ex;
+
+        // TODO excessive ???
+        ex.printStackTrace();
+
+        // Releasing a permit for the next operation to detect the error
+        concurrencyLimiter.release();
+    }
+
+    protected abstract class CHAbstractCL implements CompletionHandler<Integer, Object> {
+        @Override
+        public void failed(Throwable exc, Object attachment) {
+            _ex(exc);
+        }
+    }
+
     private static final class Block<O> {
         final CountDownLatch latch = new CountDownLatch(1);
+
         volatile boolean eof;
         volatile List<O> content;
+        volatile PrimitivIOBlockHeader header;
+
+        volatile OutputPort<O> port;
     }
 }

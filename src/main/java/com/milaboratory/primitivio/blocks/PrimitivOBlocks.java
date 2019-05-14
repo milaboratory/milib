@@ -286,7 +286,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
         public synchronized void writeHeader(PrimitivIOBlockHeader header) {
             if (!buffer.isEmpty())
-                throw new IllegalStateException("Buffer is not empty.");
+                throw new IllegalStateException("Buffer is not empty. Invoke flush() before writeHeader(...).");
 
             // Checking for errors
             checkException();
@@ -402,7 +402,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
                 if (!buffer.isEmpty())
                     // Writing leftovers
-                    writeBlock(buffer);
+                    flush();
                 else
                     // Anyway check for errors before proceed
                     checkException();

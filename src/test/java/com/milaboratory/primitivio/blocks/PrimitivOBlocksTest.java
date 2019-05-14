@@ -60,11 +60,11 @@ public class PrimitivOBlocksTest {
     @Test
     public void benchmark1() throws IOException {
         for (int i = 0; i < 2; i++) {
-            // runTest(false, 1, 1000000, 1);
-            // runTest(false, 4, 1000000, 1);
-            runTest(false, 4, 100000, 1);
-            // runTest(true, 1, 100000, 2);
-            // runTest(true, 4, 100000, 2);
+            runTest(false, 1, 1000000, 1);
+            runTest(false, 4, 1000000, 1);
+            // runTest(false, 4, 100000, 1);
+            runTest(true, 1, 100000, 2);
+            runTest(true, 4, 100000, 2);
         }
     }
 
@@ -101,9 +101,12 @@ public class PrimitivOBlocksTest {
         long startTimestamp = System.nanoTime();
         io.resetStats();
         try (PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target)) {
-            for (int i = 0; i < repeats; i++)
+            for (int i = 0; i < repeats; i++) {
                 for (int j = 0; j < elementsInRepeat; j++)
                     writer.write(sr.get(j));
+                writer.flush();
+                writer.writeHeader(PrimitivIOBlockHeader.specialHeader().setSpecialLong(0, 1234L));
+            }
         }
         long elapsed = System.nanoTime() - startTimestamp;
         System.out.println();
@@ -135,8 +138,8 @@ public class PrimitivOBlocksTest {
         else
             Assert.assertArrayEquals(checksum, expectedChecksum);
 
-        PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(executorService, concurrency, SingleRead.class,
-                lz4Factory.fastDecompressor(), PrimitivIState.INITIAL);
+        PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(SingleRead.class, executorService, concurrency,
+                PrimitivIState.INITIAL, lz4Factory.fastDecompressor());
 
         try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2)) {
             for (int i = 0; i < repeats; i++)

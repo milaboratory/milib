@@ -48,7 +48,7 @@ public final class PrimitivIOBlockHeader {
     private PrimitivIOBlockHeader(byte[] headerBytes) {
         if ((headerBytes[0] & 0xF8) != 0)
             throw new IllegalArgumentException("Illegal first byte.");
-        if(headerBytes.length != HEADER_SIZE)
+        if (headerBytes.length != HEADER_SIZE)
             throw new IllegalArgumentException();
         this.headerBytes = headerBytes;
     }
@@ -175,10 +175,13 @@ public final class PrimitivIOBlockHeader {
         return new PrimitivIOBlockHeader(LAST_HEADER.clone());
     }
 
+    public static PrimitivIOBlockHeader readHeaderNoCopy(byte[] headerBytes) {
+        return new PrimitivIOBlockHeader(headerBytes);
+    }
+
     public static PrimitivIOBlockHeader readHeader(byte[] buffer, int offset) {
         if (buffer.length < offset + 17)
             throw new IllegalArgumentException("Wrong buffer size");
-
         return new PrimitivIOBlockHeader(Arrays.copyOfRange(buffer, offset, offset + HEADER_SIZE));
     }
 
@@ -207,7 +210,7 @@ public final class PrimitivIOBlockHeader {
 
     @Override
     public String toString() {
-        if (isSpecial())
+        if (!isSpecial())
             return "NormalHeader{" +
                     "numberOfObjects=" + getNumberOfObjects() + "," +
                     "uncompressedDataSize=" + getUncompressedDataSize() + "," +
