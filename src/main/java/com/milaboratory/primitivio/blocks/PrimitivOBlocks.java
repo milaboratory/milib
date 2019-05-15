@@ -251,8 +251,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
          * Flush internal object buffer
          */
         public synchronized void flush() {
-            writeBlock(buffer);
-            buffer = new ArrayList<>();
+            if (!buffer.isEmpty()) {
+                writeBlock(buffer);
+                buffer = new ArrayList<>();
+            }
         }
 
         public synchronized void write(O obj) {
