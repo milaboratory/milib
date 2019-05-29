@@ -41,8 +41,10 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class PrimitivOBlocksTest {
     static ExecutorService executorService;
@@ -59,12 +61,17 @@ public class PrimitivOBlocksTest {
 
     @Test
     public void benchmark1() throws IOException {
-        for (int i = 0; i < 2; i++) {
-            runTest(false, 1, 1000000, 1);
-            runTest(false, 4, 1000000, 1);
-            runTest(true, 1, 100000, 2);
-            runTest(true, 4, 100000, 2);
-        }
+        AtomicInteger counter = new AtomicInteger();
+        HashMap<Integer, Integer> cSlots = new HashMap<>();
+        for (int elements : new int[]{1000000, 100000})
+            // for (int elements : new int[]{100000})
+            for (boolean highCompression : new boolean[]{true, false})
+                for (int concurrency : new int[]{1, 4})
+                    for (int blockSize : new int[]{172, 1024}) {
+                        Integer slot = cSlots.computeIfAbsent(Objects.hash(highCompression, blockSize, elements),
+                                q -> counter.incrementAndGet());
+                        runTest(highCompression, concurrency, elements, slot, blockSize);
+                    }
     }
 
     final HashMap<Integer, byte[]> checksums = new HashMap<>();
@@ -72,7 +79,8 @@ public class PrimitivOBlocksTest {
     public void runTest(boolean highCompression,
                         int concurrency,
                         int elements,
-                        int checksumSlot) throws IOException {
+                        int checksumSlot,
+                        int blockSize) throws IOException {
         // LZ4Factory lz4Factory = LZ4Factory.fastestJavaInstance();
         LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
         LZ4Compressor compressor = highCompression
@@ -81,7 +89,7 @@ public class PrimitivOBlocksTest {
 
         Path target = TempFileManager.getTempFile().toPath();
 
-        PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, 1024, compressor
+        PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, blockSize, compressor
         );
 
         RandomUtil.reseedThreadLocal(12341);
@@ -97,12 +105,19 @@ public class PrimitivOBlocksTest {
             sr.add(test);
         }
 
+        RandomUtil.reseedThreadLocal(12341);
+
         long startTimestamp = System.nanoTime();
         io.resetStats();
+        long k = 0;
         try (PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target)) {
-            for (int i = 0; i < repeats; i++)
-                for (int j = 0; j < elementsInRepeat; j++)
+            for (int i = 0; i < repeats; i++) {
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+                for (int j = 0; j < els; j++)
                     writer.write(sr.get(j));
+                writer.flush();
+                writer.writeHeader(PrimitivIOBlockHeader.specialHeader().setSpecialLong(0, k += 124));
+            }
         }
         long elapsed = System.nanoTime() - startTimestamp;
         System.out.println();
@@ -131,22 +146,51 @@ public class PrimitivOBlocksTest {
         byte[] expectedChecksum = checksums.get(checksumSlot);
         if (expectedChecksum == null)
             checksums.put(checksumSlot, checksum);
-        else
+        else {
             Assert.assertArrayEquals(checksum, expectedChecksum);
+            System.out.println("Checksum ok!");
+        }
 
-        PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(executorService, concurrency, SingleRead.class,
-                lz4Factory.fastDecompressor(), PrimitivIState.INITIAL);
+        RandomUtil.reseedThreadLocal(12341);
+
+        PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(SingleRead.class, executorService, concurrency,
+                PrimitivIState.INITIAL, lz4Factory.fastDecompressor());
 
         try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2)) {
-            for (int i = 0; i < repeats; i++)
-                for (int j = 0; j < elementsInRepeat; j++) {
+            for (int i = 0; i < repeats; i++) {
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+                for (int j = 0; j < els; j++) {
                     final SingleRead obj = reader.take();
                     Assert.assertEquals(sr.get(j), obj);
                 }
+            }
+            Assert.assertNull(reader.take());
         }
 
         System.out.println();
-        System.out.println("I. Stats:");
+        System.out.println("I. Stats 1:");
+        System.out.println(pi.getStats());
+
+        RandomUtil.reseedThreadLocal(12341);
+
+        k = 0;
+        try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2,
+                h -> PrimitivIHeaderActions.outputObject(
+                        new SingleReadImpl(h.getSpecialLong(0), NSequenceWithQuality.EMPTY, "")))) {
+            for (int i = 0; i < repeats; i++) {
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+                for (int j = 0; j < els; j++) {
+                    final SingleRead obj = reader.take();
+                    Assert.assertEquals(sr.get(j), obj);
+                }
+                final SingleRead obj = reader.take();
+                Assert.assertEquals(new SingleReadImpl(k += 124, NSequenceWithQuality.EMPTY, ""), obj);
+            }
+            Assert.assertNull(reader.take());
+        }
+
+        System.out.println();
+        System.out.println("I. Stats 2:");
         System.out.println(pi.getStats());
 
         Files.delete(target);

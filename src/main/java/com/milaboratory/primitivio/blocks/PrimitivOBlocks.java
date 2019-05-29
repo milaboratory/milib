@@ -19,8 +19,9 @@ import cc.redberry.pipe.InputPort;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.LambdaLatch;
+import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.ByteArrayDataOutput;
-import com.milaboratory.util.io.IOUtil;
+import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
 
 import java.io.Closeable;
@@ -36,8 +37,6 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
-
-import static com.milaboratory.util.io.IOUtil.writeIntBE;
 
 
 /**
@@ -56,8 +55,6 @@ import static com.milaboratory.util.io.IOUtil.writeIntBE;
  * [ dataSize bytes ] (compressed, if bit1 of header is 1; uncompressed, if bit1 is 0; no bytes for special blocks )
  */
 public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
-    private static final byte[] LAST_HEADER = new byte[BLOCK_HEADER_SIZE];
-
     /**
      * LZ4 compressor to compress data blocks
      */
@@ -130,72 +127,69 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     /**
-     * Block serialization, CPU intensive part
+     * Block serialization, CPU intensive part.
+     *
+     * Returns header + data.
+     *
+     * Executed from {@link Writer} class.
      */
     private ByteBuffer serializeBlock(List<O> content) {
-        // // Assert
-        // assert content.size() != 0;
-        // boolean assertOn = false;
-        // assert assertOn = true;
-        // //noinspection ConstantConditions
-        // if (!assertOn && content.size() == 0)
-        //     System.err.println("Writing empty block in AlignmentsIO.");
-
-        // buffers.ensureRawBufferSize(alignments.size() * AVERAGE_ALIGNMENT_SIZE);
-
-        // TODO init with average object size
-        ByteArrayDataOutput dataOutput = new ByteArrayDataOutput();
+        ByteArrayDataOutput uncompressedOutput = blockCount.get() > 0
+                ? new ByteArrayDataOutput((int) (uncompressedBytes.get() / blockCount.get()))
+                : new ByteArrayDataOutput();
 
         // Stats {
         long start = System.nanoTime();
         // }
 
-        PrimitivO output = outputState.createPrimitivO(dataOutput);
+        PrimitivO output = outputState.createPrimitivO(uncompressedOutput);
 
-        // Writing alignments to memory buffer
+        // Writing objects to memory buffer
         for (O obj : content)
             output.writeObject(obj);
 
+        // Creating header
+        PrimitivIOBlockHeader header = PrimitivIOBlockHeader.dataBlockHeader();
+
         // Stats {
         serializationNanos.addAndGet(System.nanoTime() - start);
-        uncompressedBytes.addAndGet(dataOutput.size());
+        uncompressedBytes.addAndGet(uncompressedOutput.size());
         start = System.nanoTime();
         // }
 
-        int checksum = xxHash32.hash(dataOutput.getBuffer(), 0, dataOutput.size(), HASH_SEED);
+        header.setChecksum(xxHash32.hash(uncompressedOutput.getBuffer(), 0, uncompressedOutput.size(), HASH_SEED));
 
         // Stats {
         checksumNanos.addAndGet(System.nanoTime() - start);
         start = System.nanoTime();
         // }
 
-        byte[] block = new byte[BLOCK_HEADER_SIZE + compressor.maxCompressedLength(dataOutput.size())];
-        int compressedLength = compressor.compress(dataOutput.getBuffer(), 0, dataOutput.size(),
+        byte[] block = new byte[BLOCK_HEADER_SIZE + compressor.maxCompressedLength(uncompressedOutput.size())];
+        int compressedLength = compressor.compress(uncompressedOutput.getBuffer(), 0, uncompressedOutput.size(),
                 block, BLOCK_HEADER_SIZE);
 
         compressionNanos.addAndGet(System.nanoTime() - start);
 
-        // Header field 1
-        writeIntBE(content.size(), block, 1);
+        // Setting header fields
+        header
+                .setNumberOfObjects(content.size())
+                .setUncompressedDataSize(uncompressedOutput.size());
 
         int blockSize;
 
-        if (compressedLength > dataOutput.size()) {
+        if (compressedLength > uncompressedOutput.size()) {
             // Compression increased data size -> writing uncompressed block
-            System.arraycopy(dataOutput.getBuffer(), 0, block, BLOCK_HEADER_SIZE, dataOutput.size());
-            block[0] = 0x1; // bit0 = 1, bit1 = 0
-            writeIntBE(dataOutput.size(), block, 5);
-            writeIntBE(dataOutput.size(), block, 9);
-            blockSize = BLOCK_HEADER_SIZE + dataOutput.size();
+            System.arraycopy(uncompressedOutput.getBuffer(), 0, block, BLOCK_HEADER_SIZE, uncompressedOutput.size());
+            header.setDataSize(uncompressedOutput.size());
+            // Saving actual block size
+            blockSize = BLOCK_HEADER_SIZE + uncompressedOutput.size();
         } else {
-            block[0] = 0x3; // bit0 = 1, bit1 = 1
-            writeIntBE(dataOutput.size(), block, 5);
-            writeIntBE(compressedLength, block, 9);
+            header.setCompressed().setDataSize(compressedLength);
+            // Saving actual block size
             blockSize = BLOCK_HEADER_SIZE + compressedLength;
         }
 
-        // Writing checksum
-        writeIntBE(checksum, block, 13);
+        header.writeTo(block, 0);
 
         objectCount.addAndGet(content.size());
         outputSize.addAndGet(blockSize);
@@ -220,7 +214,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     public Writer newWriter(AsynchronousFileChannel channel, long position, boolean closeUnderlyingChannel) {
-        return newWriter(IOUtil.toAsynchronousByteChannel(channel, position), closeUnderlyingChannel);
+        return newWriter(new AsynchronousFileChannelAdapter(channel, position), closeUnderlyingChannel);
     }
 
     public Writer newWriter(AsynchronousByteChannel channel, boolean closeUnderlyingChannel) {
@@ -253,12 +247,87 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 close();
         }
 
-        public synchronized void write(O obj) {
-            buffer.add(obj);
-            if (blockIsFull(buffer.size())) {
+        /**
+         * Flush internal object buffer
+         */
+        public synchronized void flush() {
+            if (!buffer.isEmpty()) {
                 writeBlock(buffer);
                 buffer = new ArrayList<>();
             }
+        }
+
+        public synchronized void write(O obj) {
+            buffer.add(obj);
+            if (blockIsFull(buffer.size())) {
+                flush();
+            }
+        }
+
+        /**
+         * Wait for all async operations to finish
+         */
+        public synchronized void sync() {
+            try {
+                currentWriteLatch.await();
+            } catch (InterruptedException e) {
+                throw new RuntimeException();
+            }
+        }
+
+        /**
+         * Return current position if underlying channel supports position
+         */
+        public synchronized long getPosition() {
+            if (channel instanceof HasPosition) {
+                sync();
+                return ((HasPosition) channel).getPosition();
+            } else
+                throw new IllegalStateException("Underlying channel does not support information retrieval.");
+        }
+
+        public synchronized void writeHeader(PrimitivIOBlockHeader header) {
+            if (!buffer.isEmpty())
+                throw new IllegalStateException("Buffer is not empty. Invoke flush() before writeHeader(...).");
+
+            // Checking for errors
+            checkException();
+
+            // Creating latches for IO operations ordering
+            LambdaLatch previousLatch = currentWriteLatch;
+            LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
+
+            // Header bytes
+            ByteBuffer block = header.asByteBuffer();
+            int size = block.limit();
+
+            // Tracking output size
+            outputSize.addAndGet(BLOCK_HEADER_SIZE);
+
+            // Adding a callback after the last IO operation to issue write operation of the current block
+            previousLatch.setCallback(
+                    () -> {
+                        long ioBegin = System.nanoTime();
+                        channel.write(block, null,
+                                new CHAbstract() {
+                                    @Override
+                                    public void completed(Integer result, Object attachment) {
+                                        ioDelayNanos.addAndGet(System.nanoTime() - ioBegin);
+
+                                        // Assert
+                                        if (result != size) {
+                                            exception = new RuntimeException("Wrong block size.");
+                                            exception.printStackTrace();
+                                            // Releasing a permit for the next operation to detect the error
+                                            concurrencyLimiter.release();
+                                            return;
+                                        }
+
+                                        // Opening latch for the next IO operation
+                                        nextLatch.open();
+                                    }
+                                });
+                    });
         }
 
         public synchronized void writeBlock(final List<O> content) {
@@ -267,11 +336,15 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
             // Concurrency limits the whole block lifecycle (serialization + IO)
             // so operations will be throttled both on IO and CPU
+            //
+            // This operation will block caller thread (this is the only blocking operation for the whole
+            // PrimitivIOBlocks suite)
             concurrencyLimiter.acquireUninterruptibly();
 
             // Checking for errors before and after throttling
             checkException();
 
+            // Creating latches for IO operations ordering
             LambdaLatch previousLatch = currentWriteLatch;
             LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
 
@@ -317,6 +390,8 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                             });
                 } catch (Exception e) {
                     exception = e;
+                    // Releasing a permit for the next operation to detect the error
+                    concurrencyLimiter.release();
                     throw new RuntimeException(e);
                 }
             });
@@ -329,30 +404,24 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
                 if (!buffer.isEmpty())
                     // Writing leftovers
-                    writeBlock(buffer);
+                    flush();
                 else
                     // Anyway check for errors before proceed
                     checkException();
 
-                // Writing final block
-                LambdaLatch previousLatch = currentWriteLatch;
-                LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
-                outputSize.addAndGet(BLOCK_HEADER_SIZE);
-                previousLatch.setCallback(() -> channel.write(ByteBuffer.wrap(LAST_HEADER), null,
-                        new CHAbstract() {
-                            @Override
-                            public void completed(Integer result, Object attachment) {
-                                nextLatch.open();
-                            }
-                        }));
+                // Writing final header
+                writeHeader(PrimitivIOBlockHeader.lastHeader());
 
                 // Waiting EOF header to be flushed to the stream
-                nextLatch.await();
+                sync();
+
+                // Just in case
+                checkException();
 
                 if (closeUnderlyingChannel)
                     channel.close();
 
-            } catch (InterruptedException | IOException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }

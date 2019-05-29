@@ -17,7 +17,7 @@ package com.milaboratory.primitivio.blocks;
 
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
-import com.milaboratory.util.io.IOUtil;
+import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 
@@ -28,6 +28,7 @@ import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 
 /**
  * Helper class to mix synchronous PrimitivI reading with asynchronous / parallel PrimitivIBlocks streaming
@@ -46,7 +47,7 @@ public final class PrimitivIHybrid implements AutoCloseable {
 
     public PrimitivIHybrid(ExecutorService executorService, Path file, PrimitivIState primitivIState) throws IOException {
         this(executorService,
-                IOUtil.toAsynchronousByteChannel(
+                new AsynchronousFileChannelAdapter(
                         PrimitivIOBlocksAbstract.createAsyncChannel(executorService, file, new OpenOption[0], StandardOpenOption.READ),
                         0),
                 primitivIState);
@@ -73,10 +74,17 @@ public final class PrimitivIHybrid implements AutoCloseable {
     static final LZ4FastDecompressor lz4Decompressor = lz4Factory.fastDecompressor();
 
     public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks) {
+        return beginPrimitivIBlocks(clazz, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
+    }
+
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
+                                                                           Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
         if (primitivIBlocks != null || primitivI != null)
             throw new IllegalStateException();
-        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(executorService, concurrency, clazz, lz4Decompressor, primitivIState);
-        return primitivIBlocks = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, false);
+        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
+        //noinspection unchecked
+        return primitivIBlocks = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction,
+                false);
     }
 
     public synchronized void endPrimitivIBlocks() {
