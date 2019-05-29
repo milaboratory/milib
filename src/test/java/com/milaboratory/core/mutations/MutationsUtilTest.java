@@ -18,6 +18,7 @@ package com.milaboratory.core.mutations;
 import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
 import com.milaboratory.core.alignment.Aligner;
 import com.milaboratory.core.alignment.Alignment;
+import com.milaboratory.core.alignment.AlignmentUtils;
 import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
 import com.milaboratory.core.mutations.generator.MutationsGenerator;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
@@ -312,6 +313,26 @@ public class MutationsUtilTest {
         Alignment<AminoAcidSequence> aaAl = new Alignment<>(aaSeq1, aaMuts, 0);
 
         MutationsUtil.MutationsWitMapping mm = MutationsUtil.nt2aaWithMapping(seq1, muts, FromRightWithoutIncompleteCodon, 20);
+
+        System.out.println(mm.mutations);
+        System.out.println(Arrays.toString(mm.mapping));
+    }
+
+    @Test
+    public void nt2AAWithMappingManual3() throws Exception {
+        NucleotideSequence seq1 = new NucleotideSequence("CAGGTTCAGCTGGTGCAGTCTGGAGCTGAGGTGAAGAAGCCTGGGGCCTCAGTGAAGGTCTCCTGCAAGGCTTCTGGTTACACCTTTACCAGCTACGGTATCAGCTGGGTGCGACAGGCCCCTGGACAAGGGCTTGAGTGGATGGGATGGATCAGCGCTTACAATGGTAACACAAACTATGCACAGAAGCTCCAGGGCAGAGTCACCATGACCACAGACACATCCACGAGCACAGCCTACATGGAGCTGAGGAGCCTGAGATCTGACGACACGGCCGTGTATTACTGTGCGAGAGA");
+        Mutations<NucleotideSequence> muts = new Mutations<>(NucleotideSequence.ALPHABET, "SA174T SA175T SC183G SC189T SA219G SG229C SC239T SG259C SC262T DA268 DC269 DA270 DC271 DG272 SG276A ST277C SG278A ST281C");
+        Alignment<NucleotideSequence> al = new Alignment<>(seq1, muts, 0);
+        NucleotideSequence seq2 = AlignmentUtils.getAlignedSequence2Part(al);
+        AminoAcidSequence aaSeq1 = AminoAcidSequence.translate(seq1, FromLeftWithIncompleteCodon);
+        AminoAcidSequence aaSeq2 = AminoAcidSequence.translate(seq2, FromLeftWithIncompleteCodon);
+        Mutations<AminoAcidSequence> aaMuts = MutationsUtil.nt2aa(seq1, muts, FromLeftWithIncompleteCodon);
+        System.out.println(aaMuts);
+        Alignment<AminoAcidSequence> aaAl = new Alignment<>(aaSeq1, aaMuts, 0);
+        System.out.println(AlignmentUtils.getAlignedSequence2Part(aaAl));
+        System.out.println(aaSeq2);
+
+        MutationsUtil.MutationsWitMapping mm = MutationsUtil.nt2aaWithMapping(seq1, muts, FromLeftWithIncompleteCodon, 20);
 
         System.out.println(mm.mutations);
         System.out.println(Arrays.toString(mm.mapping));
