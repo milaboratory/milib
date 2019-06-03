@@ -2,7 +2,10 @@ package com.milaboratory.core.alignment.kaligner2;
 
 import cc.redberry.primitives.Filter;
 import com.milaboratory.core.Range;
-import com.milaboratory.core.alignment.*;
+import com.milaboratory.core.alignment.AffineGapAlignmentScoring;
+import com.milaboratory.core.alignment.Alignment;
+import com.milaboratory.core.alignment.BandedAffineAligner;
+import com.milaboratory.core.alignment.BandedSemiLocalResult;
 import com.milaboratory.core.alignment.batch.BatchAlignerWithBaseWithFilter;
 import com.milaboratory.core.alignment.kaligner2.KMapper2.ArrList;
 import com.milaboratory.core.mutations.Mutations;
@@ -34,11 +37,11 @@ public class KAligner2<P> implements BatchAlignerWithBaseWithFilter<NucleotideSe
     /**
      * Base records for reference sequences
      */
-    final List<NucleotideSequence> sequences = new ArrayList<>();
+    final List<NucleotideSequence> sequences;
     /**
      * Record payloads.
      */
-    final TIntObjectHashMap<P> payloads = new TIntObjectHashMap<>();
+    final TIntObjectHashMap<P> payloads;
     /**
      * Statistics aggregator
      */
@@ -52,6 +55,40 @@ public class KAligner2<P> implements BatchAlignerWithBaseWithFilter<NucleotideSe
         this.parameters = parameters;
         this.mapper = KMapper2.createFromParameters(parameters, stat);
         this.stat = stat;
+        this.sequences = new ArrayList<>();
+        this.payloads = new TIntObjectHashMap<>();
+    }
+
+    private KAligner2(KMapper2 mapper,
+                      KAlignerParameters2 parameters,
+                      List<NucleotideSequence> sequences,
+                      TIntObjectHashMap<P> payloads,
+                      KAligner2Statistics stat) {
+        this.mapper = mapper;
+        this.parameters = parameters;
+        this.sequences = sequences;
+        this.payloads = payloads;
+        this.stat = stat;
+    }
+
+    @Override
+    public KAligner2<P>
+    setFloatingLeftBound(boolean floatingLeftBound) {
+        if (floatingLeftBound == this.parameters.isFloatingLeftBound() )
+            return this;
+        KAlignerParameters2 parameters = this.parameters.clone();
+        parameters.setFloatingLeftBound(floatingLeftBound);
+        return new KAligner2<>(mapper.setFloatingLeftBound(floatingLeftBound), parameters, sequences, payloads, stat);
+    }
+
+    @Override
+    public KAligner2<P>
+    setFloatingRightBound(boolean floatingRightBound) {
+        if (floatingRightBound == this.parameters.isFloatingRightBound() )
+            return this;
+        KAlignerParameters2 parameters = this.parameters.clone();
+        parameters.setFloatingRightBound(floatingRightBound);
+        return new KAligner2<>(mapper.setFloatingRightBound(floatingRightBound), parameters, sequences, payloads, stat);
     }
 
     /**

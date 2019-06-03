@@ -171,6 +171,42 @@ public final class KMapper implements java.io.Serializable {
         //this.random = new RandomDataImpl(new Well19937c(12364785L));
     }
 
+    public KMapper(int bitsForOffset,
+                   int offsetMask,
+                   int kValue,
+                   int[][] base, int[] lengths,
+                   float absoluteMinScore,  float relativeMinScore,
+                   float matchScore, float mismatchPenalty, float offsetShiftPenalty,
+                   int minAlignmentLength, int maxIndels,
+                   boolean floatingLeftBound, boolean floatingRightBound,
+                   int minDistance, int maxDistance,
+                   boolean built, int[] refFrom, int[] refLength,
+                   int maxReferenceLength, int minReferenceLength, int sequencesInBase, BitArray allFilter) {
+        this.bitsForOffset = bitsForOffset;
+        this.offsetMask = offsetMask;
+        this.kValue = kValue;
+        this.base = base;
+        this.lengths = lengths;
+        this.absoluteMinScore = absoluteMinScore;
+        this.relativeMinScore = relativeMinScore;
+        this.matchScore = matchScore;
+        this.mismatchPenalty = mismatchPenalty;
+        this.offsetShiftPenalty = offsetShiftPenalty;
+        this.minAlignmentLength = minAlignmentLength;
+        this.maxIndels = maxIndels;
+        this.floatingLeftBound = floatingLeftBound;
+        this.floatingRightBound = floatingRightBound;
+        this.minDistance = minDistance;
+        this.maxDistance = maxDistance;
+        this.built = built;
+        this.refFrom = refFrom;
+        this.refLength = refLength;
+        this.maxReferenceLength = maxReferenceLength;
+        this.minReferenceLength = minReferenceLength;
+        this.sequencesInBase = sequencesInBase;
+        this.allFilter = allFilter;
+    }
+
     /**
      * Factory method to create KMapper using parametners specified in the {@link KAlignerParameters}
      * object.
@@ -185,6 +221,20 @@ public final class KMapper implements java.io.Serializable {
                 parameters.getMapperOffsetShiftPenalty(),
                 parameters.getMaxAdjacentIndels(),
                 parameters.isFloatingLeftBound(), parameters.isFloatingRightBound());
+    }
+
+    KMapper setFloatingLeftBound(boolean floatingLeftBound) {
+        ensureBuilt();
+        return new KMapper(bitsForOffset, offsetMask, kValue, base, lengths, absoluteMinScore, relativeMinScore, matchScore,
+                mismatchPenalty, offsetShiftPenalty, minAlignmentLength, maxIndels, floatingLeftBound, floatingRightBound,
+                minDistance, maxDistance, built, refFrom, refLength, maxReferenceLength, minReferenceLength, sequencesInBase, allFilter);
+    }
+
+    KMapper setFloatingRightBound(boolean floatingRightBound) {
+        ensureBuilt();
+        return new KMapper(bitsForOffset, offsetMask, kValue, base, lengths, absoluteMinScore, relativeMinScore, matchScore,
+                mismatchPenalty, offsetShiftPenalty, minAlignmentLength, maxIndels, floatingLeftBound, floatingRightBound,
+                minDistance, maxDistance, built, refFrom, refLength, maxReferenceLength, minReferenceLength, sequencesInBase, allFilter);
     }
 
     /**
