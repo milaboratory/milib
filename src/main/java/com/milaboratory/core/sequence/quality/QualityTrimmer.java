@@ -18,6 +18,9 @@ package com.milaboratory.core.sequence.quality;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.SequenceQuality;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Searches for a region where for the given threshold and window size:
  *
@@ -76,6 +79,29 @@ public final class QualityTrimmer {
         for (int i = 0; i < windowSize; i++) {
             sum += quality.value(position);
             position += scanIncrement;
+        }
+
+        // Checking whether the criteria #1 is NOT met for the first window
+        if (searchForRise == (sum >= sumThreshold)) {
+            // Trying to rewind windows by moving outside the search region
+            for (int i = 0; i < windowSize; i++) {
+                windowEndPosition -= scanIncrement;
+                position -= scanIncrement;
+                if (windowEndPosition < 0 || windowEndPosition >= quality.size()) // Failed to find window meeting the criteria #1
+                    return (scanIncrement == 1 ? leftmostPosition : rightmostPosition - 1) - scanIncrement;
+                sum += quality.value(windowEndPosition);
+                sum -= quality.value(position);
+                if (searchForRise ^ (sum >= sumThreshold)) {
+                    // Final pass for criteria #2
+                    while ((searchForRise ^ (quality.value(position) < averageQualityThreshold))
+                            && i < windowSize) {
+                        position -= scanIncrement;
+                        ++i;
+                    }
+                    return position;
+                }
+            }
+            return position - scanIncrement;
         }
 
         // Main search pass (criteria #1)
@@ -159,6 +185,90 @@ public final class QualityTrimmer {
         int lower = pabs(trim(quality, 0, initialRange.getLower(), -1, false, parameters));
         int upper = pabs(trim(quality, initialRange.getUpper(), quality.size(), +1, false, parameters)) + 1;
         return new Range(lower, upper, initialRange.isReverse());
+    }
+
+    /**
+     * Find all good quality islands in terms of two criteria listed above.
+     *
+     * @param quality    quality values
+     * @param parameters trimming parameters
+     */
+    public static Range[] calculateAllIslands(SequenceQuality quality, QualityTrimmerParameters parameters) {
+        ArrayList<Range> ranges = new ArrayList<>();
+        findIslands(quality, parameters, 0, +1, false, ranges);
+        return ranges.toArray(new Range[0]);
+    }
+
+    /** Used for tests */
+    static Range[] findIslands(SequenceQuality quality, QualityTrimmerParameters parameters,
+                               int from, int direction,
+                               boolean isReversed) {
+        ArrayList<Range> ranges = new ArrayList<>();
+        findIslands(quality, parameters, from, direction, isReversed, ranges);
+        return ranges.toArray(new Range[0]);
+    }
+
+    /**
+     * Searches for good quality islands in terms of two criteria listed above.
+     *
+     * @param quality    quality values
+     * @param parameters trimming parameters
+     * @param from       initial scan position
+     * @param direction  search direction
+     * @param isReversed should the resulting ranges be reversed
+     * @param ranges     list to add results to (ranges will be added sorted by position)
+     */
+    static void findIslands(SequenceQuality quality, QualityTrimmerParameters parameters,
+                            int from, int direction,
+                            boolean isReversed,
+                            List<Range> ranges) {
+        while (from >= 0 && from < quality.size()) {
+            // from supposed to be low quality position
+            int islandStart = trim(quality,
+                    direction == +1 ? from : 0,
+                    direction == +1 ? quality.size() : from,
+                    direction, true, parameters);
+
+            if (islandStart < -1)
+                // No more good quality islands
+                break;
+
+            // Searching for the island boundary
+            int islandEnd = pabs(trim(quality,
+                    direction == +1 ? islandStart + direction : 0,
+                    direction == +1 ? quality.size() : islandStart + direction,
+                    direction, false, parameters));
+
+            if (direction == +1)
+                ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
+            else
+                ranges.add(0, new Range(islandEnd, islandStart, isReversed));
+
+            from = islandEnd + direction;
+        }
+    }
+
+    /**
+     * Extend initialRange to the biggest possible range that fulfils the criteria of QualityTrimmer along the whole
+     * extended region, then splits leftover ranges into good quality islands.
+     *
+     * The criteria may not be fulfilled for the initial range.
+     *
+     * @param quality      quality values
+     * @param parameters   trimming parameters
+     * @param initialRange initial range to extend
+     * @return array of ranges including extended initial range
+     */
+    public static Range[] calculateIslandsFromInitialRange(SequenceQuality quality, QualityTrimmerParameters parameters, Range initialRange) {
+        int lowerInitial = pabs(trim(quality, 0, initialRange.getLower(), -1, false, parameters));
+        int upperInitial = pabs(trim(quality, initialRange.getUpper(), quality.size(), +1, false, parameters)) + 1;
+        ArrayList<Range> ranges = new ArrayList<>();
+        ranges.add(new Range(lowerInitial, upperInitial, initialRange.isReverse()));
+        if (lowerInitial > parameters.getWindowSize() - 1)
+            findIslands(quality, parameters, lowerInitial - 1, -1, initialRange.isReverse(), ranges);
+        if (upperInitial <= quality.size() - parameters.getWindowSize())
+            findIslands(quality, parameters, upperInitial, +1, initialRange.isReverse(), ranges);
+        return ranges.toArray(new Range[0]);
     }
 
     /**
