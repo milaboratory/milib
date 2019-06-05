@@ -227,6 +227,12 @@ public class QualityTrimmerTest {
         q0 = q("");
         Assert.assertArrayEquals(new Range[]{},
                 QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10
+        q0 = q("4321001234567");
+        Assert.assertArrayEquals(new Range[]{},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
     }
 
 
