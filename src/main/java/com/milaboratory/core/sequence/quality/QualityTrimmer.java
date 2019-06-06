@@ -239,10 +239,11 @@ public final class QualityTrimmer {
                     direction == +1 ? quality.size() : islandStart + direction,
                     direction, false, parameters));
 
-            if (direction == +1)
-                ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
-            else
-                ranges.add(0, new Range(islandEnd, islandStart, isReversed));
+            if (Math.abs(islandEnd - islandStart) >= parameters.getWindowSize())
+                if (direction == +1)
+                    ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
+                else
+                    ranges.add(0, new Range(islandEnd, islandStart, isReversed));
 
             from = islandEnd + direction;
         }
