@@ -15,7 +15,11 @@
  */
 package com.milaboratory.core.io.sequence;
 
+import com.milaboratory.core.sequence.quality.FunctionWithIndex;
 import com.milaboratory.primitivio.annotations.Serializable;
+
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * @author Dmitry Bolotin
@@ -28,4 +32,18 @@ public interface SequenceRead extends Iterable<SingleRead> {
     SingleRead getRead(int i);
 
     long getId();
+
+    default SequenceRead mapReads(Function<SingleRead, SingleRead> mapping) {
+        return SequenceReadUtil.construct(IntStream.range(0, numberOfReads())
+                .mapToObj(this::getRead)
+                .map(mapping)
+                .toArray(SingleRead[]::new));
+    }
+
+    default SequenceRead mapReadsWithIndex(FunctionWithIndex<SingleRead, SingleRead> mapping) {
+        return SequenceReadUtil.construct(
+                IntStream.range(0, numberOfReads())
+                        .mapToObj(i -> mapping.apply(i, this.getRead(i)))
+                        .toArray(SingleRead[]::new));
+    }
 }
