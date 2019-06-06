@@ -87,8 +87,13 @@ public final class QualityTrimmer {
             for (int i = 0; i < windowSize; i++) {
                 windowEndPosition -= scanIncrement;
                 position -= scanIncrement;
-                if (windowEndPosition < 0 || windowEndPosition >= quality.size()) // Failed to find window meeting the criteria #1
-                    return (scanIncrement == 1 ? leftmostPosition : rightmostPosition - 1) - scanIncrement;
+                if (windowEndPosition < 0 || windowEndPosition >= quality.size()) {// Failed to find window meeting the criteria #1
+                    // position = (scanIncrement == 1 ? leftmostPosition : rightmostPosition - 1) - scanIncrement;
+                    while (position >= leftmostPosition && position < rightmostPosition
+                            && searchForRise ^ (quality.value(position) < averageQualityThreshold))
+                        position -= scanIncrement;
+                    return position;
+                }
                 sum += quality.value(windowEndPosition);
                 sum -= quality.value(position);
                 if (searchForRise ^ (sum >= sumThreshold)) {
@@ -115,13 +120,7 @@ public final class QualityTrimmer {
         }
 
         // Determine whether the search was successful
-        if (searchForRise ^ (sum >= sumThreshold)) { // If this condition is still true, search was unsuccessful
-            // One step back
-            position -= scanIncrement;
-            return -2 - position;
-        }
-
-        // Successful search
+        boolean unsuccessful = searchForRise ^ (sum >= sumThreshold);
 
         // Searching for actual boundary of the region, reverse search (criteria #2)
         do {
@@ -132,7 +131,7 @@ public final class QualityTrimmer {
 
         // assert scanIncrement == 1 ? position >= windowEndPosition : position <= windowEndPosition;
 
-        return position;
+        return unsuccessful ? -2 - position : position;
     }
 
 
@@ -309,5 +308,38 @@ public final class QualityTrimmer {
             // Should not happen, just in case
             return null;
         return new Range(lower, upper, initialRange.isReverse());
+    }
+
+    /**
+     * Similar to {@link #trim(SequenceQuality, QualityTrimmerParameters)} but also accounts for low quality regions
+     * inside read body and selects best (in terms of sum of quality score values)  quality island fulfilling both
+     * criterion listed above.
+     *
+     * @param quality    quality values
+     * @param parameters parameters
+     * @return best island range or null if there are no
+     */
+    public static Range bestIsland(SequenceQuality quality, QualityTrimmerParameters parameters) {
+        final Range[] ranges = calculateAllIslands(quality, parameters);
+        if (ranges.length == 0)
+            return null;
+
+        Range bestRange = ranges[0];
+        int bestRangeSumScore = 0;
+        for (int i = bestRange.getLower(); i < bestRange.getUpper(); i++)
+            bestRangeSumScore += quality.value(i);
+
+        for (int i = 1; i < ranges.length; i++) {
+            int sumScore = 0;
+            for (int j = ranges[i].getLower(); j < ranges[i].getUpper(); j++)
+                sumScore += quality.value(j);
+
+            if (sumScore > bestRangeSumScore) {
+                bestRangeSumScore = sumScore;
+                bestRange = ranges[i];
+            }
+        }
+
+        return bestRange;
     }
 }

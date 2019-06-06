@@ -63,6 +63,22 @@ public class QualityTrimmerTest {
     }
 
     @Test
+    public void test3() {
+        //                               |0        |10       |20
+        SequenceQuality q0 = q("499999999941");
+        Assert.assertEquals(0, QualityTrimmer.trim(q0, 0, q0.size(), +1, true, params7));
+        Assert.assertEquals(9, QualityTrimmer.pabs(QualityTrimmer.trim(q0, 4, q0.size(), +1, false, params7)));
+    }
+
+    @Test
+    public void test4() {
+        //                               |0        |10       |20
+        SequenceQuality q0 = q("4999999999429");
+        Assert.assertEquals(0, QualityTrimmer.trim(q0, 0, q0.size(), +1, true, params7));
+        Assert.assertEquals(12, QualityTrimmer.pabs(QualityTrimmer.trim(q0, 4, q0.size(), +1, false, params7)));
+    }
+
+    @Test
     public void testBoundaryCase1() {
         SequenceQuality q0 = q("9");
         Assert.assertEquals(-1, QualityTrimmer.trim(q0, 0, q0.size(), +1, true, params7));
@@ -237,8 +253,13 @@ public class QualityTrimmerTest {
         q0 = q("4321001234FFFF77");
         Assert.assertArrayEquals(new Range[]{new Range(10, 16)},
                 QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10
+        q0 = q("49999999994");
+        Assert.assertArrayEquals(new Range[]{new Range(1, 10)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
     }
-    
+
     @Test
     public void testParametersSerialization0() {
         TestUtil.assertJson(params7, true);
