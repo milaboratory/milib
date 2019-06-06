@@ -219,8 +219,8 @@ public class QualityTrimmerTest {
                 QualityTrimmer.calculateAllIslands(q0, params7));
 
         //               |0
-        q0 = q("999");
-        Assert.assertArrayEquals(new Range[]{new Range(0, 3)},
+        q0 = q("999999");
+        Assert.assertArrayEquals(new Range[]{new Range(0, 6)},
                 QualityTrimmer.calculateAllIslands(q0, params7));
 
         //               |0
@@ -234,12 +234,11 @@ public class QualityTrimmerTest {
                 QualityTrimmer.calculateAllIslands(q0, params7));
 
         //               |0        |10
-        q0 = q("4321001234FFF");
-        Assert.assertArrayEquals(new Range[]{new Range(10, 13)},
+        q0 = q("4321001234FFFF77");
+        Assert.assertArrayEquals(new Range[]{new Range(10, 16)},
                 QualityTrimmer.calculateAllIslands(q0, params7));
     }
-
-
+    
     @Test
     public void testParametersSerialization0() {
         TestUtil.assertJson(params7, true);
