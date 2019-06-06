@@ -56,6 +56,13 @@ public class QualityTrimmerTest {
     }
 
     @Test
+    public void test2() {
+        //                               |0        |10       |20
+        SequenceQuality q0 = q("0123456789999999999876543210");
+        Assert.assertEquals(1, QualityTrimmer.trim(q0, 2, q0.size(), +1, false, params7));
+    }
+
+    @Test
     public void testBoundaryCase1() {
         SequenceQuality q0 = q("9");
         Assert.assertEquals(-1, QualityTrimmer.trim(q0, 0, q0.size(), +1, true, params7));
@@ -139,6 +146,99 @@ public class QualityTrimmerTest {
         Assert.assertEquals(new Range(0, 1), QualityTrimmer.trim(q0, params7));
     }
 
+    @Test
+    public void islandsTest1() {
+        //                               |0        |10       |20
+        SequenceQuality q0 = q("0123456789999999999876543210");
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21)},
+                QualityTrimmer.findIslands(q0, params7, 0, +1, false));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21)},
+                QualityTrimmer.findIslands(q0, params7, q0.size() - 1, -1, false));
+
+        Assert.assertArrayEquals(new Range[]{new Range(10, 21)},
+                QualityTrimmer.findIslands(q0, params7, 10, +1, false));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 18)},
+                QualityTrimmer.findIslands(q0, params7, 18, -1, false));
+    }
+
+    @Test
+    public void islandsTest2() {
+        //                               |0        |10       |20       |30       |40       |50
+        SequenceQuality q0 = q("01234567899999999998765432100123456789999999999876543210");
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.findIslands(q0, params7, 0, +1, false));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.findIslands(q0, params7, q0.size() - 1, -1, false));
+
+        Assert.assertArrayEquals(new Range[]{new Range(10, 21), new Range(35, 49)},
+                QualityTrimmer.findIslands(q0, params7, 10, +1, false));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 46)},
+                QualityTrimmer.findIslands(q0, params7, 46, -1, false));
+    }
+
+    @Test
+    public void islandsFromRegionTest1() {
+        //                               |0        |10       |20       |30       |40       |50       |60
+        SequenceQuality q0 = q("012345678999999999987654321001234567899999999998765432100120102020");
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(10, 20)));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(38, 40)));
+
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(30, 49)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(30, 40)));
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 52)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(38, 52)));
+
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49), new Range(55, 59)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(55, 59)));
+        Assert.assertArrayEquals(new Range[]{new Range(0, 2), new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.calculateIslandsFromInitialRange(q0, params7, new Range(0, 2)));
+    }
+
+    @Test
+    public void islandsFromRegionTest2() {
+        //                               |0        |10       |20       |30       |40       |50       |60
+        SequenceQuality q0 = q("012345678999999999987654321001234567899999999998765432100120102020");
+        Assert.assertArrayEquals(new Range[]{new Range(7, 21), new Range(35, 49)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10       |20       |30       |40       |50       |60
+        q0 = q("999999999999999999987654321001234567899999999998765432100120102020");
+        Assert.assertArrayEquals(new Range[]{new Range(0, 21), new Range(35, 49)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10       |20       |30       |40       |50       |60
+        q0 = q("9999999999999999999876543210012345678999999999999999999999999");
+        Assert.assertArrayEquals(new Range[]{new Range(0, 21), new Range(35, 61)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10       |20       |30       |40       |50       |60
+        q0 = q("9999999999999999999899999999999909999999999978999999999999999");
+        Assert.assertArrayEquals(new Range[]{new Range(0, 61)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0
+        q0 = q("999999");
+        Assert.assertArrayEquals(new Range[]{new Range(0, 6)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0
+        q0 = q("");
+        Assert.assertArrayEquals(new Range[]{},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10
+        q0 = q("4321001234567");
+        Assert.assertArrayEquals(new Range[]{},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+
+        //               |0        |10
+        q0 = q("4321001234FFFF77");
+        Assert.assertArrayEquals(new Range[]{new Range(10, 16)},
+                QualityTrimmer.calculateAllIslands(q0, params7));
+    }
+    
     @Test
     public void testParametersSerialization0() {
         TestUtil.assertJson(params7, true);
