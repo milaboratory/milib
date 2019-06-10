@@ -15,8 +15,10 @@
  */
 package com.milaboratory.core.io.sequence;
 
-import com.milaboratory.core.sequence.*;
-import com.milaboratory.primitivio.annotations.Serializable;
+import com.milaboratory.core.sequence.NSequenceWithQuality;
+import com.milaboratory.core.sequence.quality.FunctionWithIndex;
+
+import java.util.function.Function;
 
 /**
  * Single read
@@ -28,4 +30,21 @@ public interface SingleRead extends SequenceRead, java.io.Serializable {
     String getDescription();
 
     NSequenceWithQuality getData();
+
+    @Override
+    default SingleRead mapReads(Function<SingleRead, SingleRead> mapping) {
+        return mapping.apply(this);
+    }
+
+    default SingleRead mapSequence(Function<NSequenceWithQuality, NSequenceWithQuality> mapping) {
+        final NSequenceWithQuality mapped = mapping.apply(this.getData());
+        if (mapped == getData())
+            return this;
+        return new SingleReadImpl(this.getId(), mapped, this.getDescription());
+    }
+
+    @Override
+    default SingleRead mapReadsWithIndex(FunctionWithIndex<SingleRead, SingleRead> mapping) {
+        return mapping.apply(0, this);
+    }
 }

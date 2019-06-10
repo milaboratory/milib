@@ -55,11 +55,11 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
     /**
      * Base records for reference sequences
      */
-    final List<NucleotideSequence> sequences = new ArrayList<>();
+    final List<NucleotideSequence> sequences;
     /**
      * Record payloads.
      */
-    final TIntObjectHashMap<P> payloads = new TIntObjectHashMap<>();
+    final TIntObjectHashMap<P> payloads;
     /**
      * Flag indicating how to load final alignments - at first request or immediately after obtaining {@link
      * KAlignmentResult}
@@ -99,6 +99,21 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
         this.mapper = KMapper.createFromParameters(parameters);
         this.parameters = parameters.clone();
         this.lazyResults = lazyResults;
+        this.sequences = new ArrayList<>();
+        this.payloads = new TIntObjectHashMap<>();
+    }
+
+    private KAligner(KMapper mapper,
+                     KAlignerParameters parameters,
+                     List<NucleotideSequence> sequences,
+                     TIntObjectHashMap<P> payloads,
+                     boolean lazyResults, int threads) {
+        this.mapper = mapper;
+        this.parameters = parameters;
+        this.sequences = sequences;
+        this.payloads = payloads;
+        this.lazyResults = lazyResults;
+        this.threads = threads;
     }
 
     /**
@@ -162,6 +177,26 @@ public class KAligner<P> implements PipedBatchAlignerWithBase<NucleotideSequence
      */
     public NucleotideSequence getReference(int id) {
         return sequences.get(id);
+    }
+
+    @Override
+    public KAligner<P>
+    setFloatingLeftBound(boolean floatingLeftBound) {
+        if (floatingLeftBound == this.parameters.isFloatingLeftBound() )
+            return this;
+        KAlignerParameters parameters = this.parameters.clone();
+        parameters.setFloatingLeftBound(floatingLeftBound);
+        return new KAligner<>(mapper.setFloatingLeftBound(floatingLeftBound), parameters, sequences, payloads, lazyResults, threads);
+    }
+
+    @Override
+    public KAligner<P>
+    setFloatingRightBound(boolean floatingRightBound) {
+        if (floatingRightBound == this.parameters.isFloatingRightBound() )
+            return this;
+        KAlignerParameters parameters = this.parameters.clone();
+        parameters.setFloatingRightBound(floatingRightBound);
+        return new KAligner<>(mapper.setFloatingRightBound(floatingRightBound), parameters, sequences, payloads, lazyResults, threads);
     }
 
     /**

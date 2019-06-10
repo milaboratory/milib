@@ -24,4 +24,8 @@ public interface BatchAlignerWithBaseWithFilter<S extends Sequence<S>, P, H exte
     BitArray createFilter(Filter<P> filter);
 
     AlignmentResult<H> align(S sequence, int from, int to, BitArray filter);
+
+    BatchAlignerWithBaseWithFilter<S, P, H> setFloatingLeftBound(boolean floatingLeftBound);
+
+    BatchAlignerWithBaseWithFilter<S, P, H> setFloatingRightBound(boolean floatingRightBound);
 }

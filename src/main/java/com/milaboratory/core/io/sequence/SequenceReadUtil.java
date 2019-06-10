@@ -3,6 +3,18 @@ package com.milaboratory.core.io.sequence;
 public final class SequenceReadUtil {
     private SequenceReadUtil() {}
 
+    public static SequenceRead construct(SingleRead... reads) {
+        if (reads.length == 0)
+            throw new IllegalArgumentException();
+
+        if (reads.length == 1)
+            return reads[0];
+        else if (reads.length == 2)
+            return new PairedRead(reads);
+        else
+            return new MultiRead(reads);
+    }
+
     public static SequenceRead setReadId(long readId, SequenceRead read) {
         if (readId == read.getId())
             return read;
