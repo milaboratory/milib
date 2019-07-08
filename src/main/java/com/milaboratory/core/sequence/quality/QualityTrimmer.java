@@ -18,6 +18,9 @@ package com.milaboratory.core.sequence.quality;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.SequenceQuality;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Searches for a region where for the given threshold and window size:
  *
@@ -78,6 +81,34 @@ public final class QualityTrimmer {
             position += scanIncrement;
         }
 
+        // Checking whether the criteria #1 is NOT met for the first window
+        if (searchForRise == (sum >= sumThreshold)) {
+            // Trying to rewind windows by moving outside the search region
+            for (int i = 0; i < windowSize; i++) {
+                windowEndPosition -= scanIncrement;
+                position -= scanIncrement;
+                if (windowEndPosition < 0 || windowEndPosition >= quality.size()) {// Failed to find window meeting the criteria #1
+                    // position = (scanIncrement == 1 ? leftmostPosition : rightmostPosition - 1) - scanIncrement;
+                    while (position >= leftmostPosition && position < rightmostPosition
+                            && searchForRise ^ (quality.value(position) < averageQualityThreshold))
+                        position -= scanIncrement;
+                    return position;
+                }
+                sum += quality.value(windowEndPosition);
+                sum -= quality.value(position);
+                if (searchForRise ^ (sum >= sumThreshold)) {
+                    // Final pass for criteria #2
+                    while ((searchForRise ^ (quality.value(position) < averageQualityThreshold))
+                            && i < windowSize) {
+                        position -= scanIncrement;
+                        ++i;
+                    }
+                    return position;
+                }
+            }
+            return position - scanIncrement;
+        }
+
         // Main search pass (criteria #1)
         while ((searchForRise ^ (sum >= sumThreshold)) && // if searchForRise == true, the loop will be terminated on the first position where sum >= sumThreshold
                 position >= leftmostPosition &&
@@ -89,13 +120,7 @@ public final class QualityTrimmer {
         }
 
         // Determine whether the search was successful
-        if (searchForRise ^ (sum >= sumThreshold)) { // If this condition is still true, search was unsuccessful
-            // One step back
-            position -= scanIncrement;
-            return -2 - position;
-        }
-
-        // Successful search
+        boolean unsuccessful = searchForRise ^ (sum >= sumThreshold);
 
         // Searching for actual boundary of the region, reverse search (criteria #2)
         do {
@@ -106,7 +131,7 @@ public final class QualityTrimmer {
 
         // assert scanIncrement == 1 ? position >= windowEndPosition : position <= windowEndPosition;
 
-        return position;
+        return unsuccessful ? -2 - position : position;
     }
 
 
@@ -162,6 +187,91 @@ public final class QualityTrimmer {
     }
 
     /**
+     * Find all good quality islands in terms of two criteria listed above.
+     *
+     * @param quality    quality values
+     * @param parameters trimming parameters
+     */
+    public static Range[] calculateAllIslands(SequenceQuality quality, QualityTrimmerParameters parameters) {
+        ArrayList<Range> ranges = new ArrayList<>();
+        findIslands(quality, parameters, 0, +1, false, ranges);
+        return ranges.toArray(new Range[0]);
+    }
+
+    /** Used for tests */
+    static Range[] findIslands(SequenceQuality quality, QualityTrimmerParameters parameters,
+                               int from, int direction,
+                               boolean isReversed) {
+        ArrayList<Range> ranges = new ArrayList<>();
+        findIslands(quality, parameters, from, direction, isReversed, ranges);
+        return ranges.toArray(new Range[0]);
+    }
+
+    /**
+     * Searches for good quality islands in terms of two criteria listed above.
+     *
+     * @param quality    quality values
+     * @param parameters trimming parameters
+     * @param from       initial scan position
+     * @param direction  search direction
+     * @param isReversed should the resulting ranges be reversed
+     * @param ranges     list to add results to (ranges will be added sorted by position)
+     */
+    static void findIslands(SequenceQuality quality, QualityTrimmerParameters parameters,
+                            int from, int direction,
+                            boolean isReversed,
+                            List<Range> ranges) {
+        while (from >= 0 && from < quality.size()) {
+            // from supposed to be low quality position
+            int islandStart = trim(quality,
+                    direction == +1 ? from : 0,
+                    direction == +1 ? quality.size() : from,
+                    direction, true, parameters);
+
+            if (islandStart < -1)
+                // No more good quality islands
+                break;
+
+            // Searching for the island boundary
+            int islandEnd = pabs(trim(quality,
+                    direction == +1 ? islandStart + direction : 0,
+                    direction == +1 ? quality.size() : islandStart + direction,
+                    direction, false, parameters));
+
+            if (Math.abs(islandEnd - islandStart) >= parameters.getWindowSize())
+                if (direction == +1)
+                    ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
+                else
+                    ranges.add(0, new Range(islandEnd, islandStart, isReversed));
+
+            from = islandEnd + direction;
+        }
+    }
+
+    /**
+     * Extend initialRange to the biggest possible range that fulfils the criteria of QualityTrimmer along the whole
+     * extended region, then splits leftover ranges into good quality islands.
+     *
+     * The criteria may not be fulfilled for the initial range.
+     *
+     * @param quality      quality values
+     * @param parameters   trimming parameters
+     * @param initialRange initial range to extend
+     * @return array of ranges including extended initial range
+     */
+    public static Range[] calculateIslandsFromInitialRange(SequenceQuality quality, QualityTrimmerParameters parameters, Range initialRange) {
+        int lowerInitial = pabs(trim(quality, 0, initialRange.getLower(), -1, false, parameters));
+        int upperInitial = pabs(trim(quality, initialRange.getUpper(), quality.size(), +1, false, parameters)) + 1;
+        ArrayList<Range> ranges = new ArrayList<>();
+        ranges.add(new Range(lowerInitial, upperInitial, initialRange.isReverse()));
+        if (lowerInitial > parameters.getWindowSize() - 1)
+            findIslands(quality, parameters, lowerInitial - 1, -1, initialRange.isReverse(), ranges);
+        if (upperInitial <= quality.size() - parameters.getWindowSize())
+            findIslands(quality, parameters, upperInitial, +1, initialRange.isReverse(), ranges);
+        return ranges.toArray(new Range[0]);
+    }
+
+    /**
      * Trims the quality string by cutting off low quality nucleotides on both edges.
      *
      * The criteria of QualityTrimmer may not be fulfilled for the resulting range. This method detects
@@ -198,5 +308,38 @@ public final class QualityTrimmer {
             // Should not happen, just in case
             return null;
         return new Range(lower, upper, initialRange.isReverse());
+    }
+
+    /**
+     * Similar to {@link #trim(SequenceQuality, QualityTrimmerParameters)} but also accounts for low quality regions
+     * inside read body and selects best (in terms of sum of quality score values)  quality island fulfilling both
+     * criterion listed above.
+     *
+     * @param quality    quality values
+     * @param parameters parameters
+     * @return best island range or null if there are no
+     */
+    public static Range bestIsland(SequenceQuality quality, QualityTrimmerParameters parameters) {
+        final Range[] ranges = calculateAllIslands(quality, parameters);
+        if (ranges.length == 0)
+            return null;
+
+        Range bestRange = ranges[0];
+        int bestRangeSumScore = 0;
+        for (int i = bestRange.getLower(); i < bestRange.getUpper(); i++)
+            bestRangeSumScore += quality.value(i);
+
+        for (int i = 1; i < ranges.length; i++) {
+            int sumScore = 0;
+            for (int j = ranges[i].getLower(); j < ranges[i].getUpper(); j++)
+                sumScore += quality.value(j);
+
+            if (sumScore > bestRangeSumScore) {
+                bestRangeSumScore = sumScore;
+                bestRange = ranges[i];
+            }
+        }
+
+        return bestRange;
     }
 }

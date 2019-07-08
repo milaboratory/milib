@@ -15,6 +15,10 @@
  */
 package com.milaboratory.core.io.sequence;
 
+import com.milaboratory.core.sequence.quality.FunctionWithIndex;
+
+import java.util.function.Function;
+
 /**
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
@@ -32,6 +36,22 @@ public final class PairedRead extends MultiRead {
 
     public SingleRead getR2() {
         return data[1];
+    }
+
+    @Override
+    public PairedRead mapReads(Function<SingleRead, SingleRead> mapping) {
+        return new PairedRead(
+                mapping.apply(data[0]),
+                mapping.apply(data[1])
+        );
+    }
+
+    @Override
+    public PairedRead mapReadsWithIndex(FunctionWithIndex<SingleRead, SingleRead> mapping) {
+        return new PairedRead(
+                mapping.apply(0, data[0]),
+                mapping.apply(1, data[1])
+        );
     }
 
     @Override

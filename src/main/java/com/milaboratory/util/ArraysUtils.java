@@ -22,6 +22,12 @@ public final class ArraysUtils {
     private ArraysUtils() {
     }
 
+    public static <T> void swap(T[] array, int i1, int i2) {
+        T t = array[i1];
+        array[i1] = array[i2];
+        array[i2] = t;
+    }
+
     public static void reverse(int[] array, int from, int to) {
         int i, v;
         int length = to - from;

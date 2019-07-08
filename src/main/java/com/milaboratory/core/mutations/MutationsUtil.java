@@ -467,7 +467,7 @@ public final class MutationsUtil {
                 new Range(0, seq1.size()));
 
         AlignmentIteratorForward<AminoAcidSequence> aaIterator = new AlignmentIteratorForward<>(aaMutations,
-                new Range(0, aaSeq2.size()));
+                new Range(0, aaSeq1.size()));
         boolean activeAAIterator = aaIterator.advance();
 
         while (ntIterator.advance()) {
@@ -518,6 +518,8 @@ public final class MutationsUtil {
                                                           TranslationParameters translationParameters,
                                                           int maxShiftedTriplets) {
         MutationsWitMapping mutationsWitMapping = nt2aaWithMapping(seq1, mutations, translationParameters, maxShiftedTriplets);
+        if (mutationsWitMapping == null)
+            return null;
         int[] individualMutations = nt2IndividualAA(seq1, mutations, translationParameters);
         MutationNt2AADescriptor[] result = new MutationNt2AADescriptor[mutations.size()];
         for (int i = 0; i < mutations.size(); i++) {

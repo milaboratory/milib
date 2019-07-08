@@ -31,6 +31,8 @@ public final class QualityTrimmerParameters {
     @JsonCreator
     public QualityTrimmerParameters(@JsonProperty("averageQualityThreshold") float averageQualityThreshold,
                                     @JsonProperty("windowSize") int windowSize) {
+        if (windowSize <= 0)
+            throw new IllegalArgumentException("windowSize must be > 0");
         this.averageQualityThreshold = averageQualityThreshold;
         this.windowSize = windowSize;
     }
