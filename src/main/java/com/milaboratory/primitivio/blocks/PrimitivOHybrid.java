@@ -20,7 +20,9 @@ import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
+import org.apache.commons.io.output.CloseShieldOutputStream;
 
+import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.Channels;
@@ -32,13 +34,25 @@ import java.util.concurrent.ExecutorService;
 /**
  * Helper class to mix synchronous PrimitivO writing with asynchronous / parallel PrimitivOBlocks serialization
  * for the same AsynchronousByteChannel
+ *
+ * <pre>
+ *  try(PrimitivOHybrid o = new PrimitivOHybrid(...)) {
+ *      try(PrimitivO po = o.beginPrimitivO()){
+ *          ....
+ *      }
+ *      try(PrimitivOBlocks<...>.Writer pob = o.<...>beginPrimitivOBlocks(..., ...)){
+ *          ....
+ *      }
+ *  }
+ * </pre>
  */
 public final class PrimitivOHybrid implements AutoCloseable {
-    final ExecutorService executorService;
-    final AsynchronousByteChannel byteChannel;
-    PrimitivOState primitivOState;
-    PrimitivO primitivO;
-    PrimitivOBlocks.Writer primitivOBlocks;
+    private boolean closed = false;
+    private final ExecutorService executorService;
+    private final AsynchronousByteChannel byteChannel;
+    private PrimitivOState primitivOState;
+    private PrimitivO primitivO;
+    private PrimitivOBlocks.Writer primitivOBlocks;
 
     public PrimitivOHybrid(ExecutorService executorService, Path file) throws IOException {
         this(executorService, file, PrimitivOState.INITIAL);
@@ -58,35 +72,48 @@ public final class PrimitivOHybrid implements AutoCloseable {
         this.primitivOState = state;
     }
 
-    public synchronized PrimitivO beginPrimitivO() {
-        if (primitivOBlocks != null || primitivO != null)
-            throw new IllegalStateException();
-        return primitivO = primitivOState.createPrimitivO(Channels.newOutputStream(byteChannel));
+    private void checkNullState(boolean checkClosed) {
+        if (closed)
+            throw new IllegalArgumentException("closed");
+        if (primitivOBlocks != null && primitivOBlocks.closed)
+            primitivOBlocks = null;
+        if (primitivO != null && primitivO.isClosed())
+            primitivO = null;
+        if (primitivOBlocks != null)
+            throw new IllegalStateException("primitivO blocks not closed");
+        if (primitivO != null)
+            throw new IllegalStateException("primitivO not closed");
     }
 
-    public synchronized void endPrimitivO() {
-        primitivOState = primitivO.getState();
-        primitivO = null;
+    public synchronized PrimitivO beginPrimitivO() {
+        checkNullState(true);
+
+
+        return primitivO = primitivOState.createPrimitivO(
+                new BufferedOutputStream( // Buffering here is even more important than with normal OutputStreams as channel synchronization is expensive
+                        new CloseShieldOutputStream( // Preventing channel close via OutputStream.close by CloseShieldOutputStream
+                                Channels.newOutputStream(byteChannel))));
     }
 
     static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
     static final LZ4Compressor lz4Compressor = lz4Factory.fastCompressor();
 
     public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
-        if (primitivOBlocks != null || primitivO != null)
-            throw new IllegalStateException();
+        checkNullState(true);
         final PrimitivOBlocks<O> oPrimitivOBlocks = new PrimitivOBlocks<>(executorService, concurrency,
                 primitivOState, blockSize, lz4Compressor);
+        //noinspection unchecked
         return primitivOBlocks = oPrimitivOBlocks.newWriter(byteChannel, false);
-    }
-
-    public synchronized void endPrimitivOBlocks() {
-        primitivOBlocks.close();
-        primitivOBlocks = null;
     }
 
     @Override
     public void close() throws IOException {
+        if (closed)
+            return;
+
+        checkNullState(false);
+
+        closed = true;
         byteChannel.close();
     }
 }

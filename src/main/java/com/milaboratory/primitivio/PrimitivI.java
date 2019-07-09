@@ -21,6 +21,7 @@ import java.io.*;
 import java.util.ArrayList;
 
 public final class PrimitivI implements DataInput, AutoCloseable {
+    boolean closed = false;
     final DataInput input;
     final SerializersManager manager;
     final ArrayList<Object> knownReferences;
@@ -54,6 +55,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         this.knownReferences = knownReferences;
         this.knownObjects = knownObjects;
         this.knownReferencesCount = knownReferences.size();
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 
     public SerializersManager getSerializersManager() {
@@ -324,7 +329,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
 
     @Override
     public void close() {
+        if(closed)
+            return;
         try {
+            closed = true;
             if (input instanceof Closeable)
                 ((Closeable) input).close();
         } catch (IOException e) {

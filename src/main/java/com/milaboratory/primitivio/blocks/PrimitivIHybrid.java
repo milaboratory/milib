@@ -33,13 +33,25 @@ import java.util.function.Function;
 /**
  * Helper class to mix synchronous PrimitivI reading with asynchronous / parallel PrimitivIBlocks streaming
  * for the same AsynchronousByteChannel
+ *
+ * <pre>
+ *  try(PrimitivIHybrid i = new PrimitivIHybrid(...)) {
+ *      try(PrimitivI pi = o.beginPrimitivI()){
+ *          ....
+ *      }
+ *      try(PrimitivIBlocks<...>.Writer pib = o.<...>beginPrimitivIBlocks(..., ...)){
+ *          ....
+ *      }
+ *  }
+ * </pre>
  */
 public final class PrimitivIHybrid implements AutoCloseable {
-    final ExecutorService executorService;
-    final AsynchronousByteChannel byteChannel;
-    PrimitivIState primitivIState;
-    PrimitivI primitivI;
-    PrimitivIBlocks.Reader primitivIBlocks;
+    private boolean closed = false;
+    private final ExecutorService executorService;
+    private final AsynchronousByteChannel byteChannel;
+    private PrimitivIState primitivIState;
+    private PrimitivI primitivI;
+    private PrimitivIBlocks.Reader primitivIBlocks;
 
     public PrimitivIHybrid(ExecutorService executorService, Path file) throws IOException {
         this(executorService, file, PrimitivIState.INITIAL);
@@ -59,15 +71,23 @@ public final class PrimitivIHybrid implements AutoCloseable {
         this.primitivIState = primitivIState;
     }
 
-    public synchronized PrimitivI beginPrimitivI() {
-        if (primitivIBlocks != null || primitivI != null)
-            throw new IllegalStateException();
-        return primitivI = primitivIState.createPrimitivI(Channels.newInputStream(byteChannel));
+
+    private void checkNullState(boolean checkClosed) {
+        if (closed)
+            throw new IllegalArgumentException("closed");
+        if (primitivIBlocks != null && primitivIBlocks.closed)
+            primitivIBlocks = null;
+        if (primitivI != null && primitivI.isClosed())
+            primitivI = null;
+        if (primitivIBlocks != null)
+            throw new IllegalStateException("primitivI blocks not closed");
+        if (primitivI != null)
+            throw new IllegalStateException("primitivI not closed");
     }
 
-    public synchronized void endPrimitivI() {
-        primitivIState = primitivI.getState();
-        primitivI = null;
+    public synchronized PrimitivI beginPrimitivI() {
+        checkNullState(true);
+        return primitivI = primitivIState.createPrimitivI(Channels.newInputStream(byteChannel));
     }
 
     static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
@@ -79,21 +99,21 @@ public final class PrimitivIHybrid implements AutoCloseable {
 
     public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
                                                                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
-        if (primitivIBlocks != null || primitivI != null)
-            throw new IllegalStateException();
+        checkNullState(true);
         final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
         //noinspection unchecked
         return primitivIBlocks = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction,
                 false);
     }
 
-    public synchronized void endPrimitivIBlocks() {
-        primitivIBlocks.close();
-        primitivIBlocks = null;
-    }
-
     @Override
     public void close() throws IOException {
+        if (closed)
+            return;
+
+        checkNullState(false);
+
+        closed = true;
         byteChannel.close();
     }
 }

@@ -504,6 +504,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
         @Override
         public synchronized void close() {
+            if (closed)
+                return;
+
             closed = true;
 
             try {

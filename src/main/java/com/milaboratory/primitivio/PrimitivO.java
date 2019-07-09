@@ -37,6 +37,11 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
     final DataOutput output;
 
     /**
+     * Tracking closed state (used in PrimitivIOHybrid)
+     */
+    boolean closed = false;
+
+    /**
      * Holds serializers for this stream
      */
     final SerializersManager manager;
@@ -97,6 +102,10 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         this(output, manager,
                 PrimitivOState.newKnownReferenceHashMap(), PrimitivOState.newKnownObjectHashMap()
         );
+    }
+
+    public boolean isClosed() {
+        return closed;
     }
 
     /**
@@ -403,7 +412,10 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
     @Override
     public void close() {
+        if (closed)
+            return;
         try {
+            closed = true;
             if (output instanceof Closeable)
                 ((Closeable) output).close();
         } catch (IOException e) {
