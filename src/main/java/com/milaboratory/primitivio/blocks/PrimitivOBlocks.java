@@ -400,6 +400,9 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         @Override
         public synchronized void close() {
             try {
+                if(closed)
+                    return;
+
                 closed = true;
 
                 if (!buffer.isEmpty())
