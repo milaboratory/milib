@@ -13,11 +13,15 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.PriorityQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 /**
  * Created by poslavsky on 28/02/2017.
  */
 public final class Sorter<T> {
+    private final ExecutorService executor;
     private final OutputPort<T> initialSource;
     private final Comparator<T> comparator;
     private final int chunkSize;
@@ -33,12 +37,13 @@ public final class Sorter<T> {
     private long memoryBudget = -1;
 
     public Sorter(OutputPort<T> initialSource, Comparator<T> comparator, int chunkSize,
-                  ObjectSerializer<T> serializer, File tempFile) {
+                  ObjectSerializer<T> serializer, File tempFile, ExecutorService executor) {
         this.initialSource = initialSource;
         this.comparator = comparator;
         this.chunkSize = chunkSize;
         this.serializer = serializer;
         this.tempFile = tempFile;
+        this.executor = executor;
     }
 
     /**
@@ -60,7 +65,8 @@ public final class Sorter<T> {
             int chunkSize,
             ObjectSerializer<T> serializer,
             File tempFile) throws IOException {
-        Sorter<T> sorter = new Sorter<>(initialSource, comparator, chunkSize, serializer, tempFile);
+        Sorter<T> sorter = new Sorter<>(initialSource, comparator, chunkSize, serializer, tempFile,
+                ForkJoinPool.commonPool());
         sorter.build();
         return sorter.getSorted();
     }
@@ -72,16 +78,39 @@ public final class Sorter<T> {
             // Maximal block size
             long maxBlockSize = 0;
             long previousPosition = 0;
+            CountDownLatch currentBlockWriteLatch = new CountDownLatch(0);
             while ((chunk = chunked.take()) != null) {
-                Object[] data = chunk.toArray();
-                Arrays.sort(data, (Comparator) comparator);
+                final Object[] data = chunk.toArray();
+
+                if (data.length > 3000) // Empirical value learned from https://stackoverflow.com/a/17328147/769192
+                    Arrays.parallelSort(data, (Comparator) comparator);
+                else
+                    Arrays.sort(data, (Comparator) comparator);
+
                 maxBlockSize = Math.max(maxBlockSize, output.getByteCount() - previousPosition);
                 previousPosition = output.getByteCount();
-                chunkOffsets.add(output.getByteCount());
-                serializer.write((Collection) Arrays.asList(data), new CloseShieldOutputStream(output));
+
+                // Waiting previous block to be fully flushed to the stream
+                currentBlockWriteLatch.await();
+                final CountDownLatch finalLatch = currentBlockWriteLatch = new CountDownLatch(1);
+
+                // Initiating block serialization in a separate thread
+                executor.submit(() -> {
+                    chunkOffsets.add(output.getByteCount());
+                    serializer.write((Collection) Arrays.asList(data), new CloseShieldOutputStream(output));
+                    finalLatch.countDown();
+                });
+
+                // Tracking last chunk size
                 lastChunkSize = data.length;
             }
+
+            // Waiting last block to be written
+            currentBlockWriteLatch.await();
+
             memoryBudget = maxBlockSize;
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
         built = true;
     }

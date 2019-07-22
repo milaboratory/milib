@@ -15,11 +15,13 @@
  */
 package com.milaboratory.core.io.sequence;
 
-import com.milaboratory.core.sequence.MultiNSequenceWithQuality;
+import com.milaboratory.core.sequence.quality.FunctionWithIndex;
 import com.milaboratory.util.ArrayIterator;
 
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.function.Function;
+import java.util.stream.IntStream;
 
 /**
  * @author Dmitry Bolotin
@@ -56,6 +58,23 @@ public class MultiRead implements SequenceRead, java.io.Serializable {
     @Override
     public Iterator<SingleRead> iterator() {
         return new ArrayIterator<>(data);
+    }
+
+    @Override
+    public MultiRead mapReads(Function<SingleRead, SingleRead> mapping) {
+        return new MultiRead(
+                Arrays.stream(data)
+                        .map(mapping)
+                        .toArray(SingleRead[]::new)
+        );
+    }
+
+    @Override
+    public MultiRead mapReadsWithIndex(FunctionWithIndex<SingleRead, SingleRead> mapping) {
+        return new MultiRead(
+                IntStream.range(0, numberOfReads())
+                        .mapToObj(i -> mapping.apply(i, this.getRead(i)))
+                        .toArray(SingleRead[]::new));
     }
 
     @Override

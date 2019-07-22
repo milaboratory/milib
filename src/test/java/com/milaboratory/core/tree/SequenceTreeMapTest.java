@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.util.*;
 
 import static com.milaboratory.core.sequence.SequencesUtils.concatenate;
+import static com.milaboratory.core.tree.TreeSearchParameters.TWO_MISMATCHES_OR_INDELS;
 import static com.milaboratory.test.TestUtil.its;
 import static com.milaboratory.test.TestUtil.randomSequence;
 import static org.hamcrest.CoreMatchers.not;
@@ -486,8 +487,8 @@ public class SequenceTreeMapTest {
     }
 
     /*
-         * Randomized tests
-         */
+     * Randomized tests
+     */
     final RandomGenerator random = new Well19937a();
 
     /*
@@ -1091,5 +1092,27 @@ public class SequenceTreeMapTest {
 
         Assert.assertEquals(2, i); // 2 combinations S4I5 + I4S4
 
+    }
+
+    @Test
+    public void testCase9() {
+        NucleotideSequence seq1 = new NucleotideSequence("ACTGACTGACTG");
+        NucleotideSequence seq2 = new NucleotideSequence("ACGACTTGACTG");
+        SequenceTreeMap<NucleotideSequence, NucleotideSequence> stm = new SequenceTreeMap<>(NucleotideSequence.ALPHABET);
+        stm.put(seq1, seq1);
+
+        NeighborhoodIterator<NucleotideSequence, NucleotideSequence> ni = stm.getNeighborhoodIterator(
+                seq2, TWO_MISMATCHES_OR_INDELS
+        );
+
+        int i = 0;
+        while (ni.next() != null) {
+            ++i;
+            System.out.println("Hit " + i);
+            System.out.println(ni.getCurrentAlignment());
+            System.out.println();
+        }
+
+        Assert.assertTrue(i > 0);
     }
 }

@@ -251,6 +251,44 @@ public final class KMapper2 implements java.io.Serializable {
         this.stat = stat;
     }
 
+    private KMapper2(int nValue, int kValue, int kMersPerPosition,
+                     int[][][] base, int[][] lengths,
+                     int absoluteMinClusterScore, int extraClusterScore,
+                     int matchScore, int mismatchScore, int offsetShiftScore,
+                     int slotCount, int maxClusterIndels,
+                     int maxClusters, int absoluteMinScore, float relativeMinScore,
+                     boolean floatingLeftBound, boolean floatingRightBound,
+                     int minDistance, int maxDistance,
+                     boolean built, int maxReferenceLength,
+                     int minReferenceLength, int sequencesInBase,
+                     BitArray allFilter, KAligner2Statistics stat) {
+        this.nValue = nValue;
+        this.kValue = kValue;
+        this.kMersPerPosition = kMersPerPosition;
+        this.base = base;
+        this.lengths = lengths;
+        this.absoluteMinClusterScore = absoluteMinClusterScore;
+        this.extraClusterScore = extraClusterScore;
+        this.matchScore = matchScore;
+        this.mismatchScore = mismatchScore;
+        this.offsetShiftScore = offsetShiftScore;
+        this.slotCount = slotCount;
+        this.maxClusterIndels = maxClusterIndels;
+        this.maxClusters = maxClusters;
+        this.absoluteMinScore = absoluteMinScore;
+        this.relativeMinScore = relativeMinScore;
+        this.floatingLeftBound = floatingLeftBound;
+        this.floatingRightBound = floatingRightBound;
+        this.minDistance = minDistance;
+        this.maxDistance = maxDistance;
+        this.built = built;
+        this.maxReferenceLength = maxReferenceLength;
+        this.minReferenceLength = minReferenceLength;
+        this.sequencesInBase = sequencesInBase;
+        this.allFilter = allFilter;
+        this.stat = stat;
+    }
+
     /**
      * Factory method to create KMapper2 using parameters specified in the {@link KAlignerParameters2}
      * object.
@@ -260,6 +298,24 @@ public final class KMapper2 implements java.io.Serializable {
      */
     public static KMapper2 createFromParameters(KAlignerParameters2 parameters) {
         return createFromParameters(parameters, null);
+    }
+
+    KMapper2 setFloatingLeftBound(boolean floatingLeftBound) {
+        ensureBuilt();
+        return new KMapper2(nValue, kValue, kMersPerPosition, base, lengths, absoluteMinClusterScore,
+                extraClusterScore, matchScore, mismatchScore,
+                offsetShiftScore, slotCount, maxClusterIndels, maxClusters, absoluteMinScore, relativeMinScore,
+                floatingLeftBound, floatingRightBound, minDistance, maxDistance,
+                built, maxReferenceLength, minReferenceLength, sequencesInBase, allFilter, stat);
+    }
+
+    KMapper2 setFloatingRightBound(boolean floatingRightBound) {
+        ensureBuilt();
+        return new KMapper2(nValue, kValue, kMersPerPosition, base, lengths, absoluteMinClusterScore,
+                extraClusterScore, matchScore, mismatchScore,
+                offsetShiftScore, slotCount, maxClusterIndels, maxClusters, absoluteMinScore, relativeMinScore,
+                floatingLeftBound, floatingRightBound, minDistance, maxDistance,
+                built, maxReferenceLength, minReferenceLength, sequencesInBase, allFilter, stat);
     }
 
     /**
