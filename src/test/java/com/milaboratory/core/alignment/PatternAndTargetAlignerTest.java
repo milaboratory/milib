@@ -25,7 +25,8 @@ public class PatternAndTargetAlignerTest {
         assertEquals((float)expected, score, 0.001);
     }
 
-    private static void assertAlignment(Alignment<NucleotideSequenceCaseSensitive> alignment, NSequenceWithQuality s2) {
+    private static void assertAlignment(
+            Alignment<NucleotideSequenceCaseSensitive> alignment, NSequenceWithQuality s2) {
         assertEquals(alignment.getRelativeMutations().mutate(alignment.sequence1.getRange(alignment
                         .getSequence1Range())).toNucleotideSequence(),
                 s2.getRange(alignment.getSequence2Range()).getSequence());
@@ -347,6 +348,100 @@ public class PatternAndTargetAlignerTest {
             assertTrue(a.getSequence2Range().getFrom() <= rightMatchPosition);
             assertTrue(a.getSequence2Range().getTo() <= rightMatchPosition + 1);
             assertAlignment(a, seq2);
+        }
+    }
+
+    @Test
+    public void testLeftAddedWithoutIndels() throws Exception {
+        NucleotideSequenceCaseSensitive[] patterns = {
+                new NucleotideSequenceCaseSensitive("attagaca"),
+                new NucleotideSequenceCaseSensitive("cttagaca"),
+                new NucleotideSequenceCaseSensitive("ATTAgaCA"),
+                new NucleotideSequenceCaseSensitive("CTTAGACA"),
+                new NucleotideSequenceCaseSensitive("CCCCAgCCCC") };
+        NSequenceWithQuality[] targets = {
+                new NSequenceWithQuality("ATTTAGACA"),
+                new NSequenceWithQuality("CATTTAGACA"),
+                new NSequenceWithQuality("TACAGACA"),
+                new NSequenceWithQuality("ATTAGGACA") };
+
+        // ATTAGACA & ATTTAGACA
+        Alignment<NucleotideSequenceCaseSensitive> a = alignLeftAddedWithoutIndels(simpleScoring,
+                patterns[0], targets[0], targets[0].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(1, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[0]);
+
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[2], targets[0],
+                targets[0].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(1, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[0]);
+
+        // CTTAGACA & CATTTAGACA
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[1], targets[1],
+                targets[1].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(2, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[1]);
+
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[3], targets[1],
+                targets[1].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(2, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[1]);
+
+        // ATTAGACA & TACAGACA
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[0], targets[2],
+                targets[2].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(0, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[2]);
+
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[2], targets[2],
+                targets[2].size() - 1);
+        assertNotNull(a);
+        assertEquals(0, a.getSequence1Range().getFrom());
+        assertEquals(0, a.getSequence2Range().getFrom());
+        assertAlignment(a, targets[2]);
+
+        // Impossible alignment tests
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[4], targets[2],
+                targets[2].size() - 1);
+        assertNull(a);
+
+        a = alignLeftAddedWithoutIndels(simpleScoring, patterns[0], targets[3],
+                targets[3].size() - 3);
+        assertNull(a);
+    }
+
+    @Test
+    public void testLeftAddedWithoutIndelsRandom() throws Exception {
+        int its = its(1000, 100000);
+        NucleotideSequenceCaseSensitive seq1;
+        NSequenceWithQuality seq2;
+        int rightMatchPosition;
+        Alignment<NucleotideSequenceCaseSensitive> a;
+        RandomDataGenerator random = new RandomDataGenerator(new Well19937c());
+        for (int i = 0; i < its; i++) {
+            seq1 = randomSequence(NucleotideSequenceCaseSensitive.ALPHABET, random, 80, 84);
+            seq2 = new NSequenceWithQuality(randomSequence(NucleotideSequence.ALPHABET, random,
+                    80, 84).toString());
+            rightMatchPosition = random.nextInt(0, seq2.size() - 10);
+            a = alignLeftAddedWithoutIndels(simpleScoring, seq1, seq2, rightMatchPosition);
+
+            assertEquals(rightMatchPosition < seq1.size() - 1, a == null);
+            if (a != null) {
+                assertEquals(0, a.getSequence1Range().getFrom());
+                assertEquals(rightMatchPosition + 1 - seq1.size(), a.getSequence2Range().getFrom());
+                assertEquals(rightMatchPosition + 1, a.getSequence2Range().getTo());
+                assertAlignment(a, seq2);
+            }
         }
     }
 }

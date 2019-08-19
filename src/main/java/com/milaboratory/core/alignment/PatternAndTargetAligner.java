@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 MiLaboratory.com
+ * Copyright 2019 MiLaboratory.com
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ public final class PatternAndTargetAligner {
      * Performs alignment of pattern and target with known position of pattern right side in the target and known
      * maximum allowed number of indels.
      *
-     * @param scoring scoring system for pattern and target alignment
-     * @param pattern pattern sequence, lowercase letters allow indels, uppercase letters don't allow
-     * @param target full target sequence with quality
-     * @param rightMatchPosition position of pattern right side in the target, inclusive
-     * @param maxIndels maximum allowed number of insertions and deletions
-     * @return alignment for pattern and target
+     * @param scoring               scoring system for pattern and target alignment
+     * @param pattern               pattern sequence, lowercase letters allow indels, uppercase letters don't allow
+     * @param target                full target sequence with quality
+     * @param rightMatchPosition    position of pattern right side in the target, inclusive
+     * @param maxIndels             maximum allowed number of insertions and deletions
+     * @return                      alignment for pattern and target
      */
     public static Alignment<NucleotideSequenceCaseSensitive> alignLeftAdded(
             PatternAndTargetAlignmentScoring scoring, NucleotideSequenceCaseSensitive pattern,
@@ -152,12 +152,54 @@ public final class PatternAndTargetAligner {
     }
 
     /**
+     * Performs alignment of pattern and target with known position of pattern right side in the target and without
+     * any allowed indels. May be used for quick alignment of uppercase repeat patterns and any match (N{*}) patterns.
+     *
+     * @param scoring               scoring system for pattern and target alignment
+     * @param pattern               pattern sequence, lowercase letters allow indels, uppercase letters don't allow
+     * @param target                full target sequence with quality
+     * @param rightMatchPosition    position of pattern right side in the target, inclusive
+     * @return                      alignment for pattern and target or null if alignment is impossible
+     */
+    public static Alignment<NucleotideSequenceCaseSensitive> alignLeftAddedWithoutIndels(
+            PatternAndTargetAlignmentScoring scoring, NucleotideSequenceCaseSensitive pattern,
+            NSequenceWithQuality target, int rightMatchPosition) {
+        int patternSize = pattern.size();
+        int leftMatchPosition = rightMatchPosition + 1 - patternSize;
+        if (leftMatchPosition < 0)
+            return null;
+        NucleotideSequenceCaseSensitive targetSequence = fromNucleotideSequence(target.getSequence(), true);
+        SequenceQuality targetQuality = target.getQuality();
+
+        MutationsBuilder<NucleotideSequenceCaseSensitive> builder = new MutationsBuilder<>(
+                NucleotideSequenceCaseSensitive.ALPHABET);
+        int alignmentScore = 0;
+        int i;
+        byte c1, c2;
+
+        for (i = 0; i < patternSize; i++)
+            alignmentScore += scoring.getScore(pattern.codeAt(patternSize - 1 - i),
+                    targetSequence.codeAt(rightMatchPosition - i),
+                    targetQuality.value(rightMatchPosition - i));
+
+        for (i = patternSize - 1; i >= 0; i--) {
+            c1 = pattern.codeAt(patternSize - 1 - i);
+            c2 = targetSequence.codeAt(rightMatchPosition - i);
+            if (c1 != c2)
+                builder.appendSubstitution(patternSize - 1 - i, c1, c2);
+        }
+
+        return new Alignment<>(pattern, builder.createAndDestroy(), new Range(0, patternSize),
+                new Range(rightMatchPosition + 1 - patternSize, rightMatchPosition + 1), alignmentScore);
+    }
+
+    /**
      * Performs global alignment of pattern and part of the target.
      *
-     * @param scoring scoring system for pattern and target alignment
-     * @param pattern pattern sequence, lowercase letters allow indels, uppercase letters don't allow
-     * @param targetPart part of the target: sequence with quality
-     * @return alignment for pattern and target part
+     * @param scoring       scoring system for pattern and target alignment
+     * @param pattern       pattern sequence, lowercase letters allow indels, uppercase letters don't allow
+     * @param targetPart    part of the target: sequence with quality
+     * @return              alignment for pattern and target part
      */
     public static Alignment<NucleotideSequenceCaseSensitive> alignGlobal(
             PatternAndTargetAlignmentScoring scoring, NucleotideSequenceCaseSensitive pattern,
