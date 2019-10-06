@@ -17,9 +17,8 @@ package com.milaboratory.primitivio.blocks;
 
 import static com.milaboratory.util.FormatUtils.*;
 
-public final class PrimitivOBlocksStats {
+public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
     private final long
-            wallClockTime,
             totalSerializationNanos,
             serializationNanos,
             checksumNanos,
@@ -27,17 +26,16 @@ public final class PrimitivOBlocksStats {
             ioDelayNanos,
             uncompressedBytes,
             outputSize,
-            concurrencyOverhead,
-            blockCount,
-            objectCount;
-    private final int concurrency;
+            concurrencyOverhead;
 
     public PrimitivOBlocksStats(long wallClockTime,
                                 long totalSerializationNanos, long serializationNanos, long checksumNanos,
                                 long compressionNanos, long ioDelayNanos, long uncompressedBytes,
                                 long concurrencyOverhead, long outputSize, long blockCount,
-                                long objectCount, int concurrency) {
-        this.wallClockTime = wallClockTime;
+                                long objectCount,
+                                int ongoingSerdes, int ongoingIOOps, int pendingOps,
+                                int concurrency) {
+        super(wallClockTime, blockCount, objectCount, ongoingSerdes, ongoingIOOps, pendingOps, concurrency);
         this.totalSerializationNanos = totalSerializationNanos;
         this.serializationNanos = serializationNanos;
         this.checksumNanos = checksumNanos;
@@ -46,9 +44,6 @@ public final class PrimitivOBlocksStats {
         this.concurrencyOverhead = concurrencyOverhead;
         this.uncompressedBytes = uncompressedBytes;
         this.outputSize = outputSize;
-        this.blockCount = blockCount;
-        this.objectCount = objectCount;
-        this.concurrency = concurrency;
     }
 
     @Override
@@ -71,6 +66,7 @@ public final class PrimitivOBlocksStats {
                 "Objects: " + objectCount + "\n" +
                 "Average object size uncompressed: " + bytesToString(uncompressedBytes / objectCount) + "\n" +
                 "Average object size compressed: " + bytesToString(outputSize / objectCount) + "\n" +
-                "Blocks: " + blockCount + " (~" + bytesToString(outputSize / blockCount) + " each)";
+                "Blocks: " + blockCount + " (~" + bytesToString(outputSize / blockCount) + " each)\n" +
+                "Ongoing and pending ops (Serde / IO / Pending): " + ongoingSerdes + " / " + ongoingIOOps + " / " + pendingOps;
     }
 }

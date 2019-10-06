@@ -17,25 +17,21 @@ package com.milaboratory.primitivio.blocks;
 
 import static com.milaboratory.util.FormatUtils.*;
 
-public final class PrimitivIBlocksStats {
-    private final long
-            wallClockTime,
-            totalDeserializationNanos,
-            deserializationNanos,
-            checksumNanos,
-            decompressionNanos,
-            ioDelayNanos,
-            uncompressedBytes,
-            inputSize,
-            blockCount,
-            objectCount;
-    private final int concurrency;
+public final class PrimitivIBlocksStats extends PrimitivIOBlocksStatsAbstract {
+    protected final long totalDeserializationNanos;
+    protected final long deserializationNanos;
+    protected final long checksumNanos;
+    protected final long decompressionNanos;
+    protected final long ioDelayNanos;
+    protected final long uncompressedBytes;
+    protected final long inputSize;
 
     public PrimitivIBlocksStats(long wallClockTime, long totalDeserializationNanos, long deserializationNanos, long checksumNanos,
                                 long decompressionNanos, long ioDelayNanos, long uncompressedBytes,
                                 long inputSize, long blockCount, long objectCount,
+                                int ongoingSerdes, int ongoingIOOps, int pendingOps,
                                 int concurrency) {
-        this.wallClockTime = wallClockTime;
+        super(wallClockTime, blockCount, objectCount, ongoingSerdes, ongoingIOOps, pendingOps, concurrency);
         this.totalDeserializationNanos = totalDeserializationNanos;
         this.deserializationNanos = deserializationNanos;
         this.checksumNanos = checksumNanos;
@@ -43,9 +39,6 @@ public final class PrimitivIBlocksStats {
         this.ioDelayNanos = ioDelayNanos;
         this.uncompressedBytes = uncompressedBytes;
         this.inputSize = inputSize;
-        this.blockCount = blockCount;
-        this.objectCount = objectCount;
-        this.concurrency = concurrency;
     }
 
     @Override
@@ -67,6 +60,7 @@ public final class PrimitivIBlocksStats {
                 "Objects: " + objectCount + "\n" +
                 "Average object size uncompressed: " + bytesToString(uncompressedBytes / objectCount) + "\n" +
                 "Average object size compressed: " + bytesToString(inputSize / objectCount) + "\n" +
-                "Blocks: " + blockCount + " (~" + bytesToString(inputSize / blockCount) + " each)";
+                "Blocks: " + blockCount + " (~" + bytesToString(inputSize / blockCount) + " each)\n" +
+                "Ongoing and pending ops (Serde / IO / Pending): " + ongoingSerdes + " / " + ongoingIOOps + " / " + pendingOps;
     }
 }

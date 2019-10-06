@@ -73,7 +73,7 @@ public final class PrimitivIHybrid implements AutoCloseable {
 
 
     private void checkNullState(boolean checkClosed) {
-        if (closed)
+        if (closed && checkClosed)
             throw new IllegalArgumentException("closed");
         if (primitivIBlocks != null && primitivIBlocks.closed)
             primitivIBlocks = null;

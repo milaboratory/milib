@@ -20,9 +20,8 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public final class LambdaSemaphore {
     final ConcurrentLinkedQueue<Runnable> queue = new ConcurrentLinkedQueue<>();
-    /**
-     * (number of queued objects) : 32 bits | (number of permits) : 32 bits
-     */
+
+    /** (number of queued objects) : 32 bits | (number of permits) : 32 bits */
     final AtomicLong state;
 
     public LambdaSemaphore(int initialPermits) {
@@ -33,10 +32,12 @@ public final class LambdaSemaphore {
         return ((long) queued) << 32 | (0xFFFFFFFFL & permits);
     }
 
+    /** Extracts number of permits from 64-bit state encoded value */
     private static int permits(long state) {
         return (int) (0xFFFFFFFFL & state);
     }
 
+    /** Extracts number of queued lambdas from 64-bit state encoded value */
     private static int queued(long state) {
         return (int) (state >>> 32);
     }

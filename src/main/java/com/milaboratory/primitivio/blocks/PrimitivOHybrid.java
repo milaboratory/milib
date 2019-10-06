@@ -37,7 +37,7 @@ import java.util.concurrent.ExecutorService;
  *
  * <pre>
  *  try(PrimitivOHybrid o = new PrimitivOHybrid(...)) {
- *      try(PrimitivO po = o.beginPrimitivO()){
+ *      try(PrimitivO po = o.beginPrimitivO(true)){
  *          ....
  *      }
  *      try(PrimitivOBlocks<...>.Writer pob = o.<...>beginPrimitivOBlocks(..., ...)){
@@ -50,8 +50,12 @@ public final class PrimitivOHybrid implements AutoCloseable {
     private boolean closed = false;
     private final ExecutorService executorService;
     private final AsynchronousByteChannel byteChannel;
+
     private PrimitivOState primitivOState;
+
     private PrimitivO primitivO;
+    private boolean saveStateAfterClose;
+
     private PrimitivOBlocks.Writer primitivOBlocks;
 
     public PrimitivOHybrid(ExecutorService executorService, Path file) throws IOException {
@@ -73,12 +77,15 @@ public final class PrimitivOHybrid implements AutoCloseable {
     }
 
     private void checkNullState(boolean checkClosed) {
-        if (closed)
+        if (closed && checkClosed)
             throw new IllegalArgumentException("closed");
         if (primitivOBlocks != null && primitivOBlocks.closed)
             primitivOBlocks = null;
-        if (primitivO != null && primitivO.isClosed())
+        if (primitivO != null && primitivO.isClosed()) {
+            if (saveStateAfterClose)
+                primitivOState = primitivO.getState();
             primitivO = null;
+        }
         if (primitivOBlocks != null)
             throw new IllegalStateException("primitivO blocks not closed");
         if (primitivO != null)
@@ -86,9 +93,20 @@ public final class PrimitivOHybrid implements AutoCloseable {
     }
 
     public synchronized PrimitivO beginPrimitivO() {
+        return beginPrimitivO(false);
+    }
+
+    /**
+     * Enters synchronous primitivO mode
+     *
+     * @param saveStateAfterClose if true, state of returned primitivO, after it will be closed, will be saved;
+     *                            all subsequent block / non-block writers will inherit the state
+     * @return
+     */
+    public synchronized PrimitivO beginPrimitivO(boolean saveStateAfterClose) {
         checkNullState(true);
 
-
+        this.saveStateAfterClose = saveStateAfterClose;
         return primitivO = primitivOState.createPrimitivO(
                 new BufferedOutputStream( // Buffering here is even more important than with normal OutputStreams as channel synchronization is expensive
                         new CloseShieldOutputStream( // Preventing channel close via OutputStream.close by CloseShieldOutputStream
