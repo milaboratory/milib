@@ -27,10 +27,16 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class PrimitivIOBlocksAbstract {
+public abstract class PrimitivIOBlocksAbstract {
     protected static final int HASH_SEED = 0xD5D20F71;
     protected static final int BLOCK_HEADER_SIZE = 17;
+
+    protected final AtomicInteger
+            ongoingSerdes = new AtomicInteger(),
+            ongoingIOOps = new AtomicInteger(),
+            pendingOps = new AtomicInteger();
 
     /**
      * Executor for the deserialization routines
@@ -75,9 +81,12 @@ public class PrimitivIOBlocksAbstract {
         return createAsyncChannel(executor, path, additionalOptions, options);
     }
 
+    public abstract PrimitivIOBlocksStatsAbstract getStats();
+
     protected abstract class CHAbstract implements CompletionHandler<Integer, Object> {
         @Override
         public void failed(Throwable exc, Object attachment) {
+            ongoingIOOps.decrementAndGet();
             exc.printStackTrace();
             exception = exc;
         }

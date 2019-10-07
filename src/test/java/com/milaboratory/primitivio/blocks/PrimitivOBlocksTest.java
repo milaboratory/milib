@@ -42,9 +42,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class PrimitivOBlocksTest {
     static ExecutorService executorService;
@@ -65,8 +68,8 @@ public class PrimitivOBlocksTest {
         HashMap<Integer, Integer> cSlots = new HashMap<>();
         for (int elements : new int[]{1000000, 100000})
             // for (int elements : new int[]{100000})
-            for (boolean highCompression : new boolean[]{true, false})
-                for (int concurrency : new int[]{1, 4})
+            for (boolean highCompression : new boolean[]{false, true})
+                for (int concurrency : new int[]{4, 1})
                     for (int blockSize : new int[]{172, 1024}) {
                         Integer slot = cSlots.computeIfAbsent(Objects.hash(highCompression, blockSize, elements),
                                 q -> counter.incrementAndGet());
@@ -81,6 +84,24 @@ public class PrimitivOBlocksTest {
                         int elements,
                         int checksumSlot,
                         int blockSize) throws IOException {
+        CountDownLatch latch = new CountDownLatch(1);
+        AtomicReference<PrimitivIOBlocksAbstract> statSource = new AtomicReference();
+        new Thread(() -> {
+            try {
+                while (!latch.await(1, TimeUnit.SECONDS)) {
+                    PrimitivIOBlocksAbstract io = statSource.get();
+                    if (io == null)
+                        continue;
+                    PrimitivIOBlocksStatsAbstract stats = io.getStats();
+                    System.out.println("Pending / IO / Serde: " + stats.getPendingOps() +
+                            " / " + stats.getOngoingIOOps() +
+                            " / " + stats.getOngoingSerdes());
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+
         // LZ4Factory lz4Factory = LZ4Factory.fastestJavaInstance();
         LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
         LZ4Compressor compressor = highCompression
@@ -89,8 +110,8 @@ public class PrimitivOBlocksTest {
 
         Path target = TempFileManager.getTempFile().toPath();
 
-        PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency, PrimitivOState.INITIAL, blockSize, compressor
-        );
+        PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency,
+                PrimitivOState.INITIAL, blockSize, compressor);
 
         RandomUtil.reseedThreadLocal(12341);
 
@@ -109,6 +130,9 @@ public class PrimitivOBlocksTest {
 
         long startTimestamp = System.nanoTime();
         io.resetStats();
+
+        statSource.set(io);
+
         long k = 0;
         try (PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target)) {
             for (int i = 0; i < repeats; i++) {
@@ -156,6 +180,8 @@ public class PrimitivOBlocksTest {
         PrimitivIBlocks<SingleRead> pi = new PrimitivIBlocks<>(SingleRead.class, executorService, concurrency,
                 PrimitivIState.INITIAL, lz4Factory.fastDecompressor());
 
+        statSource.set(pi);
+
         try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2)) {
             for (int i = 0; i < repeats; i++) {
                 int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
@@ -194,5 +220,7 @@ public class PrimitivOBlocksTest {
         System.out.println(pi.getStats());
 
         Files.delete(target);
+
+        latch.countDown();
     }
 }

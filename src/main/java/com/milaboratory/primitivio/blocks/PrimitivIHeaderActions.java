@@ -51,7 +51,6 @@ public final class PrimitivIHeaderActions {
 
     public static <O> O tryExtractOutputObject(PrimitivIHeaderAction<O> action) {
         return (action instanceof OutputObject) ? ((OutputObject<O>) action).obj : null;
-
     }
 
     public static <O> Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> skipAll() {

@@ -188,12 +188,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 inputSize.get(),
                 blockCount.get(),
                 objectCount.get(),
+                ongoingSerdes.get(),
+                ongoingIOOps.get(),
+                pendingOps.get(),
                 concurrency);
     }
 
-    /**
-     * Helper method to create async channel for reading with this object's execution service
-     */
+    /** Helper method to create async channel for reading with this object's execution service */
     public AsynchronousFileChannel createAsyncChannel(Path path, OpenOption... additionalOptions) throws IOException {
         return createAsyncChannel(path, additionalOptions, StandardOpenOption.READ);
     }
@@ -300,17 +301,25 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             Block<O> block = new Block<>();
             blocks.offer(block);
 
+            pendingOps.incrementAndGet();
+
             previousLatch.setCallback(() -> // IO operation will be enqueued after the previous one finished
                     concurrencyLimiter.acquire( // and after there will be an execution slot available
                             () -> {
-                                if (closed)
+                                pendingOps.decrementAndGet();
+
+                                if (closed) {
+                                    nextLatch.open();
+                                    concurrencyLimiter.release();
                                     return;
+                                }
 
                                 // Cancel all block deserialization requests if EOF was detected in the previous block
                                 if (eof) {
                                     block.eof = true;
                                     block.latch.countDown();
-                                    // Do not release next latch
+                                    concurrencyLimiter.release();
+                                    nextLatch.open();
                                     return;
                                 }
 
@@ -333,6 +342,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         private void _readHeader(LambdaLatch nextLatch) {
             byte[] headerBytes = new byte[BLOCK_HEADER_SIZE];
             ByteBuffer buffer = ByteBuffer.wrap(headerBytes);
+
+            ongoingIOOps.incrementAndGet();
             long ioStart = System.nanoTime();
 
             channel.read(buffer, null, new CHAbstractCL() {
@@ -341,9 +352,12 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                     try {
                         // Recording time spent waiting for io operation completion
                         ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+                        ongoingIOOps.decrementAndGet();
 
-                        if (closed)
+                        if (closed) {
+                            nextLatch.open();
                             return;
+                        }
 
                         // Assert
                         if (result != BLOCK_HEADER_SIZE) {
@@ -357,13 +371,12 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                         // Allowing next IO operation
                         nextLatch.open();
-
-                        // Releasing acquired concurrency unit
-                        concurrencyLimiter.release();
                     } catch (Exception e) {
                         _ex(e);
-
                         throw new RuntimeException(e);
+                    } finally {
+                        // Releasing acquired concurrency unit
+                        concurrencyLimiter.release();
                     }
                 }
             });
@@ -380,6 +393,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                 Block<O> block, LambdaLatch nextLatch) {
             byte[] blockAndNextHeader = new byte[currentHeader.getDataSize() + BLOCK_HEADER_SIZE];
             ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
+
+            ongoingIOOps.incrementAndGet();
             long ioStart = System.nanoTime();
 
             channel.read(buffer, null, new CHAbstractCL() {
@@ -387,12 +402,15 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 public void completed(Integer result, Object attachment) {
                     // Recording time spent waiting for io operation completion
                     ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
+                    ongoingIOOps.decrementAndGet();
 
                     try {
                         long start = System.nanoTime();
 
-                        if (closed)
+                        if (closed) {
+                            nextLatch.open();
                             return;
+                        }
 
                         // Assert
                         if (result != blockAndNextHeader.length) {
@@ -418,9 +436,6 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                         // Signaling that the block is populated
                         block.latch.countDown();
-
-                        // Releasing acquired concurrency unit
-                        concurrencyLimiter.release();
                     } catch (Exception e) {
                         _ex(e);
 
@@ -428,6 +443,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         block.latch.countDown();
 
                         throw new RuntimeException(e);
+                    } finally {
+                        // Releasing acquired concurrency unit
+                        concurrencyLimiter.release();
                     }
                 }
             });
@@ -455,7 +473,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             try {
                 Block<O> block = blocks.pop();
                 readBlocksIfNeeded();
+
+                // Blocking wait (the only blocking wait operation in this class),
+                // engaged in case the oldest block is still in IO or parsing stage
+                //
+                // This is the one out of two blocking operations for the whole PrimitivIOBlocks suite
                 block.latch.await();
+
                 checkException();
                 if (block.eof)
                     close();
@@ -527,6 +551,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         ex.printStackTrace();
 
         // Releasing a permit for the next operation to detect the error
+        // this reader is in unrecoverable faulty state
         concurrencyLimiter.release();
     }
 

@@ -134,6 +134,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
      * Executed from {@link Writer} class.
      */
     private ByteBuffer serializeBlock(List<O> content) {
+        // Stats {
+        ongoingSerdes.incrementAndGet();
+        // }
+
         ByteArrayDataOutput uncompressedOutput = blockCount.get() > 0
                 ? new ByteArrayDataOutput((int) (uncompressedBytes.get() / blockCount.get()))
                 : new ByteArrayDataOutput();
@@ -195,6 +199,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         outputSize.addAndGet(blockSize);
         blockCount.incrementAndGet();
 
+        // Stats {
+        ongoingSerdes.decrementAndGet();
+        // }
+
         return ByteBuffer.wrap(block, 0, blockSize);
     }
 
@@ -248,7 +256,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         /**
-         * Flush internal object buffer
+         * Flush internal object buffer. Does not wait for buffer to be serialized and flushed to underlying channel.
          */
         public synchronized void flush() {
             if (!buffer.isEmpty()) {
@@ -304,15 +312,20 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             // Tracking output size
             outputSize.addAndGet(BLOCK_HEADER_SIZE);
 
+            pendingOps.incrementAndGet();
+
             // Adding a callback after the last IO operation to issue write operation of the current block
             previousLatch.setCallback(
                     () -> {
+                        pendingOps.decrementAndGet();
+                        ongoingIOOps.incrementAndGet();
                         long ioBegin = System.nanoTime();
                         channel.write(block, null,
                                 new CHAbstract() {
                                     @Override
                                     public void completed(Integer result, Object attachment) {
                                         ioDelayNanos.addAndGet(System.nanoTime() - ioBegin);
+                                        ongoingIOOps.decrementAndGet();
 
                                         // Assert
                                         if (result != size) {
@@ -337,7 +350,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             // Concurrency limits the whole block lifecycle (serialization + IO)
             // so operations will be throttled both on IO and CPU
             //
-            // This operation will block caller thread (this is the only blocking operation for the whole
+            // This operation will block caller thread (this is the one out of two blocking operations for the whole
             // PrimitivIOBlocks suite)
             concurrencyLimiter.acquireUninterruptibly();
 
@@ -361,15 +374,20 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
                     int blockSize = block.limit();
 
+                    pendingOps.incrementAndGet();
+
                     // Adding a callback after the last IO operation to issue write operation of the current block
                     previousLatch.setCallback(
                             () -> {
+                                pendingOps.decrementAndGet();
+                                ongoingIOOps.incrementAndGet();
                                 long ioBegin = System.nanoTime();
                                 channel.write(block, null,
                                         new CHAbstract() {
                                             @Override
                                             public void completed(Integer result, Object attachment) {
                                                 ioDelayNanos.addAndGet(System.nanoTime() - ioBegin);
+                                                ongoingIOOps.decrementAndGet();
 
                                                 // Assert
                                                 if (result != blockSize) {
@@ -389,6 +407,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                                         });
                             });
                 } catch (Exception e) {
+                    // TODO _ex method like in IBlocks ?
                     exception = e;
                     // Releasing a permit for the next operation to detect the error
                     concurrencyLimiter.release();
@@ -400,7 +419,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         @Override
         public synchronized void close() {
             try {
-                if(closed)
+                if (closed)
                     return;
 
                 closed = true;
@@ -434,7 +453,9 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         return new PrimitivOBlocksStats(System.nanoTime() - initializationTimestamp,
                 totalSerializationNanos.get(), serializationNanos.get(), checksumNanos.get(),
                 compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(), concurrencyOverhead.get(),
-                outputSize.get(), blockCount.get(), objectCount.get(), concurrency);
+                outputSize.get(), blockCount.get(), objectCount.get(),
+                ongoingSerdes.get(), ongoingIOOps.get(), pendingOps.get(),
+                concurrency);
     }
 
 }
