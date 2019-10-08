@@ -61,6 +61,11 @@ public class FormatUtils {
         return "" + TIME_FORMAT.format(v) + "m";
     }
 
+    public static String bytesToStringDiv(long s, long den) {
+        if (den == 0) return "NaN";
+        else return bytesToString(s / den);
+    }
+
     public static String bytesToString(long s) {
         double v = s;
 

@@ -51,6 +51,13 @@ public final class PrimitivIOBlockHeader {
         if (headerBytes.length != HEADER_SIZE)
             throw new IllegalArgumentException();
         this.headerBytes = headerBytes;
+        checkHeaderCorrectness();
+    }
+
+    public void checkHeaderCorrectness() {
+        if (!isSpecial() && !isLastBlock())
+            if (getNumberOfObjects() < 0 || getUncompressedDataSize() < getDataSize())
+                throw new IllegalArgumentException("Malformed block header.");
     }
 
     public boolean isLastBlock() {

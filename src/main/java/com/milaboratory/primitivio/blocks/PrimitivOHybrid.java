@@ -18,9 +18,12 @@ package com.milaboratory.primitivio.blocks;
 import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
+import com.milaboratory.util.io.HasMutablePosition;
+import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import org.apache.commons.io.output.CloseShieldOutputStream;
+import org.apache.commons.io.output.CountingOutputStream;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -47,14 +50,19 @@ import java.util.concurrent.ExecutorService;
  * </pre>
  */
 public final class PrimitivOHybrid implements AutoCloseable {
+    public static final int DEFAULT_PRIMITIVIO_BUFFER_SIZE = 524_288;
+
     private boolean closed = false;
     private final ExecutorService executorService;
     private final AsynchronousByteChannel byteChannel;
 
     private PrimitivOState primitivOState;
-
     private PrimitivO primitivO;
     private boolean saveStateAfterClose;
+
+    /** Used to recover stream position after buffered reader (in PrimitivI mode) is closed */
+    private CountingOutputStream countingOutputStream;
+    private long savedPosition;
 
     private PrimitivOBlocks.Writer primitivOBlocks;
 
@@ -63,14 +71,12 @@ public final class PrimitivOHybrid implements AutoCloseable {
     }
 
     public PrimitivOHybrid(ExecutorService executorService, Path file, PrimitivOState state) throws IOException {
-        this(executorService, new AsynchronousFileChannelAdapter(
-                        PrimitivIOBlocksAbstract.createAsyncChannel(executorService, file,
-                                new OpenOption[0], StandardOpenOption.READ),
-                        0),
+        this(executorService, new AsynchronousFileChannelAdapter(PrimitivIOBlocksAbstract.createAsyncChannel(
+                executorService, file, new OpenOption[0], StandardOpenOption.CREATE, StandardOpenOption.WRITE), 0),
                 state);
     }
 
-    public PrimitivOHybrid(ExecutorService executorService, AsynchronousByteChannel byteChannel, PrimitivOState state) {
+    private PrimitivOHybrid(ExecutorService executorService, AsynchronousByteChannel byteChannel, PrimitivOState state) {
         this.executorService = executorService;
         this.byteChannel = byteChannel;
         this.primitivOState = state;
@@ -84,6 +90,12 @@ public final class PrimitivOHybrid implements AutoCloseable {
         if (primitivO != null && primitivO.isClosed()) {
             if (saveStateAfterClose)
                 primitivOState = primitivO.getState();
+
+            // adjusting byte channel position
+            ((HasMutablePosition) byteChannel).setPosition(savedPosition + countingOutputStream.getByteCount());
+            countingOutputStream = null;
+            savedPosition = 0;
+
             primitivO = null;
         }
         if (primitivOBlocks != null)
@@ -107,10 +119,13 @@ public final class PrimitivOHybrid implements AutoCloseable {
         checkNullState(true);
 
         this.saveStateAfterClose = saveStateAfterClose;
+        this.savedPosition = ((HasPosition) byteChannel).getPosition();
         return primitivO = primitivOState.createPrimitivO(
-                new BufferedOutputStream( // Buffering here is even more important than with normal OutputStreams as channel synchronization is expensive
-                        new CloseShieldOutputStream( // Preventing channel close via OutputStream.close by CloseShieldOutputStream
-                                Channels.newOutputStream(byteChannel))));
+                countingOutputStream = new CountingOutputStream( // Used to recover position of base stream
+                        new BufferedOutputStream( // Buffering here is even more important than with normal OutputStreams as channel synchronization is expensive
+                                new CloseShieldOutputStream( // Preventing channel close via OutputStream.close by CloseShieldOutputStream
+                                        Channels.newOutputStream(byteChannel)), DEFAULT_PRIMITIVIO_BUFFER_SIZE)
+                ));
     }
 
     static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();

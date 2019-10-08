@@ -53,6 +53,10 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * Data:
  * [ dataSize bytes ] (compressed, if bit1 of header is 1; uncompressed, if bit1 is 0; no bytes for special blocks )
+ *
+ * This object by itself does not hold any system resources, and there is no need to close it after use.
+ * {@link Writer} instances produces by this class, in contrast, requires proper management
+ * (e.g. has to be used inside try-with-resources).
  */
 public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     /**

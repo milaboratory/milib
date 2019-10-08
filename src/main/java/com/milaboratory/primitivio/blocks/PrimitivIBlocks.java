@@ -45,6 +45,15 @@ import java.util.function.Function;
 
 import static com.milaboratory.primitivio.blocks.PrimitivIHeaderActions.*;
 
+/**
+ * See {@link PrimitivOBlocks} for format description.
+ *
+ * This object by itself does not hold any system resources, and there is no need to close it after use.
+ * {@link Reader} instances produces by this class, in contrast, requires proper management
+ * (e.g. has to be used inside try-with-resources).
+ *
+ * @param <O>
+ */
 public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
      * Class of target objects
@@ -373,6 +382,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         nextLatch.open();
                     } catch (Exception e) {
                         _ex(e);
+                        nextLatch.open();
                         throw new RuntimeException(e);
                     } finally {
                         // Releasing acquired concurrency unit
@@ -407,7 +417,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                     try {
                         long start = System.nanoTime();
 
-                        if (closed) {
+                        if (closed || eof) {
                             nextLatch.open();
                             return;
                         }
@@ -415,6 +425,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         // Assert
                         if (result != blockAndNextHeader.length) {
                             _ex(new RuntimeException("Premature EOF."));
+                            block.latch.countDown();
                             return;
                         }
 
@@ -458,13 +469,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         private void setHeader(byte[] headerBytes) {
-            try {
-                nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
-                if (nextHeader.isLastBlock())
-                    eof = true;
-            } catch (Exception ex) {
-                _ex(ex);
-            }
+            nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
+            if (nextHeader.isLastBlock())
+                eof = true;
         }
 
         private void nextBlockOrClose() {

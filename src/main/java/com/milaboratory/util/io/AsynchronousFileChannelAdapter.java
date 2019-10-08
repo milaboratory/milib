@@ -28,9 +28,10 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Partial adapter between AsynchronousFileChannel and AsynchronousByteChannel.
  */
-public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasPosition {
+public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasMutablePosition {
     final AsynchronousFileChannel fileChannel;
     final AtomicLong positionCounter;
+    volatile boolean hasPendingOperation = false;
 
     public AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position) {
         this.fileChannel = fileChannel;
@@ -43,58 +44,41 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
     }
 
     @Override
-    public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandler<Integer, A>() {
-            @Override
-            public void completed(Integer result, A attachment) {
-                positionCounter.addAndGet(result);
-                handler.completed(result, attachment);
-            }
+    public void setPosition(long newPosition) {
+        if (hasPendingOperation)
+            throw new IllegalStateException("Can't set position during active operation.");
+        positionCounter.set(newPosition);
+    }
 
-            @Override
-            public void failed(Throwable exc, A attachment) {
-                handler.failed(exc, attachment);
-            }
-        });
+    private void startOperation() {
+        if (hasPendingOperation)
+            throw new IllegalStateException("Already have pending operation.");
+        hasPendingOperation = true;
+    }
+
+    @Override
+    public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
+        startOperation();
+        fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
     @Override
     public Future<Integer> read(ByteBuffer dst) {
-        FutureCompletable<Integer> future = new FutureCompletable<>();
-        read(dst, null, new CompletionHandler<Integer, Object>() {
-            @Override
-            public void completed(Integer result, Object attachment) {
-                future.set(result);
-            }
-
-            @Override
-            public void failed(Throwable exc, Object attachment) {
-                future.setException(exc);
-            }
-        });
+        FutureCompletable future = new FutureCompletable();
+        read(dst, null, future.completionHandler());
         return future;
     }
 
     @Override
     public <A> void write(ByteBuffer src, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        long position = positionCounter.getAndAdd(src.limit());
-        fileChannel.write(src, position, attachment, handler);
+        startOperation();
+        fileChannel.write(src, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
     @Override
     public Future<Integer> write(ByteBuffer src) {
-        FutureCompletable<Integer> future = new FutureCompletable<>();
-        read(src, null, new CompletionHandler<Integer, Object>() {
-            @Override
-            public void completed(Integer result, Object attachment) {
-                future.set(result);
-            }
-
-            @Override
-            public void failed(Throwable exc, Object attachment) {
-                future.setException(exc);
-            }
-        });
+        FutureCompletable future = new FutureCompletable();
+        write(src, null, future.completionHandler());
         return future;
     }
 
@@ -110,19 +94,44 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
     private static final Callable NOOP = () -> null;
 
-    private static final class FutureCompletable<T> extends FutureTask<T> {
-        public FutureCompletable() {
+    private final class CompletionHandlerAdapter<A> implements CompletionHandler<Integer, A> {
+        final CompletionHandler<Integer, ? super A> innerHandler;
+
+        CompletionHandlerAdapter(CompletionHandler<Integer, ? super A> innerHandler) {
+            this.innerHandler = innerHandler;
+        }
+
+        @Override
+        public void completed(Integer result, A attachment) {
+            hasPendingOperation = false;
+            positionCounter.addAndGet(result);
+            innerHandler.completed(result, attachment);
+        }
+
+        @Override
+        public void failed(Throwable exc, A attachment) {
+            hasPendingOperation = false;
+            innerHandler.failed(exc, attachment);
+        }
+    }
+
+    private static final class FutureCompletable extends FutureTask<Integer> {
+        FutureCompletable() {
             super(NOOP);
         }
 
-        @Override
-        public void set(T aVoid) {
-            super.set(aVoid);
-        }
+        <A> CompletionHandler<Integer, A> completionHandler() {
+            return new CompletionHandler<Integer, A>() {
+                @Override
+                public void completed(Integer result, A attachment) {
+                    FutureCompletable.super.set(result);
+                }
 
-        @Override
-        public void setException(Throwable t) {
-            super.setException(t);
+                @Override
+                public void failed(Throwable exc, A attachment) {
+                    FutureCompletable.super.setException(exc);
+                }
+            };
         }
     }
 }
