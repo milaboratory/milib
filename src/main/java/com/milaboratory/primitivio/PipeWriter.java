@@ -36,6 +36,8 @@ public class PipeWriter<O> extends PWriter implements InputPort<O>, AutoCloseabl
 
     @Override
     public synchronized void put(O o) {
+        ensureInitialized();
+
         if (o == null){
             close();
             return;

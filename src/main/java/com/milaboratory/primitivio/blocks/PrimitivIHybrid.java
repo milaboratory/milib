@@ -50,7 +50,7 @@ import java.util.function.Function;
  *  }
  * </pre>
  */
-public final class PrimitivIHybrid implements AutoCloseable {
+public final class PrimitivIHybrid implements HasPosition, AutoCloseable {
     public static final int DEFAULT_PRIMITIVIO_BUFFER_SIZE = 524_288;
 
     private boolean closed = false;
@@ -83,6 +83,10 @@ public final class PrimitivIHybrid implements AutoCloseable {
         this.primitivIState = primitivIState;
     }
 
+    @Override
+    public long getPosition() {
+        return ((HasPosition) byteChannel).getPosition();
+    }
 
     private void checkNullState(boolean checkClosed) {
         if (closed && checkClosed)

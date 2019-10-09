@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class PReader implements CanReportProgress, AutoCloseable {
     protected final PrimitivI input;
     protected final AtomicBoolean closed = new AtomicBoolean(false);
+    protected volatile boolean initialized = false;
     protected final CountingInputStream countingInputStream;
     protected final long totalSize;
 
@@ -51,6 +52,19 @@ public abstract class PReader implements CanReportProgress, AutoCloseable {
         this.totalSize = totalSize;
     }
 
+    protected void init() {
+    }
+
+    protected final void ensureInitialized() {
+        if (!initialized)
+            synchronized (this) {
+                if (!initialized) {
+                    init();
+                    initialized = true;
+                }
+            }
+    }
+
     @Override
     public double getProgress() {
         return 1.0 * countingInputStream.getBytesRead() / totalSize;
@@ -62,7 +76,7 @@ public abstract class PReader implements CanReportProgress, AutoCloseable {
     }
 
     @Override
-    public void close() {
+    public final void close() {
         if (closed.compareAndSet(false, true)) {
             input.close();
         }

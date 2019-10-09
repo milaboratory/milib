@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class PWriter implements AutoCloseable {
     protected final PrimitivO output;
     protected final AtomicBoolean closed = new AtomicBoolean(false);
+    protected volatile boolean initialized = false;
 
     protected PWriter(String fileName) throws FileNotFoundException {
         this(new BufferedOutputStream(new FileOutputStream(fileName), 32768));
@@ -41,8 +42,21 @@ public abstract class PWriter implements AutoCloseable {
     protected void beforeClose() {
     }
 
+    protected void init() {
+    }
+
+    protected final void ensureInitialized() {
+        if (!initialized)
+            synchronized (this) {
+                if (!initialized) {
+                    init();
+                    initialized = true;
+                }
+            }
+    }
+
     @Override
-    public void close() {
+    public final void close() {
         if (closed.compareAndSet(false, true)) {
             beforeClose();
             output.close();
