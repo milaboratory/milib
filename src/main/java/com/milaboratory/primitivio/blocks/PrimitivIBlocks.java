@@ -317,18 +317,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                             () -> {
                                 pendingOps.decrementAndGet();
 
-                                if (closed) {
-                                    nextLatch.open();
-                                    concurrencyLimiter.release();
-                                    return;
-                                }
-
                                 // Cancel all block deserialization requests if EOF was detected in the previous block
-                                if (eof) {
+                                // or user closed current reader
+                                if (closed || eof) {
                                     block.eof = true;
                                     block.latch.countDown();
-                                    concurrencyLimiter.release();
                                     nextLatch.open();
+                                    concurrencyLimiter.release();
                                     return;
                                 }
 
@@ -540,6 +535,15 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             closed = true;
 
+            // Await all IO operations complete by syncing on the last block
+            Block<O> lastBlock = blocks.peekLast();
+            if (lastBlock != null)
+                try {
+                    lastBlock.latch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException();
+                }
+
             try {
                 if (closeUnderlyingChannel)
                     channel.close();
@@ -556,16 +560,16 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
         // TODO excessive ???
         ex.printStackTrace();
-
-        // Releasing a permit for the next operation to detect the error
-        // this reader is in unrecoverable faulty state
-        concurrencyLimiter.release();
     }
 
     protected abstract class CHAbstractCL implements CompletionHandler<Integer, Object> {
         @Override
         public void failed(Throwable exc, Object attachment) {
             _ex(exc);
+
+            // Releasing a permit for the next operation to detect the error
+            // this reader is in unrecoverable faulty state
+            concurrencyLimiter.release();
         }
     }
 
