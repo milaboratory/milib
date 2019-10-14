@@ -49,7 +49,7 @@ import java.util.concurrent.ExecutorService;
  *  }
  * </pre>
  */
-public final class PrimitivOHybrid implements AutoCloseable {
+public final class PrimitivOHybrid implements AutoCloseable, HasPosition {
     public static final int DEFAULT_PRIMITIVIO_BUFFER_SIZE = 524_288;
 
     private boolean closed = false;
@@ -102,6 +102,11 @@ public final class PrimitivOHybrid implements AutoCloseable {
             throw new IllegalStateException("primitivO blocks not closed");
         if (primitivO != null)
             throw new IllegalStateException("primitivO not closed");
+    }
+
+    @Override
+    public long getPosition() {
+        return ((HasPosition) byteChannel).getPosition();
     }
 
     public synchronized PrimitivO beginPrimitivO() {
