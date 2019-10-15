@@ -49,7 +49,7 @@ import java.util.concurrent.ExecutorService;
  *  }
  * </pre>
  */
-public final class PrimitivOHybrid implements AutoCloseable, HasPosition {
+public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition {
     public static final int DEFAULT_PRIMITIVIO_BUFFER_SIZE = 524_288;
 
     private boolean closed = false;
@@ -92,7 +92,8 @@ public final class PrimitivOHybrid implements AutoCloseable, HasPosition {
                 primitivOState = primitivO.getState();
 
             // adjusting byte channel position
-            ((HasMutablePosition) byteChannel).setPosition(savedPosition + countingOutputStream.getByteCount());
+            assert ((HasPosition) byteChannel).getPosition() == savedPosition + countingOutputStream.getByteCount();
+            //((HasMutablePosition) byteChannel).setPosition(savedPosition + countingOutputStream.getByteCount());
             countingOutputStream = null;
             savedPosition = 0;
 
@@ -105,8 +106,25 @@ public final class PrimitivOHybrid implements AutoCloseable, HasPosition {
     }
 
     @Override
-    public long getPosition() {
+    public synchronized long getPosition() {
+        if (isInPrimitivOMode())
+            return savedPosition + countingOutputStream.getByteCount();
         return ((HasPosition) byteChannel).getPosition();
+    }
+
+    @Override
+    public void setPosition(long newPosition) {
+        if(isInPrimitivOMode() || isInPrimitivOBlocksMode())
+            throw new IllegalStateException();
+        ((HasMutablePosition) byteChannel).setPosition(newPosition);
+    }
+
+    public synchronized boolean isInPrimitivOMode() {
+        return primitivO != null;
+    }
+
+    public synchronized boolean isInPrimitivOBlocksMode() {
+        return primitivOBlocks != null;
     }
 
     public synchronized PrimitivO beginPrimitivO() {

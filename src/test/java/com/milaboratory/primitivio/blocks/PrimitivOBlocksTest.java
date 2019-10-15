@@ -27,6 +27,7 @@ import com.milaboratory.test.TestUtil;
 import com.milaboratory.util.FormatUtils;
 import com.milaboratory.util.RandomUtil;
 import com.milaboratory.util.TempFileManager;
+import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
 import org.junit.*;
@@ -41,10 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -149,6 +147,8 @@ public class PrimitivOBlocksTest {
 
         statSource.set(io);
 
+        ConcurrentLinkedQueue<Long> anchorPositions = new ConcurrentLinkedQueue<>();
+
         long k = 0;
         try (
                 PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target);
@@ -160,8 +160,12 @@ public class PrimitivOBlocksTest {
                 for (int j = 0; j < els; j++)
                     writer.write(sr.get(j));
                 writer.flush();
+                writer.run(() -> anchorPositions.offer(((HasPosition) writer.getChannel()).getPosition()));
                 writer.writeHeader(PrimitivIOBlockHeader.specialHeader().setSpecialLong(0, k += 124));
             }
+
+            writer.sync();
+            Assert.assertEquals(repeats, anchorPositions.size());
 
             // Hybrid
             for (int i = 0; i < 2; i++) {

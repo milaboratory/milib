@@ -553,6 +553,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             checkException();
         }
+
+        public AsynchronousByteChannel getChannel() {
+            return channel;
+        }
     }
 
     private void _ex(Throwable ex) {

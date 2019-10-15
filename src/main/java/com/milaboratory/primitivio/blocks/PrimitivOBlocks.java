@@ -35,6 +35,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
@@ -275,6 +276,22 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             }
         }
 
+        /**
+         * Insert execution of custom code into sequence of IO operations
+         */
+        public synchronized void run(Runnable runnable) {
+            LambdaLatch previousLatch = currentWriteLatch;
+            LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
+            previousLatch.setCallback(() -> {
+                try {
+                    runnable.run();
+                } catch (Exception e) {
+                    exception = e;
+                }
+                nextLatch.open();
+            });
+        }
+
         public synchronized void write(O obj) {
             buffer.add(obj);
             if (blockIsFull(buffer.size())) {
@@ -287,7 +304,9 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
          */
         public synchronized void sync() {
             try {
-                currentWriteLatch.await();
+                final CountDownLatch latch = new CountDownLatch(1);
+                run(latch::countDown);
+                latch.await();
             } catch (InterruptedException e) {
                 throw new RuntimeException();
             }
@@ -443,6 +462,10 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        public AsynchronousByteChannel getChannel() {
+            return channel;
         }
     }
 
