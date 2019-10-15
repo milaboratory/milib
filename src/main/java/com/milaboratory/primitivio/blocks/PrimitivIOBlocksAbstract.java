@@ -82,13 +82,4 @@ public abstract class PrimitivIOBlocksAbstract {
     }
 
     public abstract PrimitivIOBlocksStatsAbstract getStats();
-
-    protected abstract class CHAbstract implements CompletionHandler<Integer, Object> {
-        @Override
-        public void failed(Throwable exc, Object attachment) {
-            ongoingIOOps.decrementAndGet();
-            exc.printStackTrace();
-            exception = exc;
-        }
-    }
 }

@@ -72,7 +72,7 @@ public final class LambdaLatch {
         if (state.compareAndSet(STATE_CLOSED, STATE_OPENED))
             return;
         if (state.compareAndSet(STATE_ARMED, STATE_DONE))
-            callback.get().run();
+            run();
     }
 
     /**
@@ -89,7 +89,7 @@ public final class LambdaLatch {
         if (state.compareAndSet(STATE_CLOSED, STATE_ARMED))
             return;
         if (state.compareAndSet(STATE_OPENED, STATE_DONE))
-            callback.run();
+            run();
     }
 
     /**
@@ -104,5 +104,13 @@ public final class LambdaLatch {
         final CountDownLatch latch = new CountDownLatch(1);
         setCallback(latch::countDown);
         latch.await();
+    }
+
+    private void run() {
+        try {
+            callback.get().run();
+        } catch (RuntimeException e) {
+            throw new LambdaExecutionException(e);
+        }
     }
 }
