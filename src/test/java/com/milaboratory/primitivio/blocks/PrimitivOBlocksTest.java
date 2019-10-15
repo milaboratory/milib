@@ -160,12 +160,13 @@ public class PrimitivOBlocksTest {
                 for (int j = 0; j < els; j++)
                     writer.write(sr.get(j));
                 writer.flush();
-                writer.run(() -> anchorPositions.offer(((HasPosition) writer.getChannel()).getPosition()));
+                writer.run(c -> anchorPositions.offer(((HasPosition) c).getPosition()));
                 writer.writeHeader(PrimitivIOBlockHeader.specialHeader().setSpecialLong(0, k += 124));
+                writer.run(c -> anchorPositions.offer(((HasPosition) c).getPosition()));
             }
 
             writer.sync();
-            Assert.assertEquals(repeats, anchorPositions.size());
+            Assert.assertEquals(repeats * 2, anchorPositions.size());
 
             // Hybrid
             for (int i = 0; i < 2; i++) {

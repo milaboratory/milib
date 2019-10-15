@@ -39,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 
 /**
@@ -279,12 +280,12 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         /**
          * Insert execution of custom code into sequence of IO operations
          */
-        public synchronized void run(Runnable runnable) {
+        public synchronized void run(Consumer<AsynchronousByteChannel> lambda) {
             LambdaLatch previousLatch = currentWriteLatch;
             LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
             previousLatch.setCallback(() -> {
                 try {
-                    runnable.run();
+                    lambda.accept(channel);
                 } catch (Exception e) {
                     exception = e;
                 }
@@ -305,7 +306,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         public synchronized void sync() {
             try {
                 final CountDownLatch latch = new CountDownLatch(1);
-                run(latch::countDown);
+                run(__ -> latch.countDown());
                 latch.await();
             } catch (InterruptedException e) {
                 throw new RuntimeException();
