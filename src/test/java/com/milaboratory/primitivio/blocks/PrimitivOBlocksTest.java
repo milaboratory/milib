@@ -177,9 +177,10 @@ public class PrimitivOBlocksTest {
                         primitivO.writeObject(sr.get(j));
                 }
 
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+
                 // blocks
                 try (final PrimitivOBlocks<SingleRead>.Writer bWriter = ho.<SingleRead>beginPrimitivOBlocks(concurrency, blockSize)) {
-                    int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
                     for (int j = 0; j < els; j++)
                         bWriter.write(sr.get(j));
                 }
@@ -273,12 +274,31 @@ public class PrimitivOBlocksTest {
                     }
                 }
 
+                long blocksBegin = hi.getPosition();
+
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+
                 // blocks
                 try (PrimitivIBlocks<SingleRead>.Reader bReader =
                              hi.<SingleRead>beginPrimitivIBlocks(SingleRead.class, concurrency, 2)) {
-                    int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
                     for (int j = 0; j < els; j++) {
                         SingleRead obj = bReader.take();
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                }
+
+                try (
+                        PrimitivIBlocks<SingleRead>.Reader bReader1 =
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2);
+                        PrimitivIBlocks<SingleRead>.Reader bReader2 =
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2)
+                ) {
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = bReader1.take();
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = bReader2.take();
                         Assert.assertEquals(sr.get(j), obj);
                     }
                 }

@@ -23,19 +23,28 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Partial adapter between AsynchronousFileChannel and AsynchronousByteChannel.
  */
 public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasMutablePosition {
-    final AsynchronousFileChannel fileChannel;
-    final AtomicLong positionCounter;
-    volatile boolean hasPendingOperation = false;
+    private final AsynchronousFileChannel fileChannel;
+    private final AtomicLong positionCounter;
+    private final boolean closeUnderlyingFileChannel;
+    private volatile boolean closed = false;
+    private final AtomicBoolean hasPendingOperation = new AtomicBoolean(false);
 
     public AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position) {
+        this(fileChannel, position, true);
+    }
+
+    private AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position,
+                                           boolean closeUnderlyingFileChannel) {
         this.fileChannel = fileChannel;
         this.positionCounter = new AtomicLong(position);
+        this.closeUnderlyingFileChannel = closeUnderlyingFileChannel;
     }
 
     @Override
@@ -45,15 +54,19 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
     @Override
     public void setPosition(long newPosition) {
-        if (hasPendingOperation)
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (!hasPendingOperation.compareAndSet(false, true))
             throw new IllegalStateException("Can't set position during active operation.");
         positionCounter.set(newPosition);
+        hasPendingOperation.set(false);
     }
 
     private void startOperation() {
-        if (hasPendingOperation)
-            throw new IllegalStateException("Already have pending operation.");
-        hasPendingOperation = true;
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (!hasPendingOperation.compareAndSet(false, true))
+            throw new IllegalStateException("Can't set position during active operation.");
     }
 
     @Override
@@ -84,12 +97,38 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
     @Override
     public void close() throws IOException {
-        fileChannel.close();
+        closed = true;
+        if (closeUnderlyingFileChannel)
+            fileChannel.close();
     }
 
     @Override
     public boolean isOpen() {
-        return fileChannel.isOpen();
+        return !closed;
+    }
+
+    /**
+     * Creates AsynchronousFileChannelAdapter backed by the same AsynchronousFileChannel with separate position counter.
+     * Closing child adapter will not close underlying fileChannel on it's close.
+     */
+    public AsynchronousFileChannelAdapter createChildAdapter() {
+        return createChildAdapter(-1);
+    }
+
+    /**
+     * Creates AsynchronousFileChannelAdapter backed by the same AsynchronousFileChannel with separate position counter.
+     * Closing child adapter will not close underlying fileChannel on it's close.
+     *
+     * @param startPosition start new channel adapter from this file position; -1 to inherit current position from this reader
+     */
+    public AsynchronousFileChannelAdapter createChildAdapter(long startPosition) {
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (hasPendingOperation.get())
+            throw new IllegalStateException("Can't set position during active operation.");
+        if (startPosition == -1)
+            startPosition = positionCounter.get();
+        return new AsynchronousFileChannelAdapter(fileChannel, startPosition, false);
     }
 
     private static final Callable NOOP = () -> null;
@@ -103,14 +142,14 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
         @Override
         public void completed(Integer result, A attachment) {
-            hasPendingOperation = false;
+            hasPendingOperation.set(false);
             positionCounter.addAndGet(result);
             innerHandler.completed(result, attachment);
         }
 
         @Override
         public void failed(Throwable exc, A attachment) {
-            hasPendingOperation = false;
+            hasPendingOperation.set(false);
             innerHandler.failed(exc, attachment);
         }
     }
