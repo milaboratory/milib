@@ -292,7 +292,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             LambdaLatch nextLatch = currentIOLatch = new LambdaLatch();
 
             previousLatch.setCallback(() -> {
-                if (closed)
+                if (!stateOk())
                     return;
 
                 _readHeader(nextLatch);
@@ -319,7 +319,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                                 // Cancel all block deserialization requests if EOF was detected in the previous block
                                 // or user closed current reader
-                                if (closed || eof) {
+                                if (!stateOk()) {
                                     block.eof = true;
                                     block.latch.countDown();
                                     nextLatch.open();
@@ -358,7 +358,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
                         ongoingIOOps.decrementAndGet();
 
-                        if (closed) {
+                        if (!stateOk()) {
                             nextLatch.open();
                             return;
                         }
@@ -412,7 +412,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                     try {
                         long start = System.nanoTime();
 
-                        if (closed || eof) {
+                        if (!stateOk()) {
                             nextLatch.open();
                             return;
                         }
@@ -420,7 +420,6 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         // Assert
                         if (result != blockAndNextHeader.length) {
                             _ex(new RuntimeException("Premature EOF."));
-                            block.latch.countDown();
                             return;
                         }
 
@@ -444,14 +443,12 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         block.latch.countDown();
                     } catch (Exception e) {
                         _ex(e);
-
-                        // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
-                        block.latch.countDown();
-
                         throw new RuntimeException(e);
                     } finally {
                         // Releasing acquired concurrency unit
                         concurrencyLimiter.release();
+                        // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
+                        block.latch.countDown();
                     }
                 }
             });
@@ -467,6 +464,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
             if (nextHeader.isLastBlock())
                 eof = true;
+        }
+
+        private boolean stateOk() {
+            return !(eof || closed || exception != null);
         }
 
         private void nextBlockOrClose() {
