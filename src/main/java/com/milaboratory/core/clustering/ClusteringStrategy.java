@@ -16,6 +16,7 @@
 package com.milaboratory.core.clustering;
 
 import com.milaboratory.core.sequence.Sequence;
+import com.milaboratory.core.tree.MutationGuide;
 import com.milaboratory.core.tree.NeighborhoodIterator;
 import com.milaboratory.core.tree.TreeSearchParameters;
 
@@ -26,7 +27,34 @@ public interface ClusteringStrategy<T, S extends Sequence<S>>
     boolean canAddToCluster(Cluster<T> cluster, T minorObject,
                             NeighborhoodIterator<S, T[]> iterator);
 
-    TreeSearchParameters getSearchParameters();
+    @Deprecated
+    default TreeSearchParameters getSearchParameters() {
+        return null;
+    }
+
+    /**
+     * Must return tree search parameters to search potential children for the cluster.
+     *
+     * @param cluster target cluster
+     * @return tree search parameters
+     */
+    default TreeSearchParameters getSearchParameters(Cluster<T> cluster) {
+        return getSearchParameters();
+    }
+
+    /**
+     * Should return mutation guide to search potential children for the cluster.
+     *
+     * Cluster.head sequence will be passed to this MutationGuide as reference parameter.
+     *
+     * Return null to disable guided search.
+     *
+     * @param cluster target cluster
+     * @return mutation guide or null
+     */
+    default MutationGuide<S> getMutationGuide(Cluster<T> cluster) {
+        return null;
+    }
 
     int getMaxClusterDepth();
 }
