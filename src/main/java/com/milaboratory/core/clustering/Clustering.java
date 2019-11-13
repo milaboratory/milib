@@ -17,7 +17,6 @@ package com.milaboratory.core.clustering;
 
 import com.milaboratory.core.sequence.Alphabet;
 import com.milaboratory.core.sequence.Sequence;
-import com.milaboratory.core.tree.MutationGuide;
 import com.milaboratory.core.tree.NeighborhoodIterator;
 import com.milaboratory.core.tree.SequenceTreeMap;
 import com.milaboratory.core.tree.TreeSearchParameters;
@@ -53,20 +52,13 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
     final SequenceExtractor<T, S> sequenceExtractor;
     final ClusteringStrategy<T, S> strategy;
     final List<Cluster<T>> clusters = new ArrayList<>();
-    final MutationGuide<S> guide;
     volatile int progress;
 
     public Clustering(Collection<T> inputObjects, SequenceExtractor<T, S> sequenceExtractor,
                       ClusteringStrategy<T, S> strategy) {
-        this(inputObjects, sequenceExtractor, strategy, null);
-    }
-
-    public Clustering(Collection<T> inputObjects, SequenceExtractor<T, S> sequenceExtractor,
-                      ClusteringStrategy<T, S> strategy, MutationGuide<S> guide) {
         this.inputObjects = inputObjects;
         this.sequenceExtractor = sequenceExtractor;
         this.strategy = strategy;
-        this.guide = guide;
     }
 
     @Override
@@ -86,7 +78,6 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
 
             final Comparator<Cluster<T>> clusterComparator = getComparatorOfClusters(strategy, sequenceExtractor);
             // For performance
-            final TreeSearchParameters params = strategy.getSearchParameters();
             final int maxDepth = strategy.getMaxClusterDepth();
 
             final List<T> objects = new ArrayList<>(inputObjects);
@@ -163,8 +154,10 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
                     for (Cluster<T> previousCluster : previousLayer) {
 
                         NeighborhoodIterator<S, T[]> iterator = tree
-                                .getNeighborhoodIterator(sequenceExtractor
-                                        .getSequence(previousCluster.head), params, guide);
+                                .getNeighborhoodIterator(
+                                        sequenceExtractor.getSequence(previousCluster.head),
+                                        strategy.getSearchParameters(previousCluster),
+                                        strategy.getMutationGuide(previousCluster));
                         processedNodes.clear();
 
                         while ((current = iterator.nextNode()) != null) {
