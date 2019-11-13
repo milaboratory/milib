@@ -47,6 +47,8 @@ public class PipeReader<O> extends PReader implements OutputPortCloseable<O> {
 
     @Override
     public synchronized O take() {
+        ensureInitialized();
+
         if (closed.get())
             return null;
 

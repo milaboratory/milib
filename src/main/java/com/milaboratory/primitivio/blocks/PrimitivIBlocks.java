@@ -45,6 +45,15 @@ import java.util.function.Function;
 
 import static com.milaboratory.primitivio.blocks.PrimitivIHeaderActions.*;
 
+/**
+ * See {@link PrimitivOBlocks} for format description.
+ *
+ * This object by itself does not hold any system resources, and there is no need to close it after use.
+ * {@link Reader} instances produces by this class, in contrast, requires proper management
+ * (e.g. has to be used inside try-with-resources).
+ *
+ * @param <O>
+ */
 public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     /**
      * Class of target objects
@@ -283,7 +292,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             LambdaLatch nextLatch = currentIOLatch = new LambdaLatch();
 
             previousLatch.setCallback(() -> {
-                if (closed)
+                if (!stateOk())
                     return;
 
                 _readHeader(nextLatch);
@@ -308,18 +317,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                             () -> {
                                 pendingOps.decrementAndGet();
 
-                                if (closed) {
-                                    nextLatch.open();
-                                    concurrencyLimiter.release();
-                                    return;
-                                }
-
                                 // Cancel all block deserialization requests if EOF was detected in the previous block
-                                if (eof) {
+                                // or user closed current reader
+                                if (!stateOk()) {
                                     block.eof = true;
                                     block.latch.countDown();
-                                    concurrencyLimiter.release();
                                     nextLatch.open();
+                                    concurrencyLimiter.release();
                                     return;
                                 }
 
@@ -354,7 +358,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
                         ongoingIOOps.decrementAndGet();
 
-                        if (closed) {
+                        if (!stateOk()) {
                             nextLatch.open();
                             return;
                         }
@@ -373,6 +377,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         nextLatch.open();
                     } catch (Exception e) {
                         _ex(e);
+                        nextLatch.open();
                         throw new RuntimeException(e);
                     } finally {
                         // Releasing acquired concurrency unit
@@ -407,7 +412,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                     try {
                         long start = System.nanoTime();
 
-                        if (closed) {
+                        if (!stateOk()) {
                             nextLatch.open();
                             return;
                         }
@@ -438,14 +443,12 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         block.latch.countDown();
                     } catch (Exception e) {
                         _ex(e);
-
-                        // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
-                        block.latch.countDown();
-
                         throw new RuntimeException(e);
                     } finally {
                         // Releasing acquired concurrency unit
                         concurrencyLimiter.release();
+                        // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
+                        block.latch.countDown();
                     }
                 }
             });
@@ -458,13 +461,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         private void setHeader(byte[] headerBytes) {
-            try {
-                nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
-                if (nextHeader.isLastBlock())
-                    eof = true;
-            } catch (Exception ex) {
-                _ex(ex);
-            }
+            nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
+            if (nextHeader.isLastBlock())
+                eof = true;
+        }
+
+        private boolean stateOk() {
+            return !(eof || closed || exception != null);
         }
 
         private void nextBlockOrClose() {
@@ -533,6 +536,15 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             closed = true;
 
+            // Await all IO operations complete by syncing on the last block
+            Block<O> lastBlock = blocks.peekLast();
+            if (lastBlock != null)
+                try {
+                    lastBlock.latch.await();
+                } catch (InterruptedException e) {
+                    throw new RuntimeException();
+                }
+
             try {
                 if (closeUnderlyingChannel)
                     channel.close();
@@ -542,6 +554,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             checkException();
         }
+
+        public AsynchronousByteChannel getChannel() {
+            return channel;
+        }
     }
 
     private void _ex(Throwable ex) {
@@ -549,16 +565,16 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
         // TODO excessive ???
         ex.printStackTrace();
-
-        // Releasing a permit for the next operation to detect the error
-        // this reader is in unrecoverable faulty state
-        concurrencyLimiter.release();
     }
 
     protected abstract class CHAbstractCL implements CompletionHandler<Integer, Object> {
         @Override
         public void failed(Throwable exc, Object attachment) {
             _ex(exc);
+
+            // Releasing a permit for the next operation to detect the error
+            // this reader is in unrecoverable faulty state
+            concurrencyLimiter.release();
         }
     }
 

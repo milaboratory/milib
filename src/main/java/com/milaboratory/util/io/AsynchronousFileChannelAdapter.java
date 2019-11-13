@@ -23,18 +23,28 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Partial adapter between AsynchronousFileChannel and AsynchronousByteChannel.
  */
-public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasPosition {
-    final AsynchronousFileChannel fileChannel;
-    final AtomicLong positionCounter;
+public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasMutablePosition {
+    private final AsynchronousFileChannel fileChannel;
+    private final AtomicLong positionCounter;
+    private final boolean closeUnderlyingFileChannel;
+    private volatile boolean closed = false;
+    private final AtomicBoolean hasPendingOperation = new AtomicBoolean(false);
 
     public AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position) {
+        this(fileChannel, position, true);
+    }
+
+    private AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position,
+                                           boolean closeUnderlyingFileChannel) {
         this.fileChannel = fileChannel;
         this.positionCounter = new AtomicLong(position);
+        this.closeUnderlyingFileChannel = closeUnderlyingFileChannel;
     }
 
     @Override
@@ -43,86 +53,124 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
     }
 
     @Override
-    public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandler<Integer, A>() {
-            @Override
-            public void completed(Integer result, A attachment) {
-                positionCounter.addAndGet(result);
-                handler.completed(result, attachment);
-            }
+    public void setPosition(long newPosition) {
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (!hasPendingOperation.compareAndSet(false, true))
+            throw new IllegalStateException("Can't set position during active operation.");
+        positionCounter.set(newPosition);
+        hasPendingOperation.set(false);
+    }
 
-            @Override
-            public void failed(Throwable exc, A attachment) {
-                handler.failed(exc, attachment);
-            }
-        });
+    private void startOperation() {
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (!hasPendingOperation.compareAndSet(false, true))
+            throw new IllegalStateException("Can't set position during active operation.");
+    }
+
+    @Override
+    public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
+        startOperation();
+        fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
     @Override
     public Future<Integer> read(ByteBuffer dst) {
-        FutureCompletable<Integer> future = new FutureCompletable<>();
-        read(dst, null, new CompletionHandler<Integer, Object>() {
-            @Override
-            public void completed(Integer result, Object attachment) {
-                future.set(result);
-            }
-
-            @Override
-            public void failed(Throwable exc, Object attachment) {
-                future.setException(exc);
-            }
-        });
+        FutureCompletable future = new FutureCompletable();
+        read(dst, null, future.completionHandler());
         return future;
     }
 
     @Override
     public <A> void write(ByteBuffer src, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        long position = positionCounter.getAndAdd(src.limit());
-        fileChannel.write(src, position, attachment, handler);
+        startOperation();
+        fileChannel.write(src, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
     @Override
     public Future<Integer> write(ByteBuffer src) {
-        FutureCompletable<Integer> future = new FutureCompletable<>();
-        read(src, null, new CompletionHandler<Integer, Object>() {
-            @Override
-            public void completed(Integer result, Object attachment) {
-                future.set(result);
-            }
-
-            @Override
-            public void failed(Throwable exc, Object attachment) {
-                future.setException(exc);
-            }
-        });
+        FutureCompletable future = new FutureCompletable();
+        write(src, null, future.completionHandler());
         return future;
     }
 
     @Override
     public void close() throws IOException {
-        fileChannel.close();
+        closed = true;
+        if (closeUnderlyingFileChannel)
+            fileChannel.close();
     }
 
     @Override
     public boolean isOpen() {
-        return fileChannel.isOpen();
+        return !closed;
+    }
+
+    /**
+     * Creates AsynchronousFileChannelAdapter backed by the same AsynchronousFileChannel with separate position counter.
+     * Closing child adapter will not close underlying fileChannel on it's close.
+     */
+    public AsynchronousFileChannelAdapter createChildAdapter() {
+        return createChildAdapter(-1);
+    }
+
+    /**
+     * Creates AsynchronousFileChannelAdapter backed by the same AsynchronousFileChannel with separate position counter.
+     * Closing child adapter will not close underlying fileChannel on it's close.
+     *
+     * @param startPosition start new channel adapter from this file position; -1 to inherit current position from this reader
+     */
+    public AsynchronousFileChannelAdapter createChildAdapter(long startPosition) {
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (hasPendingOperation.get())
+            throw new IllegalStateException("Can't set position during active operation.");
+        if (startPosition == -1)
+            startPosition = positionCounter.get();
+        return new AsynchronousFileChannelAdapter(fileChannel, startPosition, false);
     }
 
     private static final Callable NOOP = () -> null;
 
-    private static final class FutureCompletable<T> extends FutureTask<T> {
-        public FutureCompletable() {
+    private final class CompletionHandlerAdapter<A> implements CompletionHandler<Integer, A> {
+        final CompletionHandler<Integer, ? super A> innerHandler;
+
+        CompletionHandlerAdapter(CompletionHandler<Integer, ? super A> innerHandler) {
+            this.innerHandler = innerHandler;
+        }
+
+        @Override
+        public void completed(Integer result, A attachment) {
+            hasPendingOperation.set(false);
+            positionCounter.addAndGet(result);
+            innerHandler.completed(result, attachment);
+        }
+
+        @Override
+        public void failed(Throwable exc, A attachment) {
+            hasPendingOperation.set(false);
+            innerHandler.failed(exc, attachment);
+        }
+    }
+
+    private static final class FutureCompletable extends FutureTask<Integer> {
+        FutureCompletable() {
             super(NOOP);
         }
 
-        @Override
-        public void set(T aVoid) {
-            super.set(aVoid);
-        }
+        <A> CompletionHandler<Integer, A> completionHandler() {
+            return new CompletionHandler<Integer, A>() {
+                @Override
+                public void completed(Integer result, A attachment) {
+                    FutureCompletable.super.set(result);
+                }
 
-        @Override
-        public void setException(Throwable t) {
-            super.setException(t);
+                @Override
+                public void failed(Throwable exc, A attachment) {
+                    FutureCompletable.super.setException(exc);
+                }
+            };
         }
     }
 }

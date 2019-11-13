@@ -60,13 +60,13 @@ public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
                 "Uncompressed size: " + bytesToString(uncompressedBytes) + "\n" +
                 "Output size: " + bytesToString(outputSize) + " (compression = " + percent(outputSize, uncompressedBytes) + ")\n" +
                 "IO speed: " + bytesToString(NANOSECONDS_IN_SECOND * outputSize / ioDelayNanos) + "/s\n" +
-                "Concurrency adjusted uncompressed speed: " + bytesToString(NANOSECONDS_IN_SECOND * uncompressedBytes / concurrencyAdjustedNanos) + "/s\n" +
-                "Actual uncompressed speed: " + bytesToString(NANOSECONDS_IN_SECOND * uncompressedBytes / wallClockTime) + "/s\n" +
-                "Actual speed: " + bytesToString(NANOSECONDS_IN_SECOND * outputSize / wallClockTime) + "/s\n" +
+                "Concurrency adjusted uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, concurrencyAdjustedNanos) + "/s\n" +
+                "Actual uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, wallClockTime) + "/s\n" +
+                "Actual speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * outputSize, wallClockTime) + "/s\n" +
                 "Objects: " + objectCount + "\n" +
-                "Average object size uncompressed: " + bytesToString(uncompressedBytes / objectCount) + "\n" +
-                "Average object size compressed: " + bytesToString(outputSize / objectCount) + "\n" +
-                "Blocks: " + blockCount + " (~" + bytesToString(outputSize / blockCount) + " each)\n" +
+                "Average object size uncompressed: " + bytesToStringDiv(uncompressedBytes, objectCount) + "\n" +
+                "Average object size compressed: " + bytesToStringDiv(outputSize, objectCount) + "\n" +
+                "Blocks: " + blockCount + " (~" + bytesToStringDiv(outputSize, blockCount) + " each)\n" +
                 "Ongoing and pending ops (Serde / IO / Pending): " + ongoingSerdes + " / " + ongoingIOOps + " / " + pendingOps;
     }
 }

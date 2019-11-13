@@ -19,18 +19,18 @@ import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.sequence.SingleReadImpl;
 import com.milaboratory.core.sequence.NSequenceWithQuality;
 import com.milaboratory.core.sequence.NucleotideSequence;
+import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
+import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.test.TestUtil;
 import com.milaboratory.util.FormatUtils;
 import com.milaboratory.util.RandomUtil;
 import com.milaboratory.util.TempFileManager;
+import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -42,10 +42,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -63,6 +60,21 @@ public class PrimitivOBlocksTest {
     }
 
     @Test
+    public void test1() throws IOException {
+        AtomicInteger counter = new AtomicInteger();
+        HashMap<Integer, Integer> cSlots = new HashMap<>();
+        for (int elements : new int[]{100000})
+            for (boolean highCompression : new boolean[]{false, true})
+                for (int concurrency : new int[]{4, 1})
+                    for (int blockSize : new int[]{172, 1024}) {
+                        Integer slot = cSlots.computeIfAbsent(Objects.hash(highCompression, blockSize, elements),
+                                q -> counter.incrementAndGet());
+                        runTest(highCompression, concurrency, elements, slot, blockSize);
+                    }
+    }
+
+    @Test
+    @Ignore
     public void benchmark1() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         HashMap<Integer, Integer> cSlots = new HashMap<>();
@@ -84,11 +96,12 @@ public class PrimitivOBlocksTest {
                         int elements,
                         int checksumSlot,
                         int blockSize) throws IOException {
-        CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<PrimitivIOBlocksAbstract> statSource = new AtomicReference();
+        // Opening the latch will result in monitoring thread termination
+        CountDownLatch pendingOpsPrinterLatch = new CountDownLatch(1);
+        AtomicReference<PrimitivIOBlocksAbstract> statSource = new AtomicReference<>();
         new Thread(() -> {
             try {
-                while (!latch.await(1, TimeUnit.SECONDS)) {
+                while (!pendingOpsPrinterLatch.await(2, TimeUnit.SECONDS)) {
                     PrimitivIOBlocksAbstract io = statSource.get();
                     if (io == null)
                         continue;
@@ -109,6 +122,7 @@ public class PrimitivOBlocksTest {
                 : lz4Factory.fastCompressor();
 
         Path target = TempFileManager.getTempFile().toPath();
+        Path hybridTarget = TempFileManager.getTempFile().toPath();
 
         PrimitivOBlocks<SingleRead> io = new PrimitivOBlocks<>(executorService, concurrency,
                 PrimitivOState.INITIAL, blockSize, compressor);
@@ -133,14 +147,43 @@ public class PrimitivOBlocksTest {
 
         statSource.set(io);
 
+        ConcurrentLinkedQueue<Long> anchorPositions = new ConcurrentLinkedQueue<>();
+
         long k = 0;
-        try (PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target)) {
+        try (
+                PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target);
+                PrimitivOHybrid ho = new PrimitivOHybrid(executorService, hybridTarget)) {
+
+            // Raw Blocks io
             for (int i = 0; i < repeats; i++) {
                 int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
                 for (int j = 0; j < els; j++)
                     writer.write(sr.get(j));
                 writer.flush();
+                writer.run(c -> anchorPositions.offer(((HasPosition) c).getPosition()));
                 writer.writeHeader(PrimitivIOBlockHeader.specialHeader().setSpecialLong(0, k += 124));
+                writer.run(c -> anchorPositions.offer(((HasPosition) c).getPosition()));
+            }
+
+            writer.sync();
+            Assert.assertEquals(repeats * 2, anchorPositions.size());
+
+            // Hybrid
+            for (int i = 0; i < 2; i++) {
+                // no blocks
+                try (PrimitivO primitivO = ho.beginPrimitivO()) {
+                    int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+                    for (int j = 0; j < els; j++)
+                        primitivO.writeObject(sr.get(j));
+                }
+
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+
+                // blocks
+                try (final PrimitivOBlocks<SingleRead>.Writer bWriter = ho.<SingleRead>beginPrimitivOBlocks(concurrency, blockSize)) {
+                    for (int j = 0; j < els; j++)
+                        bWriter.write(sr.get(j));
+                }
             }
         }
         long elapsed = System.nanoTime() - startTimestamp;
@@ -200,19 +243,66 @@ public class PrimitivOBlocksTest {
         RandomUtil.reseedThreadLocal(12341);
 
         k = 0;
-        try (PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2,
-                h -> PrimitivIHeaderActions.outputObject(
-                        new SingleReadImpl(h.getSpecialLong(0), NSequenceWithQuality.EMPTY, "")))) {
+        try (
+                PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2,
+                        h -> PrimitivIHeaderActions.outputObject(
+                                new SingleReadImpl(h.getSpecialLong(0), NSequenceWithQuality.EMPTY, "")));
+                PrimitivIHybrid hi = new PrimitivIHybrid(executorService, hybridTarget)) {
+
+            // Raw Blocks io
             for (int i = 0; i < repeats; i++) {
                 int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
                 for (int j = 0; j < els; j++) {
                     final SingleRead obj = reader.take();
                     Assert.assertEquals(sr.get(j), obj);
                 }
+
+                // Header-produced object
                 final SingleRead obj = reader.take();
                 Assert.assertEquals(new SingleReadImpl(k += 124, NSequenceWithQuality.EMPTY, ""), obj);
             }
             Assert.assertNull(reader.take());
+
+            // Hybrid
+            for (int i = 0; i < 2; i++) {
+                // no blocks
+                try (PrimitivI primitivI = hi.beginPrimitivI()) {
+                    int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = primitivI.readObject(SingleRead.class);
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                }
+
+                long blocksBegin = hi.getPosition();
+
+                int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
+
+                // blocks
+                try (PrimitivIBlocks<SingleRead>.Reader bReader =
+                             hi.<SingleRead>beginPrimitivIBlocks(SingleRead.class, concurrency, 2)) {
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = bReader.take();
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                }
+
+                try (
+                        PrimitivIBlocks<SingleRead>.Reader bReader1 =
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2);
+                        PrimitivIBlocks<SingleRead>.Reader bReader2 =
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2)
+                ) {
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = bReader1.take();
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                    for (int j = 0; j < els; j++) {
+                        SingleRead obj = bReader2.take();
+                        Assert.assertEquals(sr.get(j), obj);
+                    }
+                }
+            }
         }
 
         System.out.println();
@@ -220,7 +310,8 @@ public class PrimitivOBlocksTest {
         System.out.println(pi.getStats());
 
         Files.delete(target);
+        Files.delete(hybridTarget);
 
-        latch.countDown();
+        pendingOpsPrinterLatch.countDown();
     }
 }
