@@ -1,1 +1,6 @@
-Jacksion upgraded to 2.9.9.2
+`SequenceProvider.forceInitialize()` method added
+Minor fix for `CachedSequenceProvider.size()`
+Clustering: clustering strategy can now provide custom mutation guide for the candidate search procedure
+Clustering: tree search parameters now can be cluster dependent
+Jacksion library upgraded to 2.9.10.1
+Other dependencies upgrade
