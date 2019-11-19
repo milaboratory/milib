@@ -15,10 +15,7 @@
  */
 package com.milaboratory.core.io.sequence.fasta;
 
-import com.milaboratory.util.AbstractLongProcessReporter;
-import com.milaboratory.util.LongProcessReporter;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
