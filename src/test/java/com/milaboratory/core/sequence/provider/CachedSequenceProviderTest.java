@@ -38,6 +38,10 @@ public class CachedSequenceProviderTest {
         CachedSequenceProvider<NucleotideSequence> cache = new CachedSequenceProvider<>(NucleotideSequence.ALPHABET,
                 new SequenceProvider<NucleotideSequence>() {
                     @Override
+                    public void forceInitialize() {
+                    }
+
+                    @Override
                     public int size() {
                         return sequence.size();
                     }

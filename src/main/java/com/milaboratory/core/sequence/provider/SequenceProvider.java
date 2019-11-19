@@ -26,6 +26,11 @@ import com.milaboratory.core.sequence.Sequence;
  */
 public interface SequenceProvider<S extends Sequence<S>> {
     /**
+     * Forces all underlying providers to be materialized
+     */
+    void forceInitialize();
+
+    /**
      * Returns the length of the sequence this object represents.
      *
      * @return length of the sequence this object represents

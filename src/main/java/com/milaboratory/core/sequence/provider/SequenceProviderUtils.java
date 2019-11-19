@@ -34,6 +34,10 @@ public final class SequenceProviderUtils {
     public static <S extends Sequence<S>> SequenceProvider<S> fromSequence(final S sequence) {
         return new SequenceProvider<S>() {
             @Override
+            public void forceInitialize() {
+            }
+
+            @Override
             public int size() {
                 return sequence.size();
             }
@@ -66,6 +70,11 @@ public final class SequenceProviderUtils {
         }
 
         @Override
+        public void forceInitialize() {
+            provider.forceInitialize();
+        }
+
+        @Override
         public int size() {
             return targetRange.length();
         }
@@ -83,6 +92,12 @@ public final class SequenceProviderUtils {
         public LazySequenceProvider(SequenceProviderFactory<S> factory) {
             this.factory = factory;
             innerProvider = null;
+        }
+
+        @Override
+        public void forceInitialize() {
+            ensureProvider();
+            innerProvider.forceInitialize();
         }
 
         public boolean isInitialized() {

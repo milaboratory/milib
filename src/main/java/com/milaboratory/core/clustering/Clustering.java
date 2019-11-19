@@ -78,7 +78,6 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
 
             final Comparator<Cluster<T>> clusterComparator = getComparatorOfClusters(strategy, sequenceExtractor);
             // For performance
-            final TreeSearchParameters params = strategy.getSearchParameters();
             final int maxDepth = strategy.getMaxClusterDepth();
 
             final List<T> objects = new ArrayList<>(inputObjects);
@@ -155,8 +154,10 @@ public final class Clustering<T, S extends Sequence<S>> implements CanReportProg
                     for (Cluster<T> previousCluster : previousLayer) {
 
                         NeighborhoodIterator<S, T[]> iterator = tree
-                                .getNeighborhoodIterator(sequenceExtractor
-                                        .getSequence(previousCluster.head), params, null);
+                                .getNeighborhoodIterator(
+                                        sequenceExtractor.getSequence(previousCluster.head),
+                                        strategy.getSearchParameters(previousCluster),
+                                        strategy.getMutationGuide(previousCluster));
                         processedNodes.clear();
 
                         while ((current = iterator.nextNode()) != null) {
