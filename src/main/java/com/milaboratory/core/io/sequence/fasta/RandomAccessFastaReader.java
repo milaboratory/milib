@@ -96,6 +96,10 @@ public final class RandomAccessFastaReader<S extends Sequence<S>> implements Aut
     private SequenceProvider<S> getSequenceProvider(final RandomAccessFastaIndex.IndexRecord record) {
         return new SequenceProvider<S>() {
             @Override
+            public void forceInitialize() {
+            }
+
+            @Override
             public int size() {
                 return (int) record.getLength();
             }
