@@ -17,10 +17,7 @@ package com.milaboratory.core.clustering;
 
 import gnu.trove.procedure.TObjectProcedure;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 
 /**
  * Representation of single cluster.
@@ -81,13 +78,13 @@ public final class Cluster<T> implements java.io.Serializable {
 
     void sort(final Comparator<Cluster<T>> comparator) {
         if (children != null) {
-            Collections.sort(children, comparator);
+            children.sort(comparator);
             for (Cluster<T> cl : children)
                 cl.sort(comparator);
         }
     }
 
-    int size() {
+    public int size() {
         if (children != null)
             return children.size();
         return 0;
@@ -117,8 +114,7 @@ public final class Cluster<T> implements java.io.Serializable {
 
         assert children == null || children.size() > 0;
         if (!head.equals(cluster.head)) return false;
-        if (children != null ? !children.equals(cluster.children) : cluster.children != null) return false;
-        return true;
+        return Objects.equals(children, cluster.children);
     }
 
     @Override
@@ -135,7 +131,7 @@ public final class Cluster<T> implements java.io.Serializable {
     }
 
     private void toString(StringBuilder sb, int level) {
-        sb.append(spaces(2 * level) + head + "\n");
+        sb.append(spaces(2 * level)).append(head).append("\n");
         if (children == null)
             return;
         for (Cluster<T> child : children)
