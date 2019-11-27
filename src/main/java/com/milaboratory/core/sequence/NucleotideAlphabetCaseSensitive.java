@@ -301,18 +301,50 @@ public final class NucleotideAlphabetCaseSensitive extends AbstractArrayAlphabet
                 b_WILDCARD, d_WILDCARD, h_WILDCARD, v_WILDCARD);
     }
 
-    /**
-     * Returns UTF-8 character corresponding to specified byte-code.
-     *
-     * @param code byte-code of nucleotide
-     * @return UTF-8 character corresponding to specified byte-code
-     */
-    public static byte symbolByteFromCode(byte code) {
-        return (byte) INSTANCE.codeToSymbol(code);
+    public static boolean isLowerCase(byte code) {
+        switch (code) {
+            case a:
+            case g:
+            case c:
+            case t:
+            case n:
+            case r:
+            case y:
+            case s:
+            case w:
+            case k:
+            case m:
+            case b:
+            case d:
+            case h:
+            case v:
+                return true;
+            default:
+                return false;
+        }
     }
 
-    public static byte byteSymbolToCode(byte symbol) {
-        return INSTANCE.symbolToCode((char) symbol);
+    public static boolean isUpperCase(byte code) {
+        switch (code) {
+            case A:
+            case G:
+            case C:
+            case T:
+            case N:
+            case R:
+            case Y:
+            case S:
+            case W:
+            case K:
+            case M:
+            case B:
+            case D:
+            case H:
+            case V:
+                return true;
+            default:
+                return false;
+        }
     }
 
     @Override
