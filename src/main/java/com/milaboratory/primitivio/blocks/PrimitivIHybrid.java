@@ -31,7 +31,6 @@ import java.nio.channels.Channels;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -60,13 +59,14 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
     private final AsynchronousFileChannelAdapter byteChannel;
 
     private PrimitivIState primitivIState;
-    private PrimitivI primitivI;
+    private PrimitivI continuousPrimitivI;
+    private final List<PrimitivI> randomAccessPrimitivI = new LinkedList<>();
     private boolean saveStateAfterClose;
 
     private CountingInputStream countingInputStream;
     private long savedPosition;
 
-    private final List<PrimitivIBlocks.Reader> randomAccessPrimitivIBlockReaders = new LinkedList<>();
+    private final List<PrimitivIBlocks.Reader> randomAccessBlockReaders = new LinkedList<>();
     private PrimitivIBlocks.Reader continuousBlocksReader;
 
     public PrimitivIHybrid(ExecutorService executorService, Path file) throws IOException {
@@ -94,6 +94,7 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
 
     @Override
     public void setPosition(long newPosition) {
+        // FIXME inconsistent behaviour with -1 !!!
         checkNullState(true, true);
         byteChannel.setPosition(newPosition);
     }
@@ -102,44 +103,43 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         if (closed && checkClosed)
             throw new IllegalArgumentException("closed");
 
-        Iterator<PrimitivIBlocks.Reader> rIterator = randomAccessPrimitivIBlockReaders.iterator();
-        while (rIterator.hasNext())
-            if (rIterator.next().closed)
-                rIterator.remove();
+        randomAccessBlockReaders.removeIf(reader -> reader.closed);
+
+        randomAccessPrimitivI.removeIf(PrimitivI::isClosed);
 
         if (continuousBlocksReader != null && continuousBlocksReader.closed)
             continuousBlocksReader = null;
 
-        if (primitivI != null && primitivI.isClosed()) {
+        if (continuousPrimitivI != null && continuousPrimitivI.isClosed()) {
             if (saveStateAfterClose)
-                primitivIState = primitivI.getState();
+                primitivIState = continuousPrimitivI.getState();
 
             // recover original stream position after buffered reading
             ((HasMutablePosition) byteChannel).setPosition(savedPosition + countingInputStream.getByteCount());
             countingInputStream = null;
             savedPosition = 0;
 
-            primitivI = null;
+            continuousPrimitivI = null;
         }
 
-        if (!allowRAMode && isInRandomAccessPrimitivIBlocksMode())
-            throw new IllegalStateException("random access primitivI blocks not closed");
-        if (isInPrimitivIBlocksMode())
+        if (!allowRAMode && isInRandomAccessMode())
+            throw new IllegalStateException("random access primitivI blocks or primitivI reader not closed");
+        if (isInBlocksMode())
             throw new IllegalStateException("primitivI blocks not closed");
         if (isInPrimitivIMode())
             throw new IllegalStateException("primitivI not closed");
     }
 
     public synchronized boolean isInPrimitivIMode() {
-        return primitivI != null;
+        return continuousPrimitivI != null;
     }
 
-    public synchronized boolean isInRandomAccessPrimitivIBlocksMode() {
-        return !randomAccessPrimitivIBlockReaders.isEmpty();
-    }
-
-    public synchronized boolean isInPrimitivIBlocksMode() {
+    public synchronized boolean isInBlocksMode() {
         return continuousBlocksReader != null;
+    }
+
+    public synchronized boolean isInRandomAccessMode() {
+        return !randomAccessBlockReaders.isEmpty() || !randomAccessPrimitivI.isEmpty();
     }
 
     public PrimitivI beginPrimitivI() {
@@ -151,7 +151,7 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
 
         this.saveStateAfterClose = saveStateAfterClose;
         this.savedPosition = ((HasPosition) byteChannel).getPosition();
-        return primitivI = primitivIState.createPrimitivI(
+        return continuousPrimitivI = primitivIState.createPrimitivI(
                 countingInputStream = new CountingInputStream(
                         new BufferedInputStream(
                                 new CloseShieldInputStream(
@@ -161,6 +161,18 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         );
     }
 
+    public synchronized PrimitivI beginRandomAccessPrimitivI(long position) {
+        PrimitivI primitivI = primitivIState.createPrimitivI(
+                new CountingInputStream(
+                        new BufferedInputStream(
+                                new CloseShieldInputStream(
+                                        Channels.newInputStream(byteChannel.createChildAdapter(position))),
+                                DEFAULT_PRIMITIVIO_BUFFER_SIZE)
+                ));
+        randomAccessPrimitivI.add(primitivI);
+        return primitivI;
+    }
+
     static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
     static final LZ4FastDecompressor lz4Decompressor = lz4Factory.fastDecompressor();
 
@@ -168,14 +180,16 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         return beginPrimitivIBlocks(clazz, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
     }
 
-    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
-                                                              Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
+                                                                           Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
         checkNullState(true, false);
         final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
-        return oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction, false);
+        final PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction, false);
+        continuousBlocksReader = reader;
+        return reader;
     }
 
-    public synchronized <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int concurrency, int readAheadBlocks) {
+    public <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int concurrency, int readAheadBlocks) {
         return beginRandomAccessPrimitivIBlocks(clazz, position, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
     }
 
@@ -184,7 +198,7 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         checkNullState(true, true);
         final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
         PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel.createChildAdapter(position), readAheadBlocks, specialHeaderAction, false);
-        randomAccessPrimitivIBlockReaders.add(reader);
+        randomAccessBlockReaders.add(reader);
         return reader;
     }
 

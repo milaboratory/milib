@@ -52,10 +52,24 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
         return positionCounter.get();
     }
 
+    /**
+     * Sets reading channel position. Negative values will be converted to the positions counted from the end of the
+     * file (e.g. value -1 means that position is set so that the one last byte can be read from the file)
+     *
+     * @param newPosition new channel position, use negative values to specify positions from file end
+     */
     @Override
     public void setPosition(long newPosition) {
         if (closed)
             throw new IllegalStateException("Reader is closed.");
+
+        if (newPosition < 0)
+            try {
+                newPosition = fileChannel.size() + newPosition;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
         if (!hasPendingOperation.compareAndSet(false, true))
             throw new IllegalStateException("Can't set position during active operation.");
         positionCounter.set(newPosition);
