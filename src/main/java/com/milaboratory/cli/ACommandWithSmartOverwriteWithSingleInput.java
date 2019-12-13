@@ -26,11 +26,18 @@ public abstract class ACommandWithSmartOverwriteWithSingleInput extends ACommand
         super(appName, binaryFileInfoExtractor, pipelineConfigurationReader);
     }
 
-    @Parameters(index = "0", description = "input file")
     public String in;
+    public String out;
+
+    @Parameters(index = "0", description = "input file")
+    public void setIn(String in) {
+        this.in = in;
+    }
 
     @Parameters(index = "1", description = "output file")
-    public String out;
+    public void setOut(String out) {
+        this.out = out;
+    }
 
     @Override
     public final List<String> getOutputFiles() {
