@@ -59,7 +59,7 @@ public final class GeneticCode {
         return getAminoAcid(n0 << 8 | n1 << 4 | n2);
     }
 
-    public static byte getAminoAcid(int triplet) {
+    static byte getAminoAcid(int triplet) {
         return wildcardCode[triplet];
     }
 
@@ -83,7 +83,7 @@ public final class GeneticCode {
         return getBasicAminoAcid(n0 << 4 | n1 << 2 | n2);
     }
 
-    public static byte getBasicAminoAcid(int triplet) {
+    static byte getBasicAminoAcid(int triplet) {
         return basicCode[triplet];
     }
 
