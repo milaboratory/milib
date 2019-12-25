@@ -99,32 +99,6 @@ public final class AminoAcidSequence extends AbstractArraySequence<AminoAcidSequ
     }
 
     /**
-     * Extracts {@literal int} representation of triplet starting from specified position (see implementation for
-     * details).
-     *
-     * @param nSequence    nucleotide sequence
-     * @param tripletStart position of first nucleotide of triplet
-     * @return {@literal int} representation of triplet
-     */
-    public static int getTriplet(NucleotideSequence nSequence, int tripletStart) {
-        int triplet = (nSequence.codeAt(tripletStart) << 4) |
-                (nSequence.codeAt(tripletStart + 1) << 2) |
-                nSequence.codeAt(tripletStart + 2);
-        return triplet;
-    }
-
-    /**
-     * Returns amino acid encoded by triplet starting from specified position (in terms of standard genetic code)
-     *
-     * @param nSequence    nucleotide sequence
-     * @param tripletStart position of first nucleotide of triplet
-     * @return byte-code of encoded amino acid
-     */
-    public static byte getAminoAcid(NucleotideSequence nSequence, int tripletStart) {
-        return GeneticCode.getAminoAcid(getTriplet(nSequence, tripletStart));
-    }
-
-    /**
      * Translate sequence in one of frames (-1, -2, -3 frames are not implemented, use {@link
      * NucleotideSequence#getReverseComplement()}) discarding all incomplete codons on both boundaries.
      *

@@ -40,6 +40,10 @@ public final class Wildcard {
      */
     final byte[] matchingCodes;
     /**
+     * Set of basic codes matching current wildcard
+     */
+    final byte[] basicMatchingCodes;
+    /**
      * Code representing this wildcard (e.g. code == codes[0] for pure letters)
      */
     final byte code;
@@ -97,6 +101,7 @@ public final class Wildcard {
         this.code = code;
         this.matchingCodes = matchingCodes.clone();
         this.basicSize = (byte) numberOfBasicCodes;
+        this.basicMatchingCodes = Arrays.copyOf(matchingCodes, numberOfBasicCodes);
 
         // Sorting for binary search
         Arrays.sort(this.matchingCodes);
