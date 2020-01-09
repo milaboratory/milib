@@ -118,7 +118,7 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
      */
     public static final NucleotideSequence N = new NucleotideSequence(new byte[]{NucleotideAlphabet.N});
 
-    static final NucleotideSequence[] ONE_LETTER_SEQUENCES = {A, G, C, T, N, R, Y, S, W, K, M, B, D, H, V};
+    public static final NucleotideSequence[] ONE_LETTER_SEQUENCES = {A, G, C, T, N, R, Y, S, W, K, M, B, D, H, V};
 
     static NucleotideSequence getOneLetterSequence(byte letter) {
         return ONE_LETTER_SEQUENCES[letter];
