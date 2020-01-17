@@ -25,6 +25,7 @@ import static com.milaboratory.core.mutations.Mutation.*;
 /**
  * @author Dmitry Bolotin
  * @author Stanislav Poslavsky
+ * @author Aleksandr Popov
  */
 public final class MutationsGenerator {
     private MutationsGenerator() {
@@ -42,7 +43,11 @@ public final class MutationsGenerator {
         MutationsBuilder<NucleotideSequence> builder = new MutationsBuilder<>(NucleotideSequence.ALPHABET);
         int mut, previous = NON_MUTATION;
         for (int i = from; i < to; ++i) {
-            mut = model.generateMutation(i, sequence.codeAt(i));
+            byte letter = sequence.codeAt(i);
+            if (letter < NucleotideSequence.ALPHABET.basicSize())
+                mut = model.generateMutation(i, letter);
+            else
+                mut = NON_MUTATION;
             if (mut != NON_MUTATION) {
                 switch (getRawTypeCode(mut)) {
                     case RAW_MUTATION_TYPE_SUBSTITUTION:
@@ -79,5 +84,4 @@ public final class MutationsGenerator {
                                                                   NucleotideMutationModel model) {
         return generateMutations(sequence, model, 0, sequence.size());
     }
-
 }
