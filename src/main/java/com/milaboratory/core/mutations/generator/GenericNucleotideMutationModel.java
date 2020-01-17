@@ -16,13 +16,11 @@
 package com.milaboratory.core.mutations.generator;
 
 import com.milaboratory.core.mutations.Mutation;
-import com.milaboratory.core.sequence.Wildcard;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well19937c;
 
 import java.util.Arrays;
 
-import static com.milaboratory.core.sequence.NucleotideSequence.ALPHABET;
 import static java.lang.System.currentTimeMillis;
 
 public final class GenericNucleotideMutationModel implements NucleotideMutationModel, java.io.Serializable {
@@ -74,25 +72,17 @@ public final class GenericNucleotideMutationModel implements NucleotideMutationM
         if (insertionProbability > r)
             return Mutation.createInsertion(position, generator.nextInt(4));
 
-        int basicInputLetter;
-        Wildcard wildcard = null;
-        if (inputLetter < ALPHABET.basicSize())
-            basicInputLetter = inputLetter;
-        else {
-            wildcard = ALPHABET.codeToWildcard((byte)inputLetter);
-            basicInputLetter = wildcard.getMatchingCode(generator.nextInt(wildcard.basicSize()));
-        }
-        if (basicInputLetter >= 0) {
-            int event = Arrays.binarySearch(events, basicInputLetter * 5, (basicInputLetter + 1) * 5, r);
+        if (inputLetter >= 0) {
+            int event = Arrays.binarySearch(events, inputLetter * 5, (inputLetter + 1) * 5, r);
             if (event < 0)
                 event = -event - 1;
 
-            event -= basicInputLetter * 5;
+            event -= inputLetter * 5;
 
             if (event == 0)
                 return Mutation.createDeletion(position, inputLetter);
 
-            if ((wildcard == null) ? ((event - 1) != inputLetter) : !wildcard.matches((byte)(event - 1)))
+            if ((event - 1) != inputLetter)
                 return Mutation.createSubstitution(position, inputLetter, (event - 1));
         }
 
