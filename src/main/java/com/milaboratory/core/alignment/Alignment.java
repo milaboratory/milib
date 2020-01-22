@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.io.binary.AlignmentSerializer;
 import com.milaboratory.core.mutations.Mutation;
@@ -84,7 +85,8 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
             if (!mutations.isCompatibleWith(sequence1)) {
                 MutationsUtil.assertCompatibleWithSequence(sequence1, mutations.getRAWMutations());
                 throw new IllegalArgumentException("Not compatible mutations: muts: " + mutations + " range1: " + sequence1Range + " seq1: " + sequence1.getRange(sequence1Range));
-            } if (!sequence1Range.contains(mutations.getMutatedRange()))
+            }
+            if (!sequence1Range.contains(mutations.getMutatedRange()))
                 throw new IllegalArgumentException("Not compatible mutations range: muts: " + mutations + " range1: " + sequence1Range);
             if (sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
                 throw new IllegalArgumentException("Not compatible range2: muts: " + mutations + "muts delta:" + mutations.getLengthDelta() + " range1: " + sequence1Range + " range2: " + sequence2Range);
@@ -406,5 +408,23 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         if (position < 0)
             return -2 - position;
         return position;
+    }
+
+    private final class AlignmentElementOP implements OutputPort<AlignmentElement> {
+        final int minimalMismatchDistance;
+        int currentMutationIndex = -1;
+        int lastSeq1Position = sequence1Range.getFrom();
+        int lastSeq2Position = sequence2Range.getFrom();
+
+        public AlignmentElementOP(int minimalMismatchDistance) {
+            this.minimalMismatchDistance = minimalMismatchDistance;
+        }
+
+        @Override
+        public AlignmentElement take() {
+            int mut = currentMutationIndex == -1 ? NON_MUTATION : mutations.getMutation(currentMutationIndex);
+            
+            return null;
+        }
     }
 }
