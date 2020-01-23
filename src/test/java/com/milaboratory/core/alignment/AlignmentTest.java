@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 
+import cc.redberry.pipe.CUtils;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
@@ -78,6 +79,18 @@ public class AlignmentTest {
         Assert.assertEquals(alignment.getSequence2Range().getFrom(), helper.getSequence2PositionAt(0));
         Assert.assertEquals(alignment.getSequence2Range().getTo() - 1,
                 helper.getSequence2PositionAt(helper.size() - 1));
+    }
+
+    @Test
+    public void testAlignmentElements1() {
+        NucleotideSequence sequence1 = new NucleotideSequence("TACCGCCATGACCA");
+        NucleotideSequence sequence2 = new NucleotideSequence("CCCTCATCTCTT");
+        Alignment<NucleotideSequence> alignment = Aligner.alignLocal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
+                sequence1, sequence2);
+        System.out.println(alignment);
+        for (AlignmentElement ae : CUtils.it(alignment.getAlignmentElements())) {
+            System.out.println(ae);
+        }
     }
 
     @Test

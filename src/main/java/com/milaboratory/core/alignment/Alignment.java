@@ -366,6 +366,10 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         return new Alignment<>(sequence1, mutations, sequence1Range, sequence2Range.move(offset), score);
     }
 
+    public OutputPort<AlignmentElement> getAlignmentElements() {
+        return new AlignmentElementOP();
+    }
+
     @Override
     public String toString() {
         return getAlignmentHelper().toCompactString();
@@ -411,20 +415,79 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
     }
 
     private final class AlignmentElementOP implements OutputPort<AlignmentElement> {
-        final int minimalMismatchDistance;
         int currentMutationIndex = -1;
         int lastSeq1Position = sequence1Range.getFrom();
         int lastSeq2Position = sequence2Range.getFrom();
 
-        public AlignmentElementOP(int minimalMismatchDistance) {
-            this.minimalMismatchDistance = minimalMismatchDistance;
+        AlignmentElementOP() {
+            if (sequence1Range.isReverse() || sequence2Range.isReverse())
+                throw new IllegalArgumentException();
         }
 
         @Override
         public AlignmentElement take() {
-            int mut = currentMutationIndex == -1 ? NON_MUTATION : mutations.getMutation(currentMutationIndex);
-            
-            return null;
+            int mutation;
+            boolean isMatch = true;
+            while (true) {
+                ++currentMutationIndex;
+
+                if (currentMutationIndex > mutations.size())
+                    return null;
+
+                if (currentMutationIndex == mutations.size()) {
+                    if (lastSeq1Position == sequence1Range.getTo()) {
+                        assert lastSeq2Position == sequence2Range.getTo();
+                        return null;
+                    }
+                    return new AlignmentElement(
+                            new Range(lastSeq1Position, sequence1Range.getTo()),
+                            new Range(lastSeq2Position, sequence2Range.getTo()),
+                            isMatch);
+                }
+
+                mutation = mutations.getMutation(currentMutationIndex);
+
+                if (isSubstitution(mutation))
+                    isMatch = false;
+
+                if (isInDel(mutation)) {
+                    int newSeq1Position = getPosition(mutation);
+                    int newSeq2Position;
+
+                    if (newSeq1Position != lastSeq1Position) {
+                        --currentMutationIndex; // This mutation will be inspected again on the next round
+                        newSeq2Position = lastSeq2Position + (newSeq1Position - lastSeq1Position);
+                    } else {
+                        // newSeq1Position == lastSeq1Position == getPosition(mutation)
+                        newSeq2Position = lastSeq2Position;
+                        if (isInsertion(mutation)) {
+                            ++newSeq2Position;
+                            while (currentMutationIndex + 1 < mutations.size() &&
+                                    isInsertion(mutation = mutations.getMutation(currentMutationIndex + 1)) &&
+                                    getPosition(mutation) == newSeq1Position) {
+                                ++currentMutationIndex;
+                                ++newSeq2Position;
+                            }
+                        } else {
+                            ++newSeq1Position;
+                            while (currentMutationIndex + 1 < mutations.size() &&
+                                    isDeletion(mutation = mutations.getMutation(currentMutationIndex + 1)) &&
+                                    getPosition(mutation) == newSeq1Position) {
+                                ++currentMutationIndex;
+                                ++newSeq1Position;
+                            }
+                        }
+                    }
+
+                    AlignmentElement ret = new AlignmentElement(
+                            new Range(lastSeq1Position, newSeq1Position),
+                            new Range(lastSeq2Position, newSeq2Position),
+                            isMatch);
+                    lastSeq1Position = newSeq1Position;
+                    lastSeq2Position = newSeq2Position;
+                    return ret;
+                }
+            }
         }
     }
 }

@@ -17,13 +17,14 @@ package com.milaboratory.core.alignment;
 
 public enum AlignmentElementType {
     Match('M'),
-    Mismatch('M'),
+    Mismatch('m'),
     Insertion('I'),
     Deletion('D');
 
-    public final char cigarLetter;
+    public final char cigarLetter, cigarLetterUpper;
 
     AlignmentElementType(char cigarLetter) {
         this.cigarLetter = cigarLetter;
+        this.cigarLetterUpper = Character.toUpperCase(cigarLetter);
     }
 }

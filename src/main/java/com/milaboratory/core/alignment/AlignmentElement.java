@@ -26,6 +26,8 @@ public final class AlignmentElement {
     public AlignmentElement(Range referenceRange, Range queryRange, boolean isMatch) {
         Objects.requireNonNull(referenceRange);
         Objects.requireNonNull(queryRange);
+        if (referenceRange.length() > 0 && queryRange.length() > 0 && queryRange.length() != referenceRange.length())
+            throw new IllegalArgumentException();
         this.referenceRange = referenceRange;
         this.queryRange = queryRange;
         this.isMatch = isMatch;
@@ -37,6 +39,10 @@ public final class AlignmentElement {
         if (queryRange.isEmpty())
             return AlignmentElementType.Deletion;
         return isMatch ? AlignmentElementType.Match : AlignmentElementType.Mismatch;
+    }
+
+    public int getCigarLength() {
+        return Math.max(referenceRange.length(), queryRange.length());
     }
 
     @Override
@@ -52,5 +58,10 @@ public final class AlignmentElement {
     @Override
     public int hashCode() {
         return Objects.hash(referenceRange, queryRange, isMatch);
+    }
+
+    @Override
+    public String toString() {
+        return "" + referenceRange + " " + getCigarLength() + getType().cigarLetter + " " + queryRange;
     }
 }
