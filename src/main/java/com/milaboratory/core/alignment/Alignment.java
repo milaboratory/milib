@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.alignment;
 
+import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.io.binary.AlignmentSerializer;
@@ -366,8 +367,27 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         return new Alignment<>(sequence1, mutations, sequence1Range, sequence2Range.move(offset), score);
     }
 
+    /**
+     * Returns iterator over alignments elements in terms of CIGAR string.
+     *
+     * @return iterator over alignments elements in terms of CIGAR string
+     */
     public OutputPort<AlignmentElement> getAlignmentElements() {
         return new AlignmentElementOP();
+    }
+
+    /**
+     * Returns CIGAR string representation of this alignment.
+     *
+     * @return CIGAR string representation of this alignment
+     */
+    public String getCigarString() {
+        StringBuilder sb = new StringBuilder();
+        for (AlignmentElement ae : CUtils.it(getAlignmentElements())) {
+            sb.append(ae.getCigarLength());
+            sb.append(ae.getType().cigarLetterUpper);
+        }
+        return sb.toString();
     }
 
     @Override

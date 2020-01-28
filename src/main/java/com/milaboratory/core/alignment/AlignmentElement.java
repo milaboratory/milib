@@ -19,9 +19,12 @@ import com.milaboratory.core.Range;
 
 import java.util.Objects;
 
+/**
+ * Represents CIGAR string element, along with its positions in original alignment coordinates, and matching status
+ */
 public final class AlignmentElement {
-    final Range referenceRange, queryRange;
-    final boolean isMatch;
+    private final Range referenceRange, queryRange;
+    private final boolean isMatch;
 
     public AlignmentElement(Range referenceRange, Range queryRange, boolean isMatch) {
         Objects.requireNonNull(referenceRange);
@@ -43,6 +46,15 @@ public final class AlignmentElement {
 
     public int getCigarLength() {
         return Math.max(referenceRange.length(), queryRange.length());
+    }
+
+    /**
+     * Returns CIGAR string for the element
+     *
+     * @return CIGAR string for the element
+     */
+    public String getCigarString() {
+        return "" + getCigarLength() + getType().cigarLetterUpper;
     }
 
     @Override
