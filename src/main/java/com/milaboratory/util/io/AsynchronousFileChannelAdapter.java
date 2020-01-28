@@ -31,7 +31,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class AsynchronousFileChannelAdapter implements AsynchronousByteChannel, HasMutablePosition {
     private final AsynchronousFileChannel fileChannel;
-    private final AtomicLong positionCounter;
+    private final AtomicLong positionCounter = new AtomicLong();
     private final boolean closeUnderlyingFileChannel;
     private volatile boolean closed = false;
     private final AtomicBoolean hasPendingOperation = new AtomicBoolean(false);
@@ -43,8 +43,8 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
     private AsynchronousFileChannelAdapter(AsynchronousFileChannel fileChannel, long position,
                                            boolean closeUnderlyingFileChannel) {
         this.fileChannel = fileChannel;
-        this.positionCounter = new AtomicLong(position);
         this.closeUnderlyingFileChannel = closeUnderlyingFileChannel;
+        this.setPosition(position);
     }
 
     @Override
@@ -56,13 +56,10 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
      * Sets reading channel position. Negative values will be converted to the positions counted from the end of the
      * file (e.g. value -1 means that position is set so that the one last byte can be read from the file)
      *
-     * @param newPosition new channel position, use negative values to specify positions from file end
+     * @param newPosition new channel position, use negative values to specify positions from the file end
      */
     @Override
     public void setPosition(long newPosition) {
-        if (closed)
-            throw new IllegalStateException("Reader is closed.");
-
         if (newPosition < 0)
             try {
                 newPosition = fileChannel.size() + newPosition;
@@ -70,22 +67,32 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
                 throw new RuntimeException(e);
             }
 
-        if (!hasPendingOperation.compareAndSet(false, true))
-            throw new IllegalStateException("Can't set position during active operation.");
+        operationBegin();
         positionCounter.set(newPosition);
-        hasPendingOperation.set(false);
+        operationEnded();
     }
 
-    private void startOperation() {
+    private void checkNoPendingOperations() {
+        if (closed)
+            throw new IllegalStateException("Reader is closed.");
+        if (hasPendingOperation.get())
+            throw new IllegalStateException("Can't set position during active operation.");
+    }
+
+    private void operationBegin() {
         if (closed)
             throw new IllegalStateException("Reader is closed.");
         if (!hasPendingOperation.compareAndSet(false, true))
             throw new IllegalStateException("Can't set position during active operation.");
     }
 
+    private void operationEnded() {
+        hasPendingOperation.set(false);
+    }
+
     @Override
     public <A> void read(ByteBuffer dst, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        startOperation();
+        operationBegin();
         fileChannel.read(dst, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
@@ -98,7 +105,7 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
     @Override
     public <A> void write(ByteBuffer src, A attachment, CompletionHandler<Integer, ? super A> handler) {
-        startOperation();
+        operationBegin();
         fileChannel.write(src, positionCounter.get(), attachment, new CompletionHandlerAdapter<>(handler));
     }
 
@@ -126,7 +133,7 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
      * Closing child adapter will not close underlying fileChannel on it's close.
      */
     public AsynchronousFileChannelAdapter createChildAdapter() {
-        return createChildAdapter(-1);
+        return createChildAdapter(positionCounter.get());
     }
 
     /**
@@ -136,12 +143,7 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
      * @param startPosition start new channel adapter from this file position; -1 to inherit current position from this reader
      */
     public AsynchronousFileChannelAdapter createChildAdapter(long startPosition) {
-        if (closed)
-            throw new IllegalStateException("Reader is closed.");
-        if (hasPendingOperation.get())
-            throw new IllegalStateException("Can't set position during active operation.");
-        if (startPosition == -1)
-            startPosition = positionCounter.get();
+        checkNoPendingOperations();
         return new AsynchronousFileChannelAdapter(fileChannel, startPosition, false);
     }
 
@@ -156,14 +158,14 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
         @Override
         public void completed(Integer result, A attachment) {
-            hasPendingOperation.set(false);
+            operationEnded();
             positionCounter.addAndGet(result);
             innerHandler.completed(result, attachment);
         }
 
         @Override
         public void failed(Throwable exc, A attachment) {
-            hasPendingOperation.set(false);
+            operationEnded();
             innerHandler.failed(exc, attachment);
         }
     }

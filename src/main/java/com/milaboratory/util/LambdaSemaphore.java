@@ -23,8 +23,11 @@ public final class LambdaSemaphore {
 
     /** (number of queued objects) : 32 bits | (number of permits) : 32 bits */
     final AtomicLong state;
+    /** Number of permits this object was initialized with */
+    final int initialPermits;
 
     public LambdaSemaphore(int initialPermits) {
+        this.initialPermits = initialPermits;
         this.state = new AtomicLong(encode(0, initialPermits));
     }
 

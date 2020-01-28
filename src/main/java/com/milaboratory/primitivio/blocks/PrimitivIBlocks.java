@@ -110,6 +110,25 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         this.concurrencyLimiter = new LambdaSemaphore(concurrency);
     }
 
+    /**
+     * @param clazz              class to deserialize
+     * @param executor           executor to execute serialization process in
+     *                           (the same executor service as used in target AsynchronousByteChannels is recommended)
+     * @param concurrencyLimiter maximal number of concurrent deserializations, actual concurrency level is also limited by
+     *                           readAheadBlocks parameter (effective concurrency will be ~min(readAheadBlocks, concurrency))
+     *                           and IO speed
+     * @param inputState         stream state
+     * @param decompressor       block decompressor
+     */
+    public PrimitivIBlocks(Class<O> clazz, ExecutorService executor, LambdaSemaphore concurrencyLimiter,
+                           PrimitivIState inputState, LZ4FastDecompressor decompressor) {
+        super(executor, concurrency);
+        this.clazz = clazz;
+        this.decompressor = decompressor;
+        this.inputState = inputState;
+        this.concurrencyLimiter = new LambdaSemaphore(concurrency);
+    }
+
     public void resetStats() {
         initializationTimestamp = System.nanoTime();
         totalDeserializationNanos.set(0);

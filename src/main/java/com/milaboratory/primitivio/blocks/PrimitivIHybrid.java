@@ -17,6 +17,7 @@ package com.milaboratory.primitivio.blocks;
 
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
+import com.milaboratory.util.LambdaSemaphore;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.HasMutablePosition;
 import com.milaboratory.util.io.HasPosition;
@@ -35,6 +36,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Function;
+
+// FIXME update docs with RandomAccess options
 
 /**
  * Helper class to mix synchronous PrimitivI reading with asynchronous / parallel PrimitivIBlocks streaming
@@ -58,15 +61,26 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
     private final ExecutorService executorService;
     private final AsynchronousFileChannelAdapter byteChannel;
 
+    /** Saved PrimitivI state */
     private PrimitivIState primitivIState;
+
+    /** Exclusive PrimitivI */
     private PrimitivI continuousPrimitivI;
+    /** List of non-exclusive */
     private final List<PrimitivI> randomAccessPrimitivI = new LinkedList<>();
+    /** If set, exclusive primitivI state will be saved by by this object */
     private boolean saveStateAfterClose;
 
+    /** Used to correctly track intermediate positions in buffered exclusive PrimitivI mode */
     private CountingInputStream countingInputStream;
+    /** Position before initiation of exclusive PrimitivI session (see usage for details) */
     private long savedPosition;
 
+    /** List of non-exclusive PrimitivIBlock readers */
+    @SuppressWarnings("rawtypes")
     private final List<PrimitivIBlocks.Reader> randomAccessBlockReaders = new LinkedList<>();
+    /** Exclusive PrimitivIBlock reader */
+    @SuppressWarnings("rawtypes")
     private PrimitivIBlocks.Reader continuousBlocksReader;
 
     public PrimitivIHybrid(ExecutorService executorService, Path file) throws IOException {
@@ -92,13 +106,16 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         return byteChannel.getPosition();
     }
 
+    /**
+     * See {@link AsynchronousFileChannelAdapter#setPosition(long)}.
+     */
     @Override
     public void setPosition(long newPosition) {
-        // FIXME inconsistent behaviour with -1 !!!
         checkNullState(true, true);
         byteChannel.setPosition(newPosition);
     }
 
+    /** State assertion */
     private void checkNullState(boolean checkClosed, boolean allowRAMode) {
         if (closed && checkClosed)
             throw new IllegalArgumentException("closed");
@@ -157,8 +174,7 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
                                 new CloseShieldInputStream(
                                         Channels.newInputStream(byteChannel)),
                                 DEFAULT_PRIMITIVIO_BUFFER_SIZE)
-                )
-        );
+                ));
     }
 
     public synchronized PrimitivI beginRandomAccessPrimitivI(long position) {
@@ -180,10 +196,19 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         return beginPrimitivIBlocks(clazz, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
     }
 
+    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, LambdaSemaphore concurrencyLimiter, int readAheadBlocks) {
+        return beginPrimitivIBlocks(clazz, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
+    }
+
     public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
                                                                            Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+        return this.beginPrimitivIBlocks(clazz, new LambdaSemaphore(concurrency), readAheadBlocks, specialHeaderAction);
+    }
+
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, LambdaSemaphore concurrencyLimiter, int readAheadBlocks,
+                                                                           Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
         checkNullState(true, false);
-        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
+        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrencyLimiter, primitivIState, lz4Decompressor);
         final PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction, false);
         continuousBlocksReader = reader;
         return reader;
