@@ -16,6 +16,7 @@
 package com.milaboratory.core.alignment;
 
 
+import cc.redberry.pipe.CUtils;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.mutations.Mutations;
 import com.milaboratory.core.mutations.generator.GenericNucleotideMutationModel;
@@ -78,6 +79,62 @@ public class AlignmentTest {
         Assert.assertEquals(alignment.getSequence2Range().getFrom(), helper.getSequence2PositionAt(0));
         Assert.assertEquals(alignment.getSequence2Range().getTo() - 1,
                 helper.getSequence2PositionAt(helper.size() - 1));
+    }
+
+    @Test
+    public void testAlignmentElements1() {
+        NucleotideSequence sequence1 = new NucleotideSequence("TACCGCCATGACCA");
+
+        // 2 ccGc-cat 8
+        // 0 cc-cTcat 6
+
+        Alignment<NucleotideSequence> alignment =
+                new Alignment<>(
+                        sequence1,
+                        Mutations.decode("DG4:I6T", NucleotideSequence.ALPHABET),
+                        new Range(2, 9), new Range(0, 7),
+                        0);
+        Assert.assertEquals("2M1D1M1I3M", alignment.getCigarString());
+
+        alignment = new Alignment<>(
+                sequence1,
+                Mutations.decode("DG4:DC5:I6T", NucleotideSequence.ALPHABET),
+                new Range(2, 9), new Range(0, 6),
+                0);
+        Assert.assertEquals("2M2D1I3M", alignment.getCigarString());
+
+        alignment = new Alignment<>(
+                sequence1,
+                Mutations.decode("DG4:SC5G:I6T", NucleotideSequence.ALPHABET),
+                new Range(2, 9), new Range(0, 7),
+                0);
+        Assert.assertEquals("2M1D1M1I3M", alignment.getCigarString());
+
+        alignment = new Alignment<>(
+                sequence1,
+                Mutations.decode("I2A:I2T:DG4:SC5G:I6T", NucleotideSequence.ALPHABET),
+                new Range(2, 9), new Range(0, 9),
+                0);
+        Assert.assertEquals("2I2M1D1M1I3M", alignment.getCigarString());
+
+        alignment = new Alignment<>(
+                sequence1,
+                Mutations.decode("I3A:I3T:DG4:SC5G:I6T", NucleotideSequence.ALPHABET),
+                new Range(2, 9), new Range(0, 9),
+                0);
+        Assert.assertEquals("1M2I1M1D1M1I3M", alignment.getCigarString());
+
+        alignment = new Alignment<>(
+                sequence1,
+                Mutations.decode("DG4:SC5G:I6T:I9A:I9T", NucleotideSequence.ALPHABET),
+                new Range(2, 9), new Range(0, 9),
+                0);
+        Assert.assertEquals("2M1D1M1I3M2I", alignment.getCigarString());
+
+        // System.out.println(alignment);
+        // for (AlignmentElement ae : CUtils.it(alignment.getAlignmentElements())) {
+        //     System.out.println(ae);
+        // }
     }
 
     @Test
@@ -163,9 +220,8 @@ public class AlignmentTest {
     @Test
     public void testSerialization1() throws Exception {
         NucleotideSequence sequence1 = new NucleotideSequence("TACCGCCATGACCA");
-        NucleotideSequence sequence2 = new NucleotideSequence("CCTCATCTCTT");
-        Alignment<NucleotideSequence> alignment = Aligner.alignLocal(LinearGapAlignmentScoring.getNucleotideBLASTScoring(),
-                sequence1, sequence2);
+        Mutations<NucleotideSequence> mutations = Mutations.decode("DG4SC5T", NucleotideSequence.ALPHABET);
+        Alignment<NucleotideSequence> alignment = new Alignment<>(sequence1, mutations, 0);
 
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         PrimitivO po = new PrimitivO(bos);
