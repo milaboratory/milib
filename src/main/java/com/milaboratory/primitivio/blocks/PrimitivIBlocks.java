@@ -114,19 +114,19 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
      * @param clazz              class to deserialize
      * @param executor           executor to execute serialization process in
      *                           (the same executor service as used in target AsynchronousByteChannels is recommended)
-     * @param concurrencyLimiter maximal number of concurrent deserializations, actual concurrency level is also limited by
-     *                           readAheadBlocks parameter (effective concurrency will be ~min(readAheadBlocks, concurrency))
-     *                           and IO speed
+     * @param concurrencyLimiter concurrency limiting semaphore, to share the same concurrency budget between several readers / writers,
+     *                           actual concurrency level is also limited by readAheadBlocks parameter (effective concurrency will be
+     *                           ~min(readAheadBlocks, concurrencyLimiter.getInitialPermits())) and IO speed
      * @param inputState         stream state
      * @param decompressor       block decompressor
      */
     public PrimitivIBlocks(Class<O> clazz, ExecutorService executor, LambdaSemaphore concurrencyLimiter,
                            PrimitivIState inputState, LZ4FastDecompressor decompressor) {
-        super(executor, concurrency);
+        super(executor, concurrencyLimiter.getInitialPermits());
         this.clazz = clazz;
         this.decompressor = decompressor;
         this.inputState = inputState;
-        this.concurrencyLimiter = new LambdaSemaphore(concurrency);
+        this.concurrencyLimiter = concurrencyLimiter;
     }
 
     public void resetStats() {
@@ -143,7 +143,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     /**
-     * Block deserialization, CPU intensive part
+     * Block deserialization, CPU intensive part, don't perform any locking
      */
     private List<O> deserializeBlock(PrimitivIOBlockHeader header, byte[] blockAndNextHeader) {
         // Reading header
@@ -163,7 +163,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             int decompressedLength = header.getUncompressedDataSize();
             data = new byte[decompressedLength];
             // TODO correct method ???
-            decompressor.decompress(blockAndNextHeader, data);
+            int read = decompressor.decompress(blockAndNextHeader, data);
+            assert read == blockAndNextHeader.length - BLOCK_HEADER_SIZE;
             dataLen = decompressedLength;
         } else {// Uncompressed block
             data = blockAndNextHeader;

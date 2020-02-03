@@ -247,7 +247,9 @@ public class PrimitivOBlocksTest {
                 PrimitivIBlocks<SingleRead>.Reader reader = pi.newReader(target, 2,
                         h -> PrimitivIHeaderActions.outputObject(
                                 new SingleReadImpl(h.getSpecialLong(0), NSequenceWithQuality.EMPTY, "")));
-                PrimitivIHybrid hi = new PrimitivIHybrid(executorService, hybridTarget)) {
+                PrimitivIHybrid hi =
+                        new PrimitivIHybrid(executorService, hybridTarget, 2)
+                                .setDefaultReadAheadBlocks(2)) {
 
             // Raw Blocks io
             for (int i = 0; i < repeats; i++) {
@@ -266,7 +268,7 @@ public class PrimitivOBlocksTest {
             // Hybrid
             for (int i = 0; i < 2; i++) {
                 // no blocks
-                try (PrimitivI primitivI = hi.beginPrimitivI()) {
+                try (PrimitivI primitivI = hi.beginPrimitivI(false)) {
                     int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
                     for (int j = 0; j < els; j++) {
                         SingleRead obj = primitivI.readObject(SingleRead.class);
@@ -280,7 +282,7 @@ public class PrimitivOBlocksTest {
 
                 // blocks
                 try (PrimitivIBlocks<SingleRead>.Reader bReader =
-                             hi.<SingleRead>beginPrimitivIBlocks(SingleRead.class, concurrency, 2)) {
+                             hi.<SingleRead>beginPrimitivIBlocks(SingleRead.class)) {
                     for (int j = 0; j < els; j++) {
                         SingleRead obj = bReader.take();
                         Assert.assertEquals(sr.get(j), obj);
@@ -289,9 +291,9 @@ public class PrimitivOBlocksTest {
 
                 try (
                         PrimitivIBlocks<SingleRead>.Reader bReader1 =
-                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2);
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin);
                         PrimitivIBlocks<SingleRead>.Reader bReader2 =
-                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin, concurrency, 2)
+                                hi.<SingleRead>beginRandomAccessPrimitivIBlocks(SingleRead.class, blocksBegin)
                 ) {
                     for (int j = 0; j < els; j++) {
                         SingleRead obj = bReader1.take();
