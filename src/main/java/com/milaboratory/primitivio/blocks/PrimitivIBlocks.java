@@ -34,10 +34,7 @@ import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicLong;
@@ -332,29 +329,41 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             pendingOps.incrementAndGet();
 
-            previousLatch.setCallback(() -> // IO operation will be enqueued after the previous one finished
-                    concurrencyLimiter.acquire( // and after there will be an execution slot available
-                            () -> {
-                                pendingOps.decrementAndGet();
+            previousLatch.setCallback(() -> { // IO operation will be enqueued after the previous one finish
 
-                                // Cancel all block deserialization requests if EOF was detected in the previous block
-                                // or user closed current reader
-                                if (!stateOk()) {
-                                    block.eof = true;
-                                    block.latch.countDown();
-                                    nextLatch.open();
-                                    concurrencyLimiter.release();
-                                    return;
-                                }
+                        // Checking the state before consuming subsequent concurrency unit
+                        if (!stateOk()) {
+                            block.eof = true;
+                            block.latch.countDown();
+                            nextLatch.open();
+                            pendingOps.decrementAndGet();
+                            return;
+                        }
 
-                                block.header = nextHeader; // read as: current header
-                                if (nextHeader.isSpecial()) {
-                                    // Releasing special block
-                                    block.latch.countDown();
-                                    _readHeader(nextLatch);
-                                } else
-                                    _readBlock(nextHeader, block, nextLatch);
-                            })
+                        concurrencyLimiter.acquire( // and after there will be an execution slot available
+                                () -> {
+                                    pendingOps.decrementAndGet();
+
+                                    // Cancel all block deserialization requests if EOF was detected in the previous block
+                                    // or user closed current reader
+                                    if (!stateOk()) {
+                                        block.eof = true;
+                                        block.latch.countDown();
+                                        nextLatch.open();
+                                        concurrencyLimiter.release();
+                                        return;
+                                    }
+
+                                    block.header = nextHeader; // read as: current header
+                                    nextHeader = null; // for assertion
+                                    if (block.header.isSpecial()) {
+                                        // Releasing special block
+                                        block.latch.countDown();
+                                        _readHeader(nextLatch); // should release one concurrencyLimiter unit
+                                    } else
+                                        _readBlock(block, nextLatch); // should release one concurrencyLimiter unit
+                                });
+                    }
             );
         }
 
@@ -364,13 +373,21 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
          * @param nextLatch latch to open after IO is complete
          */
         private void _readHeader(LambdaLatch nextLatch) {
+
+            /*
+             * This method must release:
+             *   - exactly one concurrencyLimiter unit
+             *   - open nextLatch
+             * across all it's sync/async execution branches
+             */
+
             byte[] headerBytes = new byte[BLOCK_HEADER_SIZE];
             ByteBuffer buffer = ByteBuffer.wrap(headerBytes);
 
             ongoingIOOps.incrementAndGet();
             long ioStart = System.nanoTime();
 
-            channel.read(buffer, null, new CHAbstractCL() {
+            channel.read(buffer, null, new CHAbstractCL(null, nextLatch) {
                 @Override
                 public void completed(Integer result, Object attachment) {
                     try {
@@ -385,7 +402,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                         // Assert
                         if (result != BLOCK_HEADER_SIZE) {
-                            _ex(new RuntimeException("Premature EOF."));
+                            _ex(new RuntimeException("Premature EOF.")); // see finally for concurrencyLimiter.release()
                             return;
                         }
 
@@ -396,9 +413,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         // Allowing next IO operation
                         nextLatch.open();
                     } catch (Exception e) {
-                        _ex(e);
+                        _ex(e); // see finally for concurrencyLimiter.release()
                         nextLatch.open();
-                        throw new RuntimeException(e);
                     } finally {
                         // Releasing acquired concurrency unit
                         concurrencyLimiter.release();
@@ -410,36 +426,41 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         /**
          * Low level read block, to be executed from concurrencyLimiter.acquire
          *
-         * @param currentHeader header of current block
-         * @param block         block to populate
-         * @param nextLatch     latch to open after IO is complete
+         * @param block     block to populate, header must already be set
+         * @param nextLatch latch to open after IO is complete
          */
-        private void _readBlock(PrimitivIOBlockHeader currentHeader,
-                                Block<O> block, LambdaLatch nextLatch) {
-            byte[] blockAndNextHeader = new byte[currentHeader.getDataSize() + BLOCK_HEADER_SIZE];
+        private void _readBlock(Block<O> block, LambdaLatch nextLatch) {
+
+            /*
+             * This method must release:
+             *   - exactly one concurrencyLimiter unit
+             *   - open nextLatch
+             *   - open block.latch
+             * across all it's sync/async execution branches
+             */
+
+            byte[] blockAndNextHeader = new byte[block.header.getDataSize() + BLOCK_HEADER_SIZE];
             ByteBuffer buffer = ByteBuffer.wrap(blockAndNextHeader);
 
             ongoingIOOps.incrementAndGet();
             long ioStart = System.nanoTime();
 
-            channel.read(buffer, null, new CHAbstractCL() {
+            channel.read(buffer, null, new CHAbstractCL(block, nextLatch) {
                 @Override
                 public void completed(Integer result, Object attachment) {
-                    // Recording time spent waiting for io operation completion
+                    // Recording time spent waiting for the io operation completion
                     ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
                     ongoingIOOps.decrementAndGet();
 
                     try {
                         long start = System.nanoTime();
 
-                        if (!stateOk()) {
-                            nextLatch.open();
+                        if (!stateOk())
                             return;
-                        }
 
                         // Assert
                         if (result != blockAndNextHeader.length) {
-                            _ex(new RuntimeException("Premature EOF."));
+                            _ex(new RuntimeException("Premature EOF.")); // see finally for concurrencyLimiter.release()
                             return;
                         }
 
@@ -450,23 +471,23 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                                 blockAndNextHeader.length);
                         setHeader(header);
 
-                        // Releasing next IO operation
+                        // Releasing next IO operation before running CPU intensive deserialization procedure
                         nextLatch.open();
 
                         // CPU intensive task
-                        block.content = deserializeBlock(currentHeader, blockAndNextHeader);
+                        block.content = deserializeBlock(block.header, blockAndNextHeader);
 
                         // Recording total deserialization time
                         totalDeserializationNanos.addAndGet(System.nanoTime() - start);
-
-                        // Signaling that the block is populated
-                        block.latch.countDown();
                     } catch (Exception e) {
                         _ex(e);
-                        throw new RuntimeException(e);
                     } finally {
+                        // Opening next latch if it was not yet opened
+                        nextLatch.open();
+
                         // Releasing acquired concurrency unit
                         concurrencyLimiter.release();
+
                         // Releasing the latch for the block, to prevent deadlock in nextBlockOrClose
                         block.latch.countDown();
                     }
@@ -481,6 +502,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         private void setHeader(byte[] headerBytes) {
+            assert nextHeader == null;
             nextHeader = PrimitivIOBlockHeader.readHeaderNoCopy(headerBytes);
             if (nextHeader.isLastBlock())
                 eof = true;
@@ -490,6 +512,13 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             return !(eof || closed || exception != null);
         }
 
+        /**
+         * Takes next block from the read ahead buffer, waits if its parsing is not yet finished,
+         * performs special block actions if required, and schedules all required IO / parsing operation
+         * to fully populate read ahead buffer.
+         *
+         * Closes the reader if EOF was encountered.
+         */
         private void nextBlockOrClose() {
             checkException();
 
@@ -526,6 +555,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 }
             } catch (Exception e) {
                 _ex(e);
+
+                // Rethrowing exception right away
+                throw new RuntimeException(e);
             }
         }
 
@@ -562,7 +594,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 try {
                     lastBlock.latch.await();
                 } catch (InterruptedException e) {
-                    throw new RuntimeException();
+                    throw new RuntimeException(e);
                 }
 
             try {
@@ -582,12 +614,22 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
     private void _ex(Throwable ex) {
         exception = ex;
-
-        // TODO excessive ???
-        ex.printStackTrace();
     }
 
     protected abstract class CHAbstractCL implements CompletionHandler<Integer, Object> {
+        final Block<O> block;
+        final LambdaLatch nextLambdaLatch;
+
+        /**
+         * @param block           can be null, will be automatically released on error
+         * @param nextLambdaLatch nonnull required, will be automatically released on error
+         */
+        public CHAbstractCL(Block<O> block, LambdaLatch nextLambdaLatch) {
+            Objects.requireNonNull(nextLambdaLatch);
+            this.block = block;
+            this.nextLambdaLatch = nextLambdaLatch;
+        }
+
         @Override
         public void failed(Throwable exc, Object attachment) {
             _ex(exc);
@@ -595,6 +637,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             // Releasing a permit for the next operation to detect the error
             // this reader is in unrecoverable faulty state
             concurrencyLimiter.release();
+
+            // Releasing all the locks associated with this IO operation
+            nextLambdaLatch.open();
+            if (block != null) block.latch.countDown();
         }
     }
 
