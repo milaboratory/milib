@@ -61,6 +61,6 @@ set -e
 if [[ ! -f src/test/resources/big/16SMicrobial.nsq ]]
 then
     mkdir -p ${scriptDir}/src/test/resources/big
-    (cd ${scriptDir}/src/test/resources/big; curl https://ftp.ncbi.nlm.nih.gov/blast/db/16SMicrobial.tar.gz 2> /dev/null | tar -xzv)
+    (cd ${scriptDir}/src/test/resources/big; curl https://ftp.ncbi.nlm.nih.gov/blast/db/v4/16SMicrobial_v4.tar.gz  2> /dev/null | tar -xzv)
 fi
 
