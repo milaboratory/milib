@@ -137,6 +137,11 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
     }
 
     @Override
+    public void forceInitialize() {
+        provider.forceInitialize();
+    }
+
+    @Override
     public int size() {
         if (provider instanceof NoProvider) {
             int s = provider.size();
@@ -148,7 +153,7 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
                 else
                     return sequences.enclosingRange().getUpper(); // last cached position
         } else if (provider instanceof SequenceProviderUtils.LazySequenceProvider)
-            if (sequences.isEmpty())
+            if (((SequenceProviderUtils.LazySequenceProvider<S>) provider).isInitialized() || sequences.isEmpty())
                 return provider.size();
             else
                 return sequences.enclosingRange().getUpper(); // last cached position
@@ -245,6 +250,11 @@ public final class CachedSequenceProvider<S extends Sequence<S>> implements Sequ
         public NoProvider(int size, String errorMessage) {
             this.size = size;
             this.errorMessage = errorMessage;
+        }
+
+        @Override
+        public void forceInitialize() {
+            throw new RuntimeException(errorMessage);
         }
 
         @Override

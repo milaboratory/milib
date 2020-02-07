@@ -15,6 +15,8 @@
  */
 package com.milaboratory.core.alignment;
 
+import cc.redberry.pipe.CUtils;
+import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.io.binary.AlignmentSerializer;
 import com.milaboratory.core.mutations.Mutation;
@@ -84,7 +86,8 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
             if (!mutations.isCompatibleWith(sequence1)) {
                 MutationsUtil.assertCompatibleWithSequence(sequence1, mutations.getRAWMutations());
                 throw new IllegalArgumentException("Not compatible mutations: muts: " + mutations + " range1: " + sequence1Range + " seq1: " + sequence1.getRange(sequence1Range));
-            } if (!sequence1Range.contains(mutations.getMutatedRange()))
+            }
+            if (!sequence1Range.contains(mutations.getMutatedRange()))
                 throw new IllegalArgumentException("Not compatible mutations range: muts: " + mutations + " range1: " + sequence1Range);
             if (sequence1Range.length() + mutations.getLengthDelta() != sequence2Range.length())
                 throw new IllegalArgumentException("Not compatible range2: muts: " + mutations + "muts delta:" + mutations.getLengthDelta() + " range1: " + sequence1Range + " range2: " + sequence2Range);
@@ -364,6 +367,29 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         return new Alignment<>(sequence1, mutations, sequence1Range, sequence2Range.move(offset), score);
     }
 
+    /**
+     * Returns iterator over alignments elements in terms of CIGAR string.
+     *
+     * @return iterator over alignments elements in terms of CIGAR string
+     */
+    public OutputPort<AlignmentElement> getAlignmentElements() {
+        return new AlignmentElementOP();
+    }
+
+    /**
+     * Returns CIGAR string representation of this alignment.
+     *
+     * @return CIGAR string representation of this alignment
+     */
+    public String getCigarString() {
+        StringBuilder sb = new StringBuilder();
+        for (AlignmentElement ae : CUtils.it(getAlignmentElements())) {
+            sb.append(ae.getCigarLength());
+            sb.append(ae.getType().cigarLetterUpper);
+        }
+        return sb.toString();
+    }
+
     @Override
     public String toString() {
         return getAlignmentHelper().toCompactString();
@@ -406,5 +432,82 @@ public final class Alignment<S extends Sequence<S>> implements java.io.Serializa
         if (position < 0)
             return -2 - position;
         return position;
+    }
+
+    private final class AlignmentElementOP implements OutputPort<AlignmentElement> {
+        int currentMutationIndex = -1;
+        int lastSeq1Position = sequence1Range.getFrom();
+        int lastSeq2Position = sequence2Range.getFrom();
+
+        AlignmentElementOP() {
+            if (sequence1Range.isReverse() || sequence2Range.isReverse())
+                throw new IllegalArgumentException();
+        }
+
+        @Override
+        public AlignmentElement take() {
+            int mutation;
+            boolean isMatch = true;
+            while (true) {
+                ++currentMutationIndex;
+
+                if (currentMutationIndex > mutations.size())
+                    return null;
+
+                if (currentMutationIndex == mutations.size()) {
+                    if (lastSeq1Position == sequence1Range.getTo()) {
+                        assert lastSeq2Position == sequence2Range.getTo();
+                        return null;
+                    }
+                    return new AlignmentElement(
+                            new Range(lastSeq1Position, sequence1Range.getTo()),
+                            new Range(lastSeq2Position, sequence2Range.getTo()),
+                            isMatch);
+                }
+
+                mutation = mutations.getMutation(currentMutationIndex);
+
+                if (isSubstitution(mutation))
+                    isMatch = false;
+
+                if (isInDel(mutation)) {
+                    int newSeq1Position = getPosition(mutation);
+                    int newSeq2Position;
+
+                    if (newSeq1Position != lastSeq1Position) {
+                        --currentMutationIndex; // This mutation will be inspected again on the next round
+                        newSeq2Position = lastSeq2Position + (newSeq1Position - lastSeq1Position);
+                    } else {
+                        // newSeq1Position == lastSeq1Position == getPosition(mutation)
+                        newSeq2Position = lastSeq2Position;
+                        if (isInsertion(mutation)) {
+                            ++newSeq2Position;
+                            while (currentMutationIndex + 1 < mutations.size() &&
+                                    isInsertion(mutation = mutations.getMutation(currentMutationIndex + 1)) &&
+                                    getPosition(mutation) == newSeq1Position) {
+                                ++currentMutationIndex;
+                                ++newSeq2Position;
+                            }
+                        } else {
+                            ++newSeq1Position;
+                            while (currentMutationIndex + 1 < mutations.size() &&
+                                    isDeletion(mutation = mutations.getMutation(currentMutationIndex + 1)) &&
+                                    getPosition(mutation) == newSeq1Position) {
+                                ++currentMutationIndex;
+                                ++newSeq1Position;
+                            }
+                        }
+                    }
+
+                    AlignmentElement ret = new AlignmentElement(
+                            new Range(lastSeq1Position, newSeq1Position),
+                            new Range(lastSeq2Position, newSeq2Position),
+                            isMatch);
+                    lastSeq1Position = newSeq1Position;
+                    lastSeq2Position = newSeq2Position;
+                    return ret;
+                }
+            }
+        }
     }
 }

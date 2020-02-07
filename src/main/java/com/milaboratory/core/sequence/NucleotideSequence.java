@@ -44,6 +44,87 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
     public static final NucleotideSequence EMPTY = new NucleotideSequence("");
 
     /**
+     * Single letter sequence A
+     */
+    public static final NucleotideSequence A = new NucleotideSequence(new byte[]{NucleotideAlphabet.A});
+
+    /**
+     * Single letter sequence T
+     */
+    public static final NucleotideSequence T = new NucleotideSequence(new byte[]{NucleotideAlphabet.T});
+
+    /**
+     * Single letter sequence G
+     */
+    public static final NucleotideSequence G = new NucleotideSequence(new byte[]{NucleotideAlphabet.G});
+
+    /**
+     * Single letter sequence C
+     */
+    public static final NucleotideSequence C = new NucleotideSequence(new byte[]{NucleotideAlphabet.C});
+
+    /**
+     * Single letter sequence R
+     */
+    public static final NucleotideSequence R = new NucleotideSequence(new byte[]{NucleotideAlphabet.R});
+
+    /**
+     * Single letter sequence Y
+     */
+    public static final NucleotideSequence Y = new NucleotideSequence(new byte[]{NucleotideAlphabet.Y});
+
+    /**
+     * Single letter sequence S
+     */
+    public static final NucleotideSequence S = new NucleotideSequence(new byte[]{NucleotideAlphabet.S});
+
+    /**
+     * Single letter sequence W
+     */
+    public static final NucleotideSequence W = new NucleotideSequence(new byte[]{NucleotideAlphabet.W});
+
+    /**
+     * Single letter sequence K
+     */
+    public static final NucleotideSequence K = new NucleotideSequence(new byte[]{NucleotideAlphabet.K});
+
+    /**
+     * Single letter sequence M
+     */
+    public static final NucleotideSequence M = new NucleotideSequence(new byte[]{NucleotideAlphabet.M});
+
+    /**
+     * Single letter sequence B
+     */
+    public static final NucleotideSequence B = new NucleotideSequence(new byte[]{NucleotideAlphabet.B});
+
+    /**
+     * Single letter sequence D
+     */
+    public static final NucleotideSequence D = new NucleotideSequence(new byte[]{NucleotideAlphabet.D});
+
+    /**
+     * Single letter sequence H
+     */
+    public static final NucleotideSequence H = new NucleotideSequence(new byte[]{NucleotideAlphabet.H});
+
+    /**
+     * Single letter sequence V
+     */
+    public static final NucleotideSequence V = new NucleotideSequence(new byte[]{NucleotideAlphabet.V});
+
+    /**
+     * Single letter sequence N
+     */
+    public static final NucleotideSequence N = new NucleotideSequence(new byte[]{NucleotideAlphabet.N});
+
+    static final NucleotideSequence[] ONE_LETTER_SEQUENCES = {A, G, C, T, N, R, Y, S, W, K, M, B, D, H, V};
+
+    static NucleotideSequence getOneLetterSequence(byte letter) {
+        return ONE_LETTER_SEQUENCES[letter];
+    }
+
+    /**
      * Creates nucleotide sequence from its string representation (e.g. "ATCGG" or "atcgg").
      *
      * @param sequence string representation of sequence (case insensitive)
@@ -85,6 +166,11 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
 
         if (range.length() == 0)
             return EMPTY;
+
+        if (range.length() == 1)
+            return range.isReverse()
+                    ? getOneLetterSequence(NucleotideAlphabet.complementCode(data[range.getFrom()]))
+                    : getOneLetterSequence(data[range.getFrom()]);
 
         if (range.isReverse())
             return new NucleotideSequence(

@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.not;
@@ -100,5 +101,11 @@ public class NucleotideSequencesTest {
     @Test(expected = IllegalArgumentException.class)
     public void testUnknownSymbol2() throws Exception {
         new NucleotideSequence(new char[]{'a', 'n', 'q'});
+    }
+
+    @Test
+    public void testOneLetter() {
+        for (int i = 0; i < NucleotideSequence.ONE_LETTER_SEQUENCES.length; i++)
+            Assert.assertEquals(i, NucleotideSequence.ONE_LETTER_SEQUENCES[i].codeAt(0));
     }
 }

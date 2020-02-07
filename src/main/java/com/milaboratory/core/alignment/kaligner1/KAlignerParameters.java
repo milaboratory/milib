@@ -37,7 +37,7 @@ public final class KAlignerParameters implements Cloneable, java.io.Serializable
     static {
         Map<String, KAlignerParameters> map = null;
         try {
-            InputStream is = KAlignerParameters.class.getClassLoader().getResourceAsStream("parameters/kaligner_parameters.json");
+            InputStream is = KAlignerParameters.class.getClassLoader().getResourceAsStream("parameters_resource/kaligner_parameters.json");
             TypeReference<HashMap<String, KAlignerParameters>> typeRef
                     = new TypeReference<
                     HashMap<String, KAlignerParameters>

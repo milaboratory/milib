@@ -15,9 +15,9 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.core.motif.Motif;
 import com.milaboratory.test.TestUtil;
-import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Set;
@@ -76,5 +76,12 @@ public class SequencesUtilsTest {
         Set<Alphabet<?>> set = possibleAlphabets("CAsSL*_GAT");
         assertTrue(set.contains(AminoAcidSequence.ALPHABET));
         assertFalse(set.contains(NucleotideSequence.ALPHABET));
+    }
+
+    @Test
+    public void testLongestHomopolymer1() {
+        assertEquals(new Range(0, 3), findLongestHomopolymer(new NucleotideSequence("AAAGACA")));
+        assertEquals(new Range(6 , 11), findLongestHomopolymer(new NucleotideSequence("AAAGACAAAAA")));
+        assertEquals(new Range(4, 10), findLongestHomopolymer(new NucleotideSequence("AAAGAAAAAACA")));
     }
 }
