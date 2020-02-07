@@ -35,6 +35,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Semaphore;
@@ -277,27 +278,33 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             }
         }
 
+        public void run(Consumer<AsynchronousByteChannel> lambda) {
+            run(lambda, false);
+        }
+
         /**
-         * Insert execution of custom code into sequence of IO operations
+         * Insert execution of a custom code into sequence of IO operations
          */
-        public synchronized void run(Consumer<AsynchronousByteChannel> lambda) {
+        public synchronized void run(Consumer<AsynchronousByteChannel> lambda, boolean executeInErrorState) {
+            checkException();
+
             LambdaLatch previousLatch = currentWriteLatch;
             LambdaLatch nextLatch = currentWriteLatch = new LambdaLatch();
             previousLatch.setCallback(() -> {
                 try {
-                    lambda.accept(channel);
+                    if (executeInErrorState || stateOk())
+                        lambda.accept(channel);
                 } catch (Exception e) {
-                    exception = e;
+                    _ex(e);
+                } finally {
+                    nextLatch.open();
                 }
-                nextLatch.open();
             });
         }
 
         public synchronized void write(O obj) {
             buffer.add(obj);
-            if (blockIsFull(buffer.size())) {
-                flush();
-            }
+            if (blockIsFull(buffer.size())) flush();
         }
 
         /**
@@ -305,9 +312,11 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
          */
         public synchronized void sync() {
             try {
+                checkException();
                 final CountDownLatch latch = new CountDownLatch(1);
-                run(__ -> latch.countDown());
+                run(__ -> latch.countDown(), true);
                 latch.await();
+                checkException();
             } catch (InterruptedException e) {
                 throw new RuntimeException();
             }
@@ -321,7 +330,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 sync();
                 return ((HasPosition) channel).getPosition();
             } else
-                throw new IllegalStateException("Underlying channel does not support information retrieval.");
+                throw new IllegalStateException("Underlying channel does not support position information retrieval.");
         }
 
         private void acquireConcurrencyUnit() {
@@ -339,54 +348,61 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             checkException();
         }
 
-        private void scheduleIOOperation(LambdaLatch latch, LambdaLatch nextLatch, ByteBuffer block) {
-            int blockBytes = block.limit();
+        private void scheduleIOOperation(LambdaLatch previousLatch, LambdaLatch nextLatch, ByteBuffer block) {
 
-            // Tracking output size
-            outputSize.addAndGet(blockBytes);
+            /*
+             * This method must release:
+             *   - exactly one concurrencyLimiter unit
+             *   - open nextLatch
+             * across all it's sync/async execution branches
+             */
+
+            int blockBytes = block.limit();
 
             pendingOps.incrementAndGet();
 
-            latch.setCallback(
-                    () -> {
-                        try {
-                            pendingOps.decrementAndGet();
+            previousLatch.setCallback(() -> {
+                pendingOps.decrementAndGet();
 
-                            // Checking for an error, and throwing exception and cancelling current cycle if it happened
-                            checkException();
+                // Cancelling current task if something is wrong
+                if (!stateOk()) {
+                    // Releasing a permit for the next operation
+                    concurrencyLimiter.release();
+                    // Opening latch for the next IO operation
+                    nextLatch.open();
+                    return;
+                }
 
-                            ongoingIOOps.incrementAndGet();
-                            long ioBegin = System.nanoTime();
-                            channel.write(block, null,
-                                    new CHAbstract() {
-                                        @Override
-                                        public void completed(Integer result, Object attachment) {
-                                            ioDelayNanos.addAndGet(System.nanoTime() - ioBegin);
-                                            ongoingIOOps.decrementAndGet();
+                ongoingIOOps.incrementAndGet();
+                long ioBegin = System.nanoTime();
+                channel.write(block, null,
+                        new CHAbstract(nextLatch) {
+                            @Override
+                            public void completed(Integer result, Object attachment) {
+                                ioDelayNanos.addAndGet(System.nanoTime() - ioBegin);
+                                ongoingIOOps.decrementAndGet();
 
-                                            // Assert
-                                            if (result != blockBytes) {
-                                                exception = new RuntimeException(
-                                                        "Wrong block size. (result = " + result +
-                                                                "; blockSize = " + blockBytes + ")");
-                                                exception.printStackTrace();
-                                            }
+                                // Tracking output size
+                                outputSize.addAndGet(blockBytes);
 
-                                            // Releasing a permit for the next operation
-                                            concurrencyLimiter.release();
-                                            // Opening latch for the next IO operation
-                                            nextLatch.open();
-                                        }
-                                    });
-                        } catch (RuntimeException e) {
-                            // Stopping exception propagation here
-                            exception = e;
-                            // Releasing a permit for the next operation
-                            concurrencyLimiter.release();
-                            // Opening latch for the next IO operation
-                            nextLatch.open();
-                        }
-                    });
+                                // Assert
+                                if (result != blockBytes)
+                                    _ex(new RuntimeException(
+                                            "Wrong block size. (result = " + result +
+                                                    "; blockSize = " + blockBytes + ")"));
+
+                                // Releasing a permit for the next operation
+                                concurrencyLimiter.release();
+
+                                // Opening latch for the next IO operation
+                                nextLatch.open();
+                            }
+                        });
+            });
+        }
+
+        private boolean stateOk() {
+            return !(closed || exception != null);
         }
 
         public synchronized void writeHeader(PrimitivIOBlockHeader header) {
@@ -416,22 +432,23 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             executor.submit(() -> {
                 concurrencyOverhead.addAndGet(System.nanoTime() - submittedTimestamp);
                 try {
+
                     // CPU intensive operation, no IO
                     long start = System.nanoTime();
                     ByteBuffer block = serializeBlock(content);
                     totalSerializationNanos.addAndGet(System.nanoTime() - start);
 
                     scheduleIOOperation(previousLatch, nextLatch, block);
-                } catch (Exception e) {
 
-                    // TODO _ex method like in IBlocks ?
-                    exception = e;
+                } catch (RuntimeException e) { // From serializeBlock
+
+                    _ex(e);
+
                     // Releasing a permit for the next operation to detect the error
                     concurrencyLimiter.release();
                     // Opening latch for the next IO operation
                     nextLatch.open();
 
-                    throw new RuntimeException(e);
                 }
             });
         }
@@ -441,8 +458,6 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             try {
                 if (closed)
                     return;
-
-                closed = true;
 
                 if (!buffer.isEmpty())
                     // Writing leftovers
@@ -454,8 +469,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 // Waiting EOF header to be flushed to the stream
                 sync();
 
-                // Just in case
-                checkException();
+                closed = true;
 
                 if (closeUnderlyingChannel)
                     channel.close();
@@ -480,14 +494,28 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     }
 
     protected abstract class CHAbstract implements CompletionHandler<Integer, Object> {
+        final LambdaLatch nextLambdaLatch;
+
+        /**
+         * @param nextLambdaLatch nonnull required, will be automatically released on error
+         */
+        public CHAbstract(LambdaLatch nextLambdaLatch) {
+            Objects.requireNonNull(nextLambdaLatch);
+            this.nextLambdaLatch = nextLambdaLatch;
+        }
+
         @Override
         public void failed(Throwable exc, Object attachment) {
+            _ex(exc);
+
+            // For correct statistics calculation
             ongoingIOOps.decrementAndGet();
-            exc.printStackTrace();
-            exception = exc;
 
             // Releasing a permit for the next operation
             concurrencyLimiter.release();
+
+            // Releasing all the locks associated with this IO operation
+            nextLambdaLatch.open();
         }
     }
 }

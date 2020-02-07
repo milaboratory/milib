@@ -331,40 +331,41 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
             previousLatch.setCallback(() -> { // IO operation will be enqueued after the previous one finish
 
-                        // Checking the state before consuming subsequent concurrency unit
-                        if (!stateOk()) {
-                            block.eof = true;
-                            block.latch.countDown();
-                            nextLatch.open();
-                            pendingOps.decrementAndGet();
-                            return;
-                        }
+                // Checking the state before consuming subsequent concurrency unit
+                if (!stateOk()) {
+                    block.eof = true;
+                    block.latch.countDown();
+                    nextLatch.open();
+                    pendingOps.decrementAndGet();
+                    return;
+                }
 
-                        concurrencyLimiter.acquire( // and after there will be an execution slot available
-                                () -> {
-                                    pendingOps.decrementAndGet();
+                concurrencyLimiter.acquire(() -> { // and after there will be an execution slot available
+                    pendingOps.decrementAndGet();
 
-                                    // Cancel all block deserialization requests if EOF was detected in the previous block
-                                    // or user closed current reader
-                                    if (!stateOk()) {
-                                        block.eof = true;
-                                        block.latch.countDown();
-                                        nextLatch.open();
-                                        concurrencyLimiter.release();
-                                        return;
-                                    }
-
-                                    block.header = nextHeader; // read as: current header
-                                    nextHeader = null; // for assertion
-                                    if (block.header.isSpecial()) {
-                                        // Releasing special block
-                                        block.latch.countDown();
-                                        _readHeader(nextLatch); // should release one concurrencyLimiter unit
-                                    } else
-                                        _readBlock(block, nextLatch); // should release one concurrencyLimiter unit
-                                });
+                    // Cancel all block deserialization requests if EOF was detected in the previous block
+                    // or user closed current reader
+                    if (!stateOk()) {
+                        block.eof = true;
+                        block.latch.countDown();
+                        nextLatch.open();
+                        concurrencyLimiter.release();
+                        return;
                     }
-            );
+
+                    block.header = nextHeader; // read as: current header
+                    nextHeader = null; // for assertion
+                    if (block.header.isSpecial()) {
+                        // Releasing special block
+                        block.latch.countDown();
+
+                        // Reading next header to determine the size of next block
+                        _readHeader(nextLatch); // should release one concurrencyLimiter unit
+                    } else
+                        _readBlock(block, nextLatch); // should release one concurrencyLimiter unit
+
+                });
+            });
         }
 
         /**
@@ -395,27 +396,23 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         ioDelayNanos.addAndGet(System.nanoTime() - ioStart);
                         ongoingIOOps.decrementAndGet();
 
-                        if (!stateOk()) {
-                            nextLatch.open();
-                            return;
-                        }
+                        if (!stateOk())
+                            return; // see finally for concurrencyLimiter.release()
 
                         // Assert
                         if (result != BLOCK_HEADER_SIZE) {
-                            _ex(new RuntimeException("Premature EOF.")); // see finally for concurrencyLimiter.release()
-                            return;
+                            _ex(new RuntimeException("Premature EOF."));
+                            return; // see finally for concurrencyLimiter.release()
                         }
 
                         inputSize.addAndGet(headerBytes.length);
 
                         setHeader(headerBytes);
-
-                        // Allowing next IO operation
-                        nextLatch.open();
                     } catch (Exception e) {
                         _ex(e); // see finally for concurrencyLimiter.release()
-                        nextLatch.open();
                     } finally {
+                        // Allowing next IO operation
+                        nextLatch.open();
                         // Releasing acquired concurrency unit
                         concurrencyLimiter.release();
                     }
@@ -446,6 +443,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             long ioStart = System.nanoTime();
 
             channel.read(buffer, null, new CHAbstractCL(block, nextLatch) {
+
+                // After inspecting JVM code it seems to be ok to run CPU heavy operations right in the completion handler
+
                 @Override
                 public void completed(Integer result, Object attachment) {
                     // Recording time spent waiting for the io operation completion
@@ -496,9 +496,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
 
         private synchronized void readBlocksIfNeeded() {
-            while (blocks.size() < readAheadBlocks) {
+            while (blocks.size() < readAheadBlocks)
                 readBlock();
-            }
         }
 
         private void setHeader(byte[] headerBytes) {
@@ -557,7 +556,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 _ex(e);
 
                 // Rethrowing exception right away
-                throw new RuntimeException(e);
+                checkException();
             }
         }
 
@@ -612,10 +611,6 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         }
     }
 
-    private void _ex(Throwable ex) {
-        exception = ex;
-    }
-
     protected abstract class CHAbstractCL implements CompletionHandler<Integer, Object> {
         final Block<O> block;
         final LambdaLatch nextLambdaLatch;
@@ -633,6 +628,9 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
         @Override
         public void failed(Throwable exc, Object attachment) {
             _ex(exc);
+
+            // For correct statistics calculation
+            ongoingIOOps.decrementAndGet();
 
             // Releasing a permit for the next operation to detect the error
             // this reader is in unrecoverable faulty state

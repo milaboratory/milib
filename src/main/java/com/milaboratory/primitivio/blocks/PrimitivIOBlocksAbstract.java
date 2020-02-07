@@ -20,7 +20,6 @@ import net.jpountz.xxhash.XXHashFactory;
 
 import java.io.IOException;
 import java.nio.channels.AsynchronousFileChannel;
-import java.nio.channels.CompletionHandler;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -65,9 +64,23 @@ public abstract class PrimitivIOBlocksAbstract {
         this.concurrency = concurrency;
     }
 
+    protected void _ex(Throwable ex) {
+        if (exception != null)
+            return;
+        exception = ex;
+    }
+
+    /**
+     * To be executed from user-facing function.
+     *
+     * Must not be executed inside async handlers.
+     */
     protected void checkException() {
         if (exception != null)
-            throw new RuntimeException(exception);
+            if (exception instanceof RuntimeException)
+                throw (RuntimeException) exception;
+            else
+                throw new RuntimeException(exception);
     }
 
     public static AsynchronousFileChannel createAsyncChannel(ExecutorService executor, Path path,
