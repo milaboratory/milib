@@ -12,7 +12,7 @@ node:
 
 steps:
   - name: Initialize environment for tests
-    image: ubuntu:18.04
+    image: buildpack-deps:18.04-curl
     commands:
       - ./init.sh
 
