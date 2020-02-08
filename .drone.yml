@@ -22,7 +22,7 @@ steps:
         from_secret: sftp-cache-user
       password:
         from_secret: sftp-cache-password
-      path: milib
+      path: /home
       restore: true
       mount:
         - blast
@@ -44,7 +44,7 @@ steps:
         from_secret: sftp-cache-user
       password:
         from_secret: sftp-cache-password
-      path: milib
+      path: /home
       rebuild: true
       mount:
         - blast
@@ -79,6 +79,6 @@ steps:
 
 ---
 kind: signature
-hmac: 27b9d3f435c11864d26b259d4b40e0110e9f5b38dd62de06e53a39372806297d
+hmac: a13307a7505d78943a5e91209e0fc2add8013a34dd4a825507fca932df783fbb
 
 ...
