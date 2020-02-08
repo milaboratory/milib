@@ -31,7 +31,17 @@ steps:
   - name: Initialize environment for tests
     image: buildpack-deps:18.04-curl
     commands:
+      - export
       - ./init.sh
+      - ./init.benchmark.sh
+    secrets:
+      - source: sftp-data-host
+        target: test_secret
+
+  - name: Benchmarks with JDK 8
+    image: maven:3-jdk-8
+    commands:
+      - ./run.benchmarks.sh
 
   - name: Rebuild cache
     image: appleboy/drone-sftp-cache
@@ -79,6 +89,6 @@ steps:
 
 ---
 kind: signature
-hmac: a13307a7505d78943a5e91209e0fc2add8013a34dd4a825507fca932df783fbb
+hmac: 267a902d5aab1cec0bf7679dc762d66a67429d46a9a5aa403d3ba7ee13333632
 
 ...
