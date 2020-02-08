@@ -1,0 +1,50 @@
+---
+kind: pipeline
+type: docker
+name: main
+
+platform:
+  os: linux
+  arch: amd64
+
+node:
+  type: benchmark
+
+steps:
+  - name: Initialize environment for tests
+    image: ubuntu:18.04
+    commands:
+      - ./init.sh
+
+---
+
+kind: pipeline
+type: docker
+name: status_reporting
+
+platform:
+  os: linux
+  arch: amd64
+
+depends_on:
+  - main
+
+trigger:
+  status:
+    - success
+    - failure
+
+steps:
+  - name: Send Telegram Notification
+    image: appleboy/drone-telegram
+    settings:
+      token:
+        from_secret: telegram-token
+      to:
+        from_secret: telegram-chat-id-micore
+
+---
+kind: signature
+hmac: 6246569eb401753a6b86e6fd87f16e27a016e7808b20bba0a561c5a9799073e1
+
+...
