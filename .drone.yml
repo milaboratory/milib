@@ -11,10 +11,44 @@ node:
   type: benchmark
 
 steps:
+  - name: Restore cache
+    image: appleboy/drone-sftp-cache
+    settings:
+      server:
+        from_secret: sftp-cache-host
+      port:
+        from_secret: sftp-cache-port
+      username:
+        from_secret: sftp-cache-user
+      password:
+        from_secret: sftp-cache-password
+      path: milib
+      restore: true
+      mount:
+        - blast
+        - src/test/resources/big
+
   - name: Initialize environment for tests
     image: buildpack-deps:18.04-curl
     commands:
       - ./init.sh
+
+  - name: Rebuild cache
+    image: appleboy/drone-sftp-cache
+    settings:
+      server:
+        from_secret: sftp-cache-host
+      port:
+        from_secret: sftp-cache-port
+      username:
+        from_secret: sftp-cache-user
+      password:
+        from_secret: sftp-cache-password
+      path: milib
+      rebuild: true
+      mount:
+        - blast
+        - src/test/resources/big
 
 ---
 
@@ -45,6 +79,6 @@ steps:
 
 ---
 kind: signature
-hmac: 6246569eb401753a6b86e6fd87f16e27a016e7808b20bba0a561c5a9799073e1
+hmac: 27b9d3f435c11864d26b259d4b40e0110e9f5b38dd62de06e53a39372806297d
 
 ...
