@@ -66,10 +66,15 @@ public abstract class ACommandWithSmartOverwrite extends ACommandWithOutput {
     /** whether to skip execution or not */
     private boolean skipExecution = false;
 
+    /** true if at least 1 of output files has mismatched pipeline */
+    private boolean foundFileWithMismatchedPipeline = false;
+
     @Override
     public void handleExistenceOfOutputFile(String outFileName) {
         if (forceOverwrite)
             // rewrite anyway
+            return;
+        if (overwriteIfRequired && foundFileWithMismatchedPipeline)
             return;
 
         // analysis supposed to be performed now
@@ -105,7 +110,15 @@ public abstract class ACommandWithSmartOverwrite extends ACommandWithOutput {
                 skipExecution = true; // nothing to do in run0, just exit
                 return;
             }
+        } else {
+            if (skipExecution)
+                warn("WARNING!!! Some of output files had matched pipeline, but file " + outFileName +
+                        " has mismatched pipeline. Running " + expectedPipeline.lastConfiguration().actionName() +
+                        " without skipping any output files.");
+            foundFileWithMismatchedPipeline = true;
+            skipExecution = false;
         }
+
         if (overwriteIfRequired)
             return;
         super.handleExistenceOfOutputFile(outFileName);
