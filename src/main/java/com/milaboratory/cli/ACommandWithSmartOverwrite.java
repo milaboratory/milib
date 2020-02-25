@@ -69,6 +69,14 @@ public abstract class ACommandWithSmartOverwrite extends ACommandWithOutput {
     /** true if at least 1 of output files has mismatched pipeline */
     private boolean foundFileWithMismatchedPipeline = false;
 
+    protected boolean isSkipExecution() {
+        return skipExecution;
+    }
+
+    protected boolean isFoundFileWithMismatchedPipeline() {
+        return foundFileWithMismatchedPipeline;
+    }
+
     @Override
     public void handleExistenceOfOutputFile(String outFileName) {
         if (forceOverwrite)
@@ -81,18 +89,19 @@ public abstract class ACommandWithSmartOverwrite extends ACommandWithOutput {
         PipelineConfiguration expectedPipeline = getFullPipelineConfiguration();
         // history written in existing file
         PipelineConfiguration actualPipeline = pipelineConfigurationReader.fromFileOrNull(outFileName,
-                getOutputFileInfo());
+                binaryFileInfoExtractor.getFileInfo(outFileName));
 
         if ((actualPipeline != null) && actualPipeline.compatibleWith(expectedPipeline)) {
             String exists = "File " + outFileName + " already exists and contains correct " +
-                    "binary data obtained from the specified input file. ";
+                    "binary data obtained from the specified input file.";
 
             if (!overwriteIfRequired)
                 throwValidationException(exists +
                         "Use --overwrite-if-required option to skip execution (output file will remain unchanged) " +
                         "or use -f / --force-overwrite option to force overwrite it.", false);
             else {
-                warn("Skipping " + expectedPipeline.lastConfiguration().actionName() + ". " + exists);
+                if (verbose || (getOutputFiles().size() == 1))
+                    warn("Skipping " + expectedPipeline.lastConfiguration().actionName() + ". " + exists);
 
                 // print warns in case different app versions
                 for (int i = 0; i < expectedPipeline.pipelineSteps.length; i++) {
