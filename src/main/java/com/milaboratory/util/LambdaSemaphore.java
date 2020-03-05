@@ -23,8 +23,11 @@ public final class LambdaSemaphore {
 
     /** (number of queued objects) : 32 bits | (number of permits) : 32 bits */
     final AtomicLong state;
+    /** Number of permits this object was initialized with */
+    final int initialPermits;
 
     public LambdaSemaphore(int initialPermits) {
+        this.initialPermits = initialPermits;
         this.state = new AtomicLong(encode(0, initialPermits));
     }
 
@@ -58,14 +61,24 @@ public final class LambdaSemaphore {
         }
     }
 
+    /**
+     * Consumes a permit from this semaphore (if available) and executes the Runnable right away,
+     * if no permits available, the Runnable action is added to the execution queue.
+     */
     public void acquire(Runnable callback) {
         queue.offer(callback);
         state.addAndGet(encode(1, 0));
         executePending();
     }
 
+    /** Adds a permit to this semaphore, and executes first pending action from the queue if there are any. */
     public void release() {
         state.addAndGet(encode(0, 1));
         executePending();
+    }
+
+    /** Returns the number of permits this objects was initially created with. */
+    public int getInitialPermits() {
+        return initialPermits;
     }
 }

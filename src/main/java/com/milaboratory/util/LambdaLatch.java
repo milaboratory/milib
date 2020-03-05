@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Lock-free primitive, allowing to execute specific callback after a certain point is reached in one of the thread.
+ * Lock-free primitive allowing to execute specific callback after a certain point is reached in one of the thread.
  *
  * Lambda is executed either in the thread invoking {@link #open()} or in the thread invoking {@link #setCallback(Runnable)}.
  */

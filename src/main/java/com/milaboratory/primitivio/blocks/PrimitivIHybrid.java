@@ -17,6 +17,7 @@ package com.milaboratory.primitivio.blocks;
 
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivIState;
+import com.milaboratory.util.LambdaSemaphore;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.HasMutablePosition;
 import com.milaboratory.util.io.HasPosition;
@@ -31,11 +32,13 @@ import java.nio.channels.Channels;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
+
+// FIXME update docs with RandomAccess options
 
 /**
  * Helper class to mix synchronous PrimitivI reading with asynchronous / parallel PrimitivIBlocks streaming
@@ -55,35 +58,72 @@ import java.util.function.Function;
 public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable {
     public static final int DEFAULT_PRIMITIVIO_BUFFER_SIZE = 524_288;
 
+    // Base fields
     private boolean closed = false;
     private final ExecutorService executorService;
     private final AsynchronousFileChannelAdapter byteChannel;
 
+    // Settings
+    /** this value is used if readAheadBlocks is not specified */
+    private int defaultReadAheadBlocks = 5;
+    /** Concurrency limiter that will be inherited by all child readers */
+    private final LambdaSemaphore concurrencyLimiter;
+
+    /** Saved PrimitivI state */
     private PrimitivIState primitivIState;
-    private PrimitivI primitivI;
+
+    /** Exclusive PrimitivI */
+    private PrimitivI continuousPrimitivI;
+    /** List of non-exclusive */
+    private final List<PrimitivI> randomAccessPrimitivI = new LinkedList<>();
+    /** If set, exclusive primitivI state will be saved by by this object */
     private boolean saveStateAfterClose;
 
+    /** Used to correctly track intermediate positions in buffered exclusive PrimitivI mode */
     private CountingInputStream countingInputStream;
+    /** Position before initiation of exclusive PrimitivI session (see usage for details) */
     private long savedPosition;
 
-    private final List<PrimitivIBlocks.Reader> randomAccessPrimitivIBlockReaders = new LinkedList<>();
+    /** List of non-exclusive PrimitivIBlock readers */
+    @SuppressWarnings("rawtypes")
+    private final List<PrimitivIBlocks.Reader> randomAccessBlockReaders = new LinkedList<>();
+    /** Exclusive PrimitivIBlock reader */
+    @SuppressWarnings("rawtypes")
     private PrimitivIBlocks.Reader continuousBlocksReader;
 
-    public PrimitivIHybrid(ExecutorService executorService, Path file) throws IOException {
-        this(executorService, file, PrimitivIState.INITIAL);
+    public PrimitivIHybrid(Path file, int concurrency) throws IOException {
+        this(ForkJoinPool.commonPool(), file, PrimitivIState.INITIAL, new LambdaSemaphore(concurrency));
     }
 
-    public PrimitivIHybrid(ExecutorService executorService, Path file, PrimitivIState primitivIState) throws IOException {
+    public PrimitivIHybrid(Path file, PrimitivIState primitivIState, int concurrency) throws IOException {
+        this(ForkJoinPool.commonPool(), file, primitivIState, new LambdaSemaphore(concurrency));
+    }
+
+    public PrimitivIHybrid(Path file, PrimitivIState primitivIState, LambdaSemaphore concurrencyLimiter) throws IOException {
+        this(ForkJoinPool.commonPool(), file, primitivIState, concurrencyLimiter);
+    }
+
+    public PrimitivIHybrid(ExecutorService executorService, Path file, int concurrency) throws IOException {
+        this(executorService, file, PrimitivIState.INITIAL, new LambdaSemaphore(concurrency));
+    }
+
+    public PrimitivIHybrid(ExecutorService executorService, Path file, PrimitivIState primitivIState, LambdaSemaphore concurrencyLimiter) throws IOException {
         this(executorService,
                 new AsynchronousFileChannelAdapter(PrimitivIOBlocksAbstract.createAsyncChannel(
                         executorService, file, new OpenOption[0], StandardOpenOption.READ), 0),
-                primitivIState);
+                primitivIState, concurrencyLimiter);
     }
 
-    private PrimitivIHybrid(ExecutorService executorService, AsynchronousFileChannelAdapter byteChannel, PrimitivIState primitivIState) {
+    private PrimitivIHybrid(ExecutorService executorService, AsynchronousFileChannelAdapter byteChannel, PrimitivIState primitivIState, LambdaSemaphore concurrencyLimiter) {
         this.executorService = executorService;
         this.byteChannel = byteChannel;
         this.primitivIState = primitivIState;
+        this.concurrencyLimiter = concurrencyLimiter;
+    }
+
+    public PrimitivIHybrid setDefaultReadAheadBlocks(int defaultReadAheadBlocks) {
+        this.defaultReadAheadBlocks = defaultReadAheadBlocks;
+        return this;
     }
 
     @Override
@@ -92,58 +132,61 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
         return byteChannel.getPosition();
     }
 
+    /**
+     * See {@link AsynchronousFileChannelAdapter#setPosition(long)}.
+     */
     @Override
     public void setPosition(long newPosition) {
         checkNullState(true, true);
         byteChannel.setPosition(newPosition);
     }
 
+    /** State assertion */
     private void checkNullState(boolean checkClosed, boolean allowRAMode) {
         if (closed && checkClosed)
             throw new IllegalArgumentException("closed");
 
-        Iterator<PrimitivIBlocks.Reader> rIterator = randomAccessPrimitivIBlockReaders.iterator();
-        while (rIterator.hasNext())
-            if (rIterator.next().closed)
-                rIterator.remove();
+        randomAccessBlockReaders.removeIf(reader -> reader.closed);
+
+        randomAccessPrimitivI.removeIf(PrimitivI::isClosed);
 
         if (continuousBlocksReader != null && continuousBlocksReader.closed)
             continuousBlocksReader = null;
 
-        if (primitivI != null && primitivI.isClosed()) {
+        if (continuousPrimitivI != null && continuousPrimitivI.isClosed()) {
             if (saveStateAfterClose)
-                primitivIState = primitivI.getState();
+                primitivIState = continuousPrimitivI.getState();
 
             // recover original stream position after buffered reading
             ((HasMutablePosition) byteChannel).setPosition(savedPosition + countingInputStream.getByteCount());
             countingInputStream = null;
             savedPosition = 0;
 
-            primitivI = null;
+            continuousPrimitivI = null;
         }
 
-        if (!allowRAMode && isInRandomAccessPrimitivIBlocksMode())
-            throw new IllegalStateException("random access primitivI blocks not closed");
-        if (isInPrimitivIBlocksMode())
+        if (!allowRAMode && isInRandomAccessMode())
+            throw new IllegalStateException("random access primitivI blocks or primitivI reader not closed");
+        if (isInBlocksMode())
             throw new IllegalStateException("primitivI blocks not closed");
         if (isInPrimitivIMode())
             throw new IllegalStateException("primitivI not closed");
     }
 
     public synchronized boolean isInPrimitivIMode() {
-        return primitivI != null;
+        return continuousPrimitivI != null;
     }
 
-    public synchronized boolean isInRandomAccessPrimitivIBlocksMode() {
-        return !randomAccessPrimitivIBlockReaders.isEmpty();
-    }
-
-    public synchronized boolean isInPrimitivIBlocksMode() {
+    public synchronized boolean isInBlocksMode() {
         return continuousBlocksReader != null;
     }
 
+    public synchronized boolean isInRandomAccessMode() {
+        return !randomAccessBlockReaders.isEmpty() || !randomAccessPrimitivI.isEmpty();
+    }
+
     public PrimitivI beginPrimitivI() {
-        return beginPrimitivI(false);
+        return beginPrimitivI(true);
     }
 
     public synchronized PrimitivI beginPrimitivI(boolean saveStateAfterClose) {
@@ -151,42 +194,80 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
 
         this.saveStateAfterClose = saveStateAfterClose;
         this.savedPosition = ((HasPosition) byteChannel).getPosition();
-        return primitivI = primitivIState.createPrimitivI(
+        return continuousPrimitivI = primitivIState.createPrimitivI(
                 countingInputStream = new CountingInputStream(
                         new BufferedInputStream(
                                 new CloseShieldInputStream(
                                         Channels.newInputStream(byteChannel)),
                                 DEFAULT_PRIMITIVIO_BUFFER_SIZE)
-                )
-        );
+                ));
+    }
+
+    public synchronized PrimitivI beginRandomAccessPrimitivI(long position) {
+        PrimitivI primitivI = primitivIState.createPrimitivI(
+                new CountingInputStream(
+                        new BufferedInputStream(
+                                new CloseShieldInputStream(
+                                        Channels.newInputStream(byteChannel.createChildAdapter(position))),
+                                DEFAULT_PRIMITIVIO_BUFFER_SIZE)
+                ));
+        randomAccessPrimitivI.add(primitivI);
+        return primitivI;
     }
 
     static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
     static final LZ4FastDecompressor lz4Decompressor = lz4Factory.fastDecompressor();
 
-    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks) {
-        return beginPrimitivIBlocks(clazz, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
+    //region beginPrimitivIBlocks
+
+    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz) {
+        return beginPrimitivIBlocks(clazz, defaultReadAheadBlocks, PrimitivIHeaderActions.skipAll());
     }
 
-    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int concurrency, int readAheadBlocks,
-                                                              Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+    public <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int readAheadBlocks) {
+        return beginPrimitivIBlocks(clazz, readAheadBlocks, PrimitivIHeaderActions.skipAll());
+    }
+
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+        return beginPrimitivIBlocks(clazz, defaultReadAheadBlocks, specialHeaderAction);
+    }
+
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginPrimitivIBlocks(Class<O> clazz, int readAheadBlocks,
+                                                                           Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
         checkNullState(true, false);
-        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
-        return oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction, false);
-    }
-
-    public synchronized <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int concurrency, int readAheadBlocks) {
-        return beginRandomAccessPrimitivIBlocks(clazz, position, concurrency, readAheadBlocks, PrimitivIHeaderActions.skipAll());
-    }
-
-    public synchronized <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int concurrency, int readAheadBlocks,
-                                                                                       Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
-        checkNullState(true, true);
-        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrency, primitivIState, lz4Decompressor);
-        PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel.createChildAdapter(position), readAheadBlocks, specialHeaderAction, false);
-        randomAccessPrimitivIBlockReaders.add(reader);
+        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrencyLimiter, primitivIState, lz4Decompressor);
+        final PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel, readAheadBlocks, specialHeaderAction, false);
+        continuousBlocksReader = reader;
         return reader;
     }
+
+    //endregion
+
+    //region beginRandomAccessPrimitivIBlocks
+
+    public <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position) {
+        return beginRandomAccessPrimitivIBlocks(clazz, position, defaultReadAheadBlocks, PrimitivIHeaderActions.skipAll());
+    }
+
+    public <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int readAheadBlocks) {
+        return beginRandomAccessPrimitivIBlocks(clazz, position, readAheadBlocks, PrimitivIHeaderActions.skipAll());
+    }
+
+    public <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position,
+                                                                          Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+        return beginRandomAccessPrimitivIBlocks(clazz, position, defaultReadAheadBlocks, specialHeaderAction);
+    }
+
+    public synchronized <O> PrimitivIBlocks<O>.Reader beginRandomAccessPrimitivIBlocks(Class<O> clazz, long position, int readAheadBlocks,
+                                                                                       Function<PrimitivIOBlockHeader, PrimitivIHeaderAction<O>> specialHeaderAction) {
+        checkNullState(true, true);
+        final PrimitivIBlocks<O> oPrimitivIBlocks = new PrimitivIBlocks<>(clazz, executorService, concurrencyLimiter, primitivIState, lz4Decompressor);
+        PrimitivIBlocks<O>.Reader reader = oPrimitivIBlocks.newReader(byteChannel.createChildAdapter(position), readAheadBlocks, specialHeaderAction, false);
+        randomAccessBlockReaders.add(reader);
+        return reader;
+    }
+
+    //endregion
 
     @Override
     public void close() throws IOException {
