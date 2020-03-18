@@ -21,14 +21,14 @@ import org.junit.Test;
 public class VersionInfoTest {
     @Test
     public void test1() throws Exception {
-        VersionInfo versionInfo = VersionInfo.getVersionInfo("/util/milib-build.properties");
+        VersionInfo versionInfo = VersionInfo.getVersionInfo("com.milaboratory.util.VersionInfo","/util/milib-build.properties");
         Assert.assertEquals("1.1.3-SNAPSHOT", versionInfo.version);
         Assert.assertEquals("6a235a64bf84b829f28b0ef3cfb03bd41d2e74eb", versionInfo.revision);
     }
 
     @Test
     public void test2() throws Exception {
-        VersionInfo versionInfo = VersionInfo.getVersionInfo("/util/asdafas");
+        VersionInfo versionInfo = VersionInfo.getVersionInfo("","/util/asdafas");
         Assert.assertNull(versionInfo);
     }
 
