@@ -20,6 +20,7 @@ import java.util.function.Function;
 public final class PrimitivIHeaderActions {
     private static final PrimitivIHeaderAction EOF = new PrimitivIHeaderAction() {};
     private static final PrimitivIHeaderAction Skip = new PrimitivIHeaderAction() {};
+    private static final PrimitivIHeaderAction Error = new PrimitivIHeaderAction() {};
 
     private static final class OutputObject<O> implements PrimitivIHeaderAction<O> {
         final O obj;
@@ -43,6 +44,14 @@ public final class PrimitivIHeaderActions {
 
     public static boolean isSkip(PrimitivIHeaderAction action) {
         return Skip == action;
+    }
+
+    public static <O> PrimitivIHeaderAction<O> error() {
+        return Error;
+    }
+
+    public static boolean isError(PrimitivIHeaderAction action) {
+        return Error == action;
     }
 
     public static <O> PrimitivIHeaderAction<O> outputObject(O obj) {
