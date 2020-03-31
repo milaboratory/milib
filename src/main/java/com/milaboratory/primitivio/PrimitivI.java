@@ -196,6 +196,12 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         return value;
     }
 
+    public byte[] readBytes(int n) {
+        byte[] buf = new byte[n];
+        readFully(buf);
+        return buf;
+    }
+
     @Override
     public void readFully(byte[] b) {
         try {
@@ -329,7 +335,7 @@ public final class PrimitivI implements DataInput, AutoCloseable {
 
     @Override
     public void close() {
-        if(closed)
+        if (closed)
             return;
         try {
             closed = true;
