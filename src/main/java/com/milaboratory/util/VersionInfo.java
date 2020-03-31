@@ -102,7 +102,7 @@ public class VersionInfo {
     }
 
     public static VersionInfo getVersionInfoForArtifact(String artifactId) {
-        return getVersionInfo("/" + artifactId + "-build.properties");
+        return getVersionInfo(className(artifactId), "/" + artifactId + "-build.properties");
     }
 
     static String longest(String s1, String s2) {
@@ -116,9 +116,22 @@ public class VersionInfo {
             return s2;
     }
 
-    static VersionInfo getVersionInfo(String resourceName) {
+    static String className(String resourceName) {
+        switch (resourceName) {
+            case "milib":
+                return "com.milaboratory.util.VersionInfo";
+            case "mixcr":
+                return "com.milaboratory.mixcr.util.MiXCRVersionInfo";
+            case "repseqio":
+                return "io.repseq.util.RepseqIOVersionInfo";
+            default:
+                return resourceName;
+        }
+    }
+
+    static VersionInfo getVersionInfo(String className, String resourceName) {
         Properties properties = new Properties();
-        try (InputStream is = VersionInfo.class.getResourceAsStream(resourceName)) {
+        try (InputStream is = Class.forName(className).getResourceAsStream(resourceName)) {
             properties.load(is);
         } catch (Exception ex) {
             return null;
