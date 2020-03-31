@@ -340,8 +340,12 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             // Concurrency limits the whole block lifecycle (serialization + IO)
             // so operations will be throttled both on IO and CPU
             //
-            // This operation will block caller thread (this is the one out of two blocking operations for the whole
-            // PrimitivIOBlocks suite)
+            // This operation will block caller thread if concurrency unit is not available at the moment
+            // (this is the one out of the two blocking operations for the whole PrimitivIOBlocks suite)
+            //
+            // This blocking provides back-pressure for the writer thread in case of:
+            //   - slow IO
+            //   - serialization threads cant keep up with the demand for block serialization
             concurrencyLimiter.acquireUninterruptibly();
 
             // Checking for errors before and after throttling

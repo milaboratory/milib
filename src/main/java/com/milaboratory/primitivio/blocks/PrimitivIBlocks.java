@@ -545,7 +545,10 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                             currentBlock.port = CUtils.EMPTY_OUTPUT_PORT;
                         else if (isStopReading(action))
                             close();
-                        else if ((obj = tryExtractOutputObject(action)) != null)
+                        else if (isError(action)) {
+                            exception = new RuntimeException("Header Error.");
+                            close();
+                        } else if ((obj = tryExtractOutputObject(action)) != null)
                             currentBlock.port = CUtils.asOutputPort(obj);
                         else
                             throw new RuntimeException("Unknown action type: " + action);
