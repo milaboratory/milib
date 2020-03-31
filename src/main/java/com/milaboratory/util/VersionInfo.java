@@ -124,6 +124,8 @@ public class VersionInfo {
                 return "com.milaboratory.mixcr.util.MiXCRVersionInfo";
             case "repseqio":
                 return "io.repseq.util.RepseqIOVersionInfo";
+            case "minnn":
+                return "com.milaboratory.minnn.util.MinnnVersionInfo";
             default:
                 return resourceName;
         }
