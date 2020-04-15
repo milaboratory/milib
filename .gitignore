@@ -22,3 +22,4 @@ release.properties
 out
 /blast
 src/test/resources/big
+benchmark-data
