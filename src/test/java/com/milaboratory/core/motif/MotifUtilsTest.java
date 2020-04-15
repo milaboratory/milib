@@ -16,7 +16,7 @@
 package com.milaboratory.core.motif;
 
 import com.milaboratory.core.sequence.NucleotideSequence;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well19937c;
 import org.junit.Test;

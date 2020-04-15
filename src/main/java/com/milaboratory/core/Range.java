@@ -109,6 +109,26 @@ public final class Range implements java.io.Serializable, Comparable<Range> {
     }
 
     /**
+     * Returns new range object with updated upper value
+     *
+     * @param newUpper new upper value
+     * @return new range object with updated upper value
+     */
+    public Range setUpper(int newUpper) {
+        return new Range(lower, newUpper, reversed);
+    }
+
+    /**
+     * Returns new range object with updated lower value
+     *
+     * @param newLower new lower value
+     * @return new range object with updated lower value
+     */
+    public Range setLower(int newLower) {
+        return new Range(newLower, upper, reversed);
+    }
+
+    /**
      * Return reversed range.
      *
      * @return reversed range

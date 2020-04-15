@@ -239,10 +239,17 @@ public final class QualityTrimmer {
                     direction, false, parameters));
 
             if (Math.abs(islandEnd - islandStart) >= parameters.getWindowSize())
-                if (direction == +1)
-                    ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
-                else
-                    ranges.add(0, new Range(islandEnd, islandStart, isReversed));
+                if (direction == +1) {
+                    if (!ranges.isEmpty() && ranges.get(ranges.size() - 1).getUpper() == islandStart + 1)
+                        ranges.set(ranges.size() - 1, ranges.get(ranges.size() - 1).setUpper(islandEnd + 1));
+                    else
+                        ranges.add(new Range(islandStart + 1, islandEnd + 1, isReversed));
+                } else {
+                    if (!ranges.isEmpty() && ranges.get(ranges.size() - 1).getLower() == islandStart)
+                        ranges.set(ranges.size() - 1, ranges.get(ranges.size() - 1).setLower(islandEnd));
+                    else
+                        ranges.add(0, new Range(islandEnd, islandStart, isReversed));
+                }
 
             from = islandEnd + direction;
         }

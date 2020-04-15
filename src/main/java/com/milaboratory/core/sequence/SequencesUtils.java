@@ -15,6 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
+import com.milaboratory.core.Range;
 import com.milaboratory.util.Bit2Array;
 import com.milaboratory.util.HashFunctions;
 
@@ -160,5 +161,25 @@ public final class SequencesUtils {
         for (int i = 0; i < bar.size(); i++)
             seq.append((byte) bar.get(i));
         return seq.createAndDestroy();
+    }
+
+    /**
+     * Searches for the longest homopolymer
+     */
+    public static Range findLongestHomopolymer(Sequence<?> seq) {
+        Range longest = null;
+        int code = -1, hpLength = 0, maxLength = 0;
+        for (int j = 0; j < seq.size(); j++) {
+            if (code != seq.codeAt(j)) {
+                code = seq.codeAt(j);
+                hpLength = 0;
+            }
+            ++hpLength;
+            if (hpLength > maxLength) {
+                maxLength = hpLength;
+                longest = new Range(j - hpLength + 1, j + 1);
+            }
+        }
+        return longest;
     }
 }
