@@ -1,4 +1,0 @@
-Fix quality trimming report json
-Added CIGAR string for alignments
-Implementation of barcodes generator in `SequencesUtils`
-Upgrade to picocli 3

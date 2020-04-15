@@ -1,4 +1,13 @@
 
+MiLib 1.13 (15 Apr 2020)
+========================
+
+-- Fix quality trimming report json
+-- Added CIGAR string for alignments
+-- Implementation of barcodes generator in `SequencesUtils`
+-- Upgrade to picocli 3
+
+
 MiLib 1.12 (19 Nov 2019)
 ========================
 
