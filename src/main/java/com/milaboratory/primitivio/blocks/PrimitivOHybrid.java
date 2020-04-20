@@ -128,7 +128,11 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
     }
 
     public synchronized PrimitivO beginPrimitivO() {
-        return beginPrimitivO(false);
+        return beginPrimitivO(false, DEFAULT_PRIMITIVIO_BUFFER_SIZE);
+    }
+
+    public synchronized PrimitivO beginPrimitivO(boolean saveStateAfterClose) {
+        return beginPrimitivO(saveStateAfterClose, DEFAULT_PRIMITIVIO_BUFFER_SIZE);
     }
 
     /**
@@ -138,7 +142,7 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
      *                            all subsequent block / non-block writers will inherit the state
      * @return
      */
-    public synchronized PrimitivO beginPrimitivO(boolean saveStateAfterClose) {
+    public synchronized PrimitivO beginPrimitivO(boolean saveStateAfterClose, int bufferSize) {
         checkNullState(true);
 
         this.saveStateAfterClose = saveStateAfterClose;
@@ -147,7 +151,7 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
                 countingOutputStream = new CountingOutputStream( // Used to recover position of base stream
                         new BufferedOutputStream( // Buffering here is even more important than with normal OutputStreams as channel synchronization is expensive
                                 new CloseShieldOutputStream( // Preventing channel close via OutputStream.close by CloseShieldOutputStream
-                                        Channels.newOutputStream(byteChannel)), DEFAULT_PRIMITIVIO_BUFFER_SIZE)
+                                        Channels.newOutputStream(byteChannel)), bufferSize)
                 ));
     }
 
