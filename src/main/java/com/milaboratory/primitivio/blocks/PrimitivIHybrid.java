@@ -186,10 +186,14 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
     }
 
     public PrimitivI beginPrimitivI() {
-        return beginPrimitivI(true);
+        return beginPrimitivI(true, DEFAULT_PRIMITIVIO_BUFFER_SIZE);
     }
 
-    public synchronized PrimitivI beginPrimitivI(boolean saveStateAfterClose) {
+    public PrimitivI beginPrimitivI(boolean saveStateAfterClose) {
+        return beginPrimitivI(saveStateAfterClose, DEFAULT_PRIMITIVIO_BUFFER_SIZE);
+    }
+
+    public synchronized PrimitivI beginPrimitivI(boolean saveStateAfterClose, int bufferSize) {
         checkNullState(true, false);
 
         this.saveStateAfterClose = saveStateAfterClose;
@@ -198,8 +202,7 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
                 countingInputStream = new CountingInputStream(
                         new BufferedInputStream(
                                 new CloseShieldInputStream(
-                                        Channels.newInputStream(byteChannel)),
-                                DEFAULT_PRIMITIVIO_BUFFER_SIZE)
+                                        Channels.newInputStream(byteChannel)), bufferSize)
                 ));
     }
 
