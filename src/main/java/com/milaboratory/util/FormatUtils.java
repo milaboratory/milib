@@ -37,7 +37,7 @@ public class FormatUtils {
     public static final long NANOSECONDS_IN_SECOND = 1_000_000_000;
 
     public static String percent(double numerator, double denominator) {
-        return PERCENT_FORMAT.format(100.0 * numerator / denominator) + "%";
+        return PERCENT_FORMAT.format((denominator == 0) ? 0 : 100.0 * numerator / denominator) + "%";
     }
 
     public static String nanoTimeToString(long t) {
