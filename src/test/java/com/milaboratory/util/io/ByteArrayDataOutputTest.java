@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 MiLaboratory.com
+ * Copyright 2019 MiLaboratory, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.util;
+package com.milaboratory.util.io;
 
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.RandomGenerator;
@@ -75,7 +75,9 @@ public class ByteArrayDataOutputTest {
                     d.writeBoolean(b1);
                     break;
                 case 8:
-                    String s = rdg.nextHexString(rg.nextInt(600) + 1) + " Юникод наше все!";
+                    String s = rdg.nextHexString(rg.nextInt(600) + 1);
+                    if (rg.nextBoolean())
+                        s += " Юникод наше все!";
                     values[i] = s;
                     d.writeUTF(s);
                     break;

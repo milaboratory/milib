@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 MiLaboratory.com
+ * Copyright 2019 MiLaboratory, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.util;
+package com.milaboratory.util.io;
 
 import java.io.DataOutput;
 import java.nio.ByteBuffer;
@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
  * writeUTF uses non-DataOutputStream-compatible results.
  */
 public final class ByteArrayDataOutput implements DataOutput {
-    public static final int DEFUALT_INITIAL_SIZE = 32;
+    public static final int DEFAULT_INITIAL_SIZE = 32;
     public static final int DEFAULT_GROW_MULTIPLIER = 3;
     public static final int DEFAULT_GROW_DIVISOR = 2;
     public static final int DEFAULT_GROW_SUMMAND = 32;
@@ -42,7 +42,7 @@ public final class ByteArrayDataOutput implements DataOutput {
     private ByteBuffer byteBuffer;
 
     public ByteArrayDataOutput() {
-        this(DEFUALT_INITIAL_SIZE, DEFAULT_GROW_MULTIPLIER, DEFAULT_GROW_DIVISOR, DEFAULT_GROW_SUMMAND, DEFAULT_GROW_MAXIMUM_CHUNK);
+        this(DEFAULT_INITIAL_SIZE, DEFAULT_GROW_MULTIPLIER, DEFAULT_GROW_DIVISOR, DEFAULT_GROW_SUMMAND, DEFAULT_GROW_MAXIMUM_CHUNK);
     }
 
     public ByteArrayDataOutput(int initialSize) {
@@ -219,7 +219,6 @@ public final class ByteArrayDataOutput implements DataOutput {
             c = str.charAt(i);
             if ((c >= 0x0001) && (c <= 0x007F)) {
                 byteBuffer.put((byte) c);
-
             } else if (c > 0x07FF) {
                 byteBuffer.put((byte) (0xE0 | ((c >> 12) & 0x0F)));
                 byteBuffer.put((byte) (0x80 | ((c >> 6) & 0x3F)));

@@ -15,10 +15,13 @@
  */
 package com.milaboratory.primitivio;
 
+import org.apache.commons.io.input.NullInputStream;
+
 import java.io.*;
 import java.util.ArrayList;
 
 public final class PrimitivI implements DataInput, AutoCloseable {
+    boolean closed = false;
     final DataInput input;
     final SerializersManager manager;
     final ArrayList<Object> knownReferences;
@@ -27,13 +30,18 @@ public final class PrimitivI implements DataInput, AutoCloseable {
     int knownReferencesCount = 0;
     int depth = 0;
 
+    public PrimitivI() {
+        this(new NullInputStream(0));
+    }
+
     public PrimitivI(InputStream input) {
         this(new DataInputStream(input),
                 new SerializersManager());
     }
 
     public PrimitivI(DataInput input) {
-        this(input, new SerializersManager());
+        this(input,
+                new SerializersManager());
     }
 
     public PrimitivI(DataInput input, SerializersManager manager) {
@@ -49,6 +57,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         this.knownReferencesCount = knownReferences.size();
     }
 
+    public boolean isClosed() {
+        return closed;
+    }
+
     public SerializersManager getSerializersManager() {
         return manager;
     }
@@ -59,6 +71,24 @@ public final class PrimitivI implements DataInput, AutoCloseable {
      */
     public PrimitivIState getState() {
         return new PrimitivIState(manager, knownReferences, knownObjects);
+    }
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivI substituteStream(InputStream input) {
+        return substituteStream((DataInput) new DataInputStream(input));
+    }
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivI substituteStream(DataInput input) {
+        if (depth != 0)
+            throw new IllegalStateException("Can't substitute stream during serialization.");
+        return new PrimitivI(input, manager, knownReferences, knownObjects);
     }
 
     public void putKnownObject(Object ref) {
@@ -164,6 +194,12 @@ public final class PrimitivI implements DataInput, AutoCloseable {
             shift += 7;
         } while ((tmp & 0x80) != 0);
         return value;
+    }
+
+    public byte[] readBytes(int n) {
+        byte[] buf = new byte[n];
+        readFully(buf);
+        return buf;
     }
 
     @Override
@@ -299,7 +335,10 @@ public final class PrimitivI implements DataInput, AutoCloseable {
 
     @Override
     public void close() {
+        if (closed)
+            return;
         try {
+            closed = true;
             if (input instanceof Closeable)
                 ((Closeable) input).close();
         } catch (IOException e) {
