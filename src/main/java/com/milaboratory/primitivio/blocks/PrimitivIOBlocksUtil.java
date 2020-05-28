@@ -15,9 +15,14 @@
  */
 package com.milaboratory.primitivio.blocks;
 
-import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 
 public final class PrimitivIOBlocksUtil {
     private PrimitivIOBlocksUtil() {
+    }
+
+    public static ExecutorService defaultExecutorService() {
+        return ForkJoinPool.commonPool();
     }
 }

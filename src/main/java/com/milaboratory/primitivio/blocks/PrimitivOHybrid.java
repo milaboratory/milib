@@ -66,6 +66,10 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
 
     private PrimitivOBlocks.Writer primitivOBlocks;
 
+    public PrimitivOHybrid(Path file) throws IOException {
+        this(PrimitivIOBlocksUtil.defaultExecutorService(), file, PrimitivOState.INITIAL);
+    }
+
     public PrimitivOHybrid(ExecutorService executorService, Path file) throws IOException {
         this(executorService, file, PrimitivOState.INITIAL);
     }
@@ -114,7 +118,7 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
 
     @Override
     public void setPosition(long newPosition) {
-        if(isInPrimitivOMode() || isInPrimitivOBlocksMode())
+        if (isInPrimitivOMode() || isInPrimitivOBlocksMode())
             throw new IllegalStateException();
         ((HasMutablePosition) byteChannel).setPosition(newPosition);
     }
