@@ -294,6 +294,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             this.readAheadBlocks = readAheadBlocks;
             this.specialHeaderAction = specialHeaderAction;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
+            activeRWs.incrementAndGet();
             readHeader();
             readBlocksIfNeeded();
         }
@@ -589,6 +590,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 return;
 
             closed = true;
+
+            activeRWs.decrementAndGet();
 
             // Await all IO operations complete by syncing on the last block
             Block<O> lastBlock = blocks.peekLast();

@@ -49,7 +49,10 @@ public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
     @Override
     public String toString() {
         long totalTimeNano = totalSerializationNanos + ioDelayNanos + concurrencyOverhead;
-        long concurrencyAdjustedNanos = (totalSerializationNanos + ioDelayNanos) / concurrency + concurrencyOverhead;
+        int concurrency = this.concurrency;
+        if (concurrency == 0)
+            concurrency = 1;
+        long concurrencyAdjustedNanos = (totalSerializationNanos + ioDelayNanos) / this.concurrency + concurrencyOverhead;
         return "Wall clock time: " + nanoTimeToString(wallClockTime) + "\n" +
                 "Total CPU time: " + nanoTimeToString(totalSerializationNanos) + "\n" +
                 "Serialization time: " + nanoTimeToString(serializationNanos) + " (" + percent(serializationNanos, totalSerializationNanos) + ")\n" +
@@ -59,7 +62,7 @@ public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
                 "Concurrency overhead: " + nanoTimeToString(concurrencyOverhead) + "\n" +
                 "Uncompressed size: " + bytesToString(uncompressedBytes) + "\n" +
                 "Output size: " + bytesToString(outputSize) + " (compression = " + percent(outputSize, uncompressedBytes) + ")\n" +
-                "IO speed: " + bytesToString(NANOSECONDS_IN_SECOND * outputSize / ioDelayNanos) + "/s\n" +
+                "IO speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * outputSize, ioDelayNanos) + "/s\n" +
                 "Concurrency adjusted uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, concurrencyAdjustedNanos) + "/s\n" +
                 "Actual uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, wallClockTime) + "/s\n" +
                 "Actual speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * outputSize, wallClockTime) + "/s\n" +

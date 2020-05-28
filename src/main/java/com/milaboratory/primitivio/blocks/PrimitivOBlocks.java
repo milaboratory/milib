@@ -254,6 +254,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         Writer(AsynchronousByteChannel channel, boolean closeUnderlyingChannel) {
             this.channel = channel;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
+            activeRWs.incrementAndGet();
         }
 
         public PrimitivOBlocks<O> getParent() {
@@ -474,6 +475,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 sync();
 
                 closed = true;
+                activeRWs.decrementAndGet();
 
                 if (closeUnderlyingChannel)
                     channel.close();

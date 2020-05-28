@@ -31,8 +31,9 @@ import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.Channels;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
+
+import static java.nio.file.StandardOpenOption.*;
 
 /**
  * Helper class to mix synchronous PrimitivO writing with asynchronous / parallel PrimitivOBlocks serialization
@@ -76,7 +77,7 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
 
     public PrimitivOHybrid(ExecutorService executorService, Path file, PrimitivOState state) throws IOException {
         this(executorService, new AsynchronousFileChannelAdapter(PrimitivIOBlocksAbstract.createAsyncChannel(
-                executorService, file, new OpenOption[0], StandardOpenOption.CREATE, StandardOpenOption.WRITE), 0),
+                executorService, file, new OpenOption[0], CREATE, WRITE, TRUNCATE_EXISTING), 0),
                 state);
     }
 
