@@ -27,20 +27,13 @@ public interface ClusteringStrategy<T, S extends Sequence<S>>
     boolean canAddToCluster(Cluster<T> cluster, T minorObject,
                             NeighborhoodIterator<S, T[]> iterator);
 
-    @Deprecated
-    default TreeSearchParameters getSearchParameters() {
-        return null;
-    }
-
     /**
      * Must return tree search parameters to search potential children for the cluster.
      *
      * @param cluster target cluster
      * @return tree search parameters
      */
-    default TreeSearchParameters getSearchParameters(Cluster<T> cluster) {
-        return getSearchParameters();
-    }
+    TreeSearchParameters getSearchParameters(Cluster<T> cluster);
 
     /**
      * Should return mutation guide to search potential children for the cluster.
