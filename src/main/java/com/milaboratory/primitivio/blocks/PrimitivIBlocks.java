@@ -529,7 +529,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 // Blocking wait (the only blocking wait operation in this class),
                 // engaged in case the oldest block is still in IO or parsing stage
                 //
-                // This is the one out of two blocking operations for the whole PrimitivIOBlocks suite
+                // This is one out of two blocking operations for the whole PrimitivIOBlocks suite
                 block.latch.await();
 
                 checkException();

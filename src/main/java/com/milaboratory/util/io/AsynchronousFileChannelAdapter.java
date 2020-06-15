@@ -158,8 +158,8 @@ public final class AsynchronousFileChannelAdapter implements AsynchronousByteCha
 
         @Override
         public void completed(Integer result, A attachment) {
-            operationEnded();
             positionCounter.addAndGet(result);
+            operationEnded();
             innerHandler.completed(result, attachment);
         }
 
