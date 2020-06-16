@@ -16,11 +16,11 @@
 package com.milaboratory.primitivio.blocks;
 
 public class PrimitivIOBlocksStatsAbstract {
-    protected final long
+    public final long
             wallClockTime,
             blockCount,
             objectCount;
-    protected final int
+    public final int
             ongoingSerdes,
             ongoingIOOps,
             pendingOps,

@@ -49,6 +49,10 @@ public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
         this.outputSize = outputSize;
     }
 
+    public long getAverageUncompressedObjectSize() {
+        return uncompressedBytes / objectCount;
+    }
+
     @Override
     public String toString() {
         long totalTimeNano = totalSerializationNanos + ioDelayNanos + concurrencyOverhead;
