@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HashCollateTest {
     @Test
@@ -43,13 +44,17 @@ public class HashCollateTest {
 
         RandomGenerator rg = new Well19937c(1234);
 
+        int N = 10000000;
+        AtomicInteger unorderedHash = new AtomicInteger(0);
         OutputPort<NucleotideSequence> seqs = new OutputPort<NucleotideSequence>() {
             @Override
             public synchronized NucleotideSequence take() {
-                return seqsList.get(rg.nextInt(seqsList.size()));
+                NucleotideSequence seq = seqsList.get(rg.nextInt(seqsList.size()));
+                unorderedHash.accumulateAndGet(seq.hashCode(), (left, right) -> left + right);
+                return seq;
             }
         };
-        seqs = new CountLimitingOutputPort<>(seqs, 10000000);
+        seqs = new CountLimitingOutputPort<>(seqs, N);
 
         File dir = TempFileManager.getTempDir();
         System.out.println(dir);
@@ -63,10 +68,12 @@ public class HashCollateTest {
         Comparator<NucleotideSequence> ec = c.effectiveComparator();
 
         OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long p = 0;
+        long actualN = 0;
+        int uh = unorderedHash.get();
         NucleotideSequence previous = null;
         for (NucleotideSequence ns : CUtils.it(port)) {
-            ++p;
+            ++actualN;
+            uh -= ns.hashCode();
             if (previous != null) {
                 int compare = ec.compare(previous, ns);
                 Assert.assertTrue(compare <= 0);
@@ -74,7 +81,8 @@ public class HashCollateTest {
             previous = ns;
         }
 
-        System.out.println(p);
+        Assert.assertEquals(N, actualN);
+        Assert.assertEquals(0, uh);
 
         c.printStat();
     }
