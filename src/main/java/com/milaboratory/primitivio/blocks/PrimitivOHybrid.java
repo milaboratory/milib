@@ -20,8 +20,6 @@ import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.HasMutablePosition;
 import com.milaboratory.util.io.HasPosition;
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
 import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.io.output.CountingOutputStream;
 
@@ -160,13 +158,10 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
                 ));
     }
 
-    static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
-    static final LZ4Compressor lz4Compressor = lz4Factory.fastCompressor();
-
     public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
         checkNullState(true);
         final PrimitivOBlocks<O> oPrimitivOBlocks = new PrimitivOBlocks<>(executorService, concurrency,
-                primitivOState, blockSize, lz4Compressor);
+                primitivOState, blockSize, PrimitivIOBlocksUtil.defaultLZ4Compressor());
         //noinspection unchecked
         return primitivOBlocks = oPrimitivOBlocks.newWriter(byteChannel, false);
     }

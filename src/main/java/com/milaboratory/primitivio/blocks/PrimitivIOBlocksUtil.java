@@ -15,6 +15,10 @@
  */
 package com.milaboratory.primitivio.blocks;
 
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 
@@ -24,5 +28,17 @@ public final class PrimitivIOBlocksUtil {
 
     public static ExecutorService defaultExecutorService() {
         return ForkJoinPool.commonPool();
+    }
+
+    private static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
+    private static final LZ4Compressor lz4Compressor = lz4Factory.fastCompressor();
+    private static final LZ4FastDecompressor lz4Decompressor = lz4Factory.fastDecompressor();
+
+    public static LZ4Compressor defaultLZ4Compressor() {
+        return lz4Compressor;
+    }
+
+    public static LZ4FastDecompressor defaultLZ4Decompressor() {
+        return lz4Decompressor;
     }
 }
