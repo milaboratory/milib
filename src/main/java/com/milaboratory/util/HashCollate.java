@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicLongArray;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -42,6 +43,7 @@ public class HashCollate<T> {
 
     private final Class<T> clazz;
     private final Comparator<T> comparator;
+    private final ToIntFunction<T> hash;
     private final Path filePrefix;
     private final int bitsPerStep;
     private final long memoryBudget;
@@ -58,27 +60,31 @@ public class HashCollate<T> {
             timeInFinalSorting2 = new AtomicLong(),
             timeInFinalSorting3 = new AtomicLong();
 
-    public HashCollate(Class<T> clazz, Comparator<T> comparator,
+    public HashCollate(Class<T> clazz,
+                       ToIntFunction<T> hash, Comparator<T> comparator,
                        Path filePrefix, int bitsPerStep,
                        int readerConcurrency, int writerConcurrency) {
-        this(clazz, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
+        this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
                 PrimitivOState.INITIAL, PrimitivIState.INITIAL);
     }
 
-    public HashCollate(Class<T> clazz, Comparator<T> comparator,
+    public HashCollate(Class<T> clazz,
+                       ToIntFunction<T> hash, Comparator<T> comparator,
                        Path filePrefix, int bitsPerStep,
                        int readerConcurrency, int writerConcurrency,
                        PrimitivOState oState, PrimitivIState iState) {
-        this(clazz, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
+        this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
                 oState, iState, 1 << 28 /* 256 Mb */);
     }
 
-    public HashCollate(Class<T> clazz, Comparator<T> comparator,
+    public HashCollate(Class<T> clazz,
+                       ToIntFunction<T> hash, Comparator<T> comparator,
                        Path filePrefix, int bitsPerStep,
                        int readerConcurrency, int writerConcurrency,
                        PrimitivOState oState, PrimitivIState iState,
                        long memoryBudget) {
         this.clazz = clazz;
+        this.hash = hash;
         this.comparator = comparator;
         if (Files.isDirectory(filePrefix))
             filePrefix = filePrefix.resolve("a");
@@ -92,11 +98,11 @@ public class HashCollate<T> {
     }
 
     public Comparator<T> effectiveComparator() {
-        return new HComparator<>(comparator);
+        return new HComparator<>(hash, comparator);
     }
 
-    public static <T> Comparator<T> effectiveComparator(Comparator<T> comparator) {
-        return new HComparator<>(comparator);
+    public static <T> Comparator<T> effectiveComparator(ToIntFunction<T> hash, Comparator<T> comparator) {
+        return new HComparator<>(hash, comparator);
     }
 
     public OutputPortCloseable<T> port(OutputPort<T> input) {
@@ -174,7 +180,7 @@ public class HashCollate<T> {
                 long objectSize = this.objectSize;
                 int recheckCounter = sizeRecheckPeriod;
                 while ((obj = source.take()) != null) {
-                    int bucketId = bitMask & (obj.hashCode() >>> bitOffset);
+                    int bucketId = bitMask & (hash.applyAsInt(obj) >>> bitOffset);
                     blocks[bucketId].add(obj);
                     objectsCount++;
 
@@ -273,14 +279,21 @@ public class HashCollate<T> {
             if (!initialized.get())
                 throw new IllegalStateException();
 
-            if (bucketSizes[i] * objectSize > memoryBudget) { // requires additional collate HDD based collate procedure
-                int newOffset = bitOffset - this.bitCount;
+            if (bucketSizes[i] * objectSize > memoryBudget) {
+
+                // <- requires additional HDD based collate procedure
+
+                // Bits to fit each sub-bucket into budget
+                int nextBitCount = 64 - Long.numberOfLeadingZeros(bucketSizes[i] * objectSize / memoryBudget - 1);
+                nextBitCount += 1;
+                nextBitCount = Math.min(nextBitCount, bitCount);
+
+                int newOffset = bitOffset - nextBitCount;
                 if (newOffset < 0)
                     throw new IllegalStateException("Can't fit into memory budget.");
 
-                Collater c = new Collater(getBucketRawPort(i),
-                        getBucketPath(i),
-                        bitCount, newOffset, objectSize, false);
+                Collater c = new Collater(getBucketRawPort(i), getBucketPath(i),
+                        nextBitCount, newOffset, objectSize, false);
 
                 // Synchronous bucket separation
                 c.run();
@@ -296,7 +309,7 @@ public class HashCollate<T> {
                 ArrayList<T>[] fBuckets = new ArrayList[fNumberOfBuckets];
                 for (T t : CUtils.it(getBucketRawPort(i))) {
                     long start = System.nanoTime();
-                    int bucket = (t.hashCode() >>> fOffset) & fBitMask;
+                    int bucket = fBitMask & (hash.applyAsInt(t) >>> fOffset);
                     ArrayList<T> fBucket = fBuckets[bucket];
                     if (fBucket == null)
                         fBuckets[bucket] = fBucket = new ArrayList<>();
@@ -305,12 +318,15 @@ public class HashCollate<T> {
                 }
 
                 long start = System.nanoTime();
-                for (ArrayList<T> fBucket : fBuckets)
-                    if (fBucket != null)
-                        if (fOffset == 0)
-                            fBucket.sort(comparator);
-                        else
-                            fBucket.sort(effectiveComparator());
+                Arrays.stream(fBuckets).parallel().forEach(
+                        fBucket -> {
+                            if (fBucket != null)
+                                if (fOffset == 0)
+                                    fBucket.sort(comparator);
+                                else
+                                    fBucket.sort(effectiveComparator());
+                        }
+                );
                 timeInFinalSorting2.addAndGet(System.nanoTime() - start);
 
                 start = System.nanoTime();
@@ -318,9 +334,6 @@ public class HashCollate<T> {
                         .flatMap(d -> d == null ? Stream.empty() : d.stream())
                         .collect(Collectors.toList());
                 timeInFinalSorting3.addAndGet(System.nanoTime() - start);
-
-                // Final sorting // TODO may be slow, additional round of in-memory hash collation ???
-                // list.sort(effectiveComparator());
 
                 // Returning in-memory stream
                 OutputPort<T> op = CUtils.asOutputPort(list);
@@ -342,13 +355,16 @@ public class HashCollate<T> {
             return new OutputPortCloseable<T>() {
                 int nextBucket = 1;
                 OutputPortCloseable<T> currentPort = getPortForBucket(0);
+                OutputPortCloseable<T> nextPort = getPortForBucket(1);
 
                 @Override
                 public synchronized T take() {
-                    T obj = currentPort.take();
-                    while (obj == null && nextBucket < numberOfBuckets) {
-                        currentPort = getPortForBucket(nextBucket++);
-                        obj = currentPort.take();
+                    T obj;
+                    while ((obj = currentPort.take()) == null && nextBucket < numberOfBuckets) {
+                        currentPort = nextPort;
+                        nextBucket++;
+                        if (nextBucket < numberOfBuckets)
+                            nextPort = getPortForBucket(nextBucket);
                     }
                     return obj;
                 }
@@ -363,15 +379,17 @@ public class HashCollate<T> {
     }
 
     private static final class HComparator<T> implements Comparator<T> {
+        final ToIntFunction<T> hash;
         final Comparator<T> comparator;
 
-        public HComparator(Comparator<T> comparator) {
+        public HComparator(ToIntFunction<T> hash, Comparator<T> comparator) {
+            this.hash = hash;
             this.comparator = comparator;
         }
 
         @Override
         public int compare(T o1, T o2) {
-            int c = Integer.compareUnsigned(o1.hashCode(), o2.hashCode());
+            int c = Integer.compareUnsigned(hash.applyAsInt(o1), hash.applyAsInt(o2));
             if (c != 0)
                 return c;
             return comparator.compare(o1, o2);
