@@ -44,7 +44,7 @@ public class HashCollateTest {
 
         RandomGenerator rg = new Well19937c(1234);
 
-        int N = 10000000;
+        int N = 5000000;
         AtomicInteger unorderedHash = new AtomicInteger(0);
         OutputPort<NucleotideSequence> seqs = new OutputPort<NucleotideSequence>() {
             @Override
@@ -63,7 +63,7 @@ public class HashCollateTest {
                 NucleotideSequence.class,
                 Objects::hashCode, Comparator.naturalOrder(),
                 dir.toPath(), 5, 4, 6,
-                PrimitivOState.INITIAL, PrimitivIState.INITIAL, 1 << 25);
+                PrimitivOState.INITIAL, PrimitivIState.INITIAL, 1 << 23);
 
         Comparator<NucleotideSequence> ec = c.effectiveComparator();
 
