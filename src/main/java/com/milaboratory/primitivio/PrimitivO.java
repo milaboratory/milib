@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import static com.milaboratory.primitivio.Util.zigZagEncodeInt;
 import static com.milaboratory.primitivio.Util.zigZagEncodeLong;
 
-public final class PrimitivO implements DataOutput, AutoCloseable {
+public final class PrimitivO implements DataOutput, AutoCloseable, HasPrimitivIOState {
     static final int NULL_ID = 0;
     static final int NEW_OBJECT_ID = 1;
     private static final float RELOAD_FACTOR = 0.5f;
@@ -146,13 +146,12 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
             currentReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE, knownReferences);
     }
 
-    public int putKnownObject(Object object) {
-        // Sequential id
-        int id = knownObjects.size();
-        knownObjects.put(object, id);
-        return id;
+    @Override
+    public void putKnownObject(Object object) {
+        knownObjects.put(object, knownObjects.size()); // Sequential id
     }
 
+    @Override
     public void putKnownReference(Object object) {
         if (depth > 0)
             putKnownAfterReset.add(object);
@@ -207,16 +206,17 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
             boolean writeIdAfter = false;
             if (serializer.isReference()) {
+                int id;
+
                 // Checking if it is a known object
-                int id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object);
-                if (id != Integer.MIN_VALUE) {
+                if ((id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object))
+                        != Integer.MIN_VALUE) {
                     writeKnownObject(id);
                     return;
                 }
 
                 // Checking if it is a known reference
-                id = currentReferences.get(object);
-                if (id != Integer.MIN_VALUE) {
+                if ((id = currentReferences.get(object)) != Integer.MIN_VALUE) {
                     writeObjectReference(id);
                     return;
                 }

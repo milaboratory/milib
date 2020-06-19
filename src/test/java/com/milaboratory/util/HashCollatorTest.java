@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class HashCollateTest {
+public class HashCollatorTest {
     @Test
     public void test1() {
         List<NucleotideSequence> seqsList = new ArrayList<>();
@@ -59,7 +59,7 @@ public class HashCollateTest {
         File dir = TempFileManager.getTempDir();
         System.out.println(dir);
 
-        HashCollate<NucleotideSequence> c = new HashCollate<>(
+        HashCollator<NucleotideSequence> c = new HashCollator<>(
                 NucleotideSequence.class,
                 Objects::hashCode, Comparator.naturalOrder(),
                 dir.toPath(), 5, 4, 6,

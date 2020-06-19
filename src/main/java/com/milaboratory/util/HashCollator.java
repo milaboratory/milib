@@ -38,7 +38,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class HashCollate<T> {
+public class HashCollator<T> {
     private static final int sizeRecheckPeriod = 1 << 15; // 32k
 
     private final Class<T> clazz;
@@ -60,29 +60,29 @@ public class HashCollate<T> {
             timeInFinalSorting2 = new AtomicLong(),
             timeInFinalSorting3 = new AtomicLong();
 
-    public HashCollate(Class<T> clazz,
-                       ToIntFunction<T> hash, Comparator<T> comparator,
-                       Path filePrefix, int bitsPerStep,
-                       int readerConcurrency, int writerConcurrency) {
+    public HashCollator(Class<T> clazz,
+                        ToIntFunction<T> hash, Comparator<T> comparator,
+                        Path filePrefix, int bitsPerStep,
+                        int readerConcurrency, int writerConcurrency) {
         this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
                 PrimitivOState.INITIAL, PrimitivIState.INITIAL);
     }
 
-    public HashCollate(Class<T> clazz,
-                       ToIntFunction<T> hash, Comparator<T> comparator,
-                       Path filePrefix, int bitsPerStep,
-                       int readerConcurrency, int writerConcurrency,
-                       PrimitivOState oState, PrimitivIState iState) {
+    public HashCollator(Class<T> clazz,
+                        ToIntFunction<T> hash, Comparator<T> comparator,
+                        Path filePrefix, int bitsPerStep,
+                        int readerConcurrency, int writerConcurrency,
+                        PrimitivOState oState, PrimitivIState iState) {
         this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
                 oState, iState, 1 << 28 /* 256 Mb */);
     }
 
-    public HashCollate(Class<T> clazz,
-                       ToIntFunction<T> hash, Comparator<T> comparator,
-                       Path filePrefix, int bitsPerStep,
-                       int readerConcurrency, int writerConcurrency,
-                       PrimitivOState oState, PrimitivIState iState,
-                       long memoryBudget) {
+    public HashCollator(Class<T> clazz,
+                        ToIntFunction<T> hash, Comparator<T> comparator,
+                        Path filePrefix, int bitsPerStep,
+                        int readerConcurrency, int writerConcurrency,
+                        PrimitivOState oState, PrimitivIState iState,
+                        long memoryBudget) {
         this.clazz = clazz;
         this.hash = hash;
         this.comparator = comparator;
