@@ -105,9 +105,16 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
     private long initializationTimestamp = System.nanoTime();
 
-    public PrimitivOBlocks(int concurrency, PrimitivOState outputState, int blockSize) {
-        this(ForkJoinPool.commonPool(), concurrency, outputState, blockSize,
-                PrimitivIOBlocksUtil.defaultLZ4Compressor());
+    /**
+     * @param concurrency maximal number of concurrent serializations
+     * @param outputState knownReferences and objects, etc.
+     * @param blockSize   number of objects in a block
+     * @param compressor  block compressor
+     */
+    public PrimitivOBlocks(int concurrency,
+                           PrimitivOState outputState, int blockSize,
+                           LZ4Compressor compressor) {
+        this(ForkJoinPool.commonPool(), concurrency, outputState, blockSize, compressor);
     }
 
     /**
@@ -119,7 +126,8 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
      * @param compressor  block compressor
      */
     public PrimitivOBlocks(ExecutorService executor, int concurrency,
-                           PrimitivOState outputState, int blockSize, LZ4Compressor compressor) {
+                           PrimitivOState outputState, int blockSize,
+                           LZ4Compressor compressor) {
         this(executor, new Semaphore(concurrency), outputState, blockSize, compressor);
     }
 
@@ -215,7 +223,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
         int blockSize;
 
-        if (compressedLength > uncompressedOutput.size()) {
+        if (compressedLength >= uncompressedOutput.size()) {
             // Compression increased data size -> writing uncompressed block
             System.arraycopy(uncompressedOutput.getBuffer(), 0, block, BLOCK_HEADER_SIZE, uncompressedOutput.size());
             header.setDataSize(uncompressedOutput.size());

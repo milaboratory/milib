@@ -20,6 +20,7 @@ import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.HasMutablePosition;
 import com.milaboratory.util.io.HasPosition;
+import net.jpountz.lz4.LZ4Compressor;
 import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.io.output.CountingOutputStream;
 
@@ -158,10 +159,15 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
                 ));
     }
 
-    public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
+    public <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
+        return beginPrimitivOBlocks(concurrency, blockSize, PrimitivIOBlocksUtil.defaultLZ4Compressor());
+    }
+
+    public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize,
+                                                                           LZ4Compressor compressor) {
         checkNullState(true);
         final PrimitivOBlocks<O> oPrimitivOBlocks = new PrimitivOBlocks<>(executorService, concurrency,
-                primitivOState, blockSize, PrimitivIOBlocksUtil.defaultLZ4Compressor());
+                primitivOState, blockSize, compressor);
         //noinspection unchecked
         return primitivOBlocks = oPrimitivOBlocks.newWriter(byteChannel, false);
     }

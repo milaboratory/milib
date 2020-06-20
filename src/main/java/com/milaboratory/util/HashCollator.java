@@ -21,6 +21,7 @@ import cc.redberry.pipe.OutputPortCloseable;
 import com.milaboratory.primitivio.PrimitivIState;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.primitivio.blocks.PrimitivIBlocks;
+import com.milaboratory.primitivio.blocks.PrimitivIOBlocksUtil;
 import com.milaboratory.primitivio.blocks.PrimitivOBlocks;
 import com.milaboratory.primitivio.blocks.PrimitivOBlocksStats;
 
@@ -38,6 +39,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+// TODO implement minimal budget in-memory analysis (don't use hdd if whole analysis can be done in memory)
 public class HashCollator<T> {
     private static final int sizeRecheckPeriod = 1 << 15; // 32k
 
@@ -163,7 +165,8 @@ public class HashCollator<T> {
         public void run() {
             long runStart = System.nanoTime();
             try {
-                PrimitivOBlocks<T> o = new PrimitivOBlocks<>(writerConcurrency, oState, 1);
+                PrimitivOBlocks<T> o = new PrimitivOBlocks<>(writerConcurrency, oState, 1, // block size not used
+                        PrimitivIOBlocksUtil.fastLZ4Compressor());
 
                 // Blocks by bucket
                 ArrayList<T>[] blocks = new ArrayList[numberOfBuckets];
