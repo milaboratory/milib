@@ -67,8 +67,8 @@ public final class PrimitivOBlocksStats extends PrimitivIOBlocksStatsAbstract {
                 "Compression time: " + nanoTimeToString(compressionNanos) + " (" + percent(compressionNanos, totalSerializationNanos) + ")\n" +
                 "Total IO delay: " + nanoTimeToString(ioDelayNanos) + "\n" +
                 "Concurrency overhead: " + nanoTimeToString(concurrencyOverhead) + "\n" +
-                "Uncompressed size: " + bytesToString(uncompressedBytes) + "\n" +
-                "Output size: " + bytesToString(outputSize) + " (compression = " + percent(outputSize, uncompressedBytes) + ")\n" +
+                "Uncompressed size: " + bytesToString(uncompressedBytes) + " (~" + bytesToString(uncompressedBytes / objectCount) + " per object)\n" +
+                "Output size: " + bytesToString(outputSize) + " (~" + bytesToString(outputSize / objectCount) + " per object; compression = " + percent(outputSize, uncompressedBytes) + ")\n" +
                 "IO speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * outputSize, ioDelayNanos) + "/s\n" +
                 "Concurrency adjusted uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, concurrencyAdjustedNanos) + "/s\n" +
                 "Actual uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, wallClockTime) + "/s\n" +
