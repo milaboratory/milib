@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.util;
+package com.milaboratory.util.sorting;
 
 import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
@@ -23,6 +23,7 @@ import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.primitivio.PrimitivIState;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.test.TestUtil;
+import com.milaboratory.util.TempFileManager;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well19937c;
 import org.junit.Assert;
@@ -35,7 +36,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class HashCollatorTest {
+public class HashSorterTest {
     @Test
     public void test1() {
         List<NucleotideSequence> seqsList = new ArrayList<>();
@@ -59,11 +60,12 @@ public class HashCollatorTest {
         File dir = TempFileManager.getTempDir();
         System.out.println(dir);
 
-        HashCollator<NucleotideSequence> c = new HashCollator<>(
+        HashSorter<NucleotideSequence> c = new HashSorter<>(
                 NucleotideSequence.class,
                 Objects::hashCode, Comparator.naturalOrder(),
-                dir.toPath(), 5, 4, 6,
-                PrimitivOState.INITIAL, PrimitivIState.INITIAL, 1 << 23);
+                5, dir.toPath(), 4, 6,
+                PrimitivOState.INITIAL, PrimitivIState.INITIAL,
+                1 << 23, 128);
 
         Comparator<NucleotideSequence> ec = c.effectiveComparator();
 

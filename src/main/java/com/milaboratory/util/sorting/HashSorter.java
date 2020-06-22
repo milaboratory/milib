@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.util;
+package com.milaboratory.util.sorting;
 
 import cc.redberry.pipe.CUtils;
 import cc.redberry.pipe.OutputPort;
@@ -24,6 +24,7 @@ import com.milaboratory.primitivio.blocks.PrimitivIBlocks;
 import com.milaboratory.primitivio.blocks.PrimitivIOBlocksUtil;
 import com.milaboratory.primitivio.blocks.PrimitivOBlocks;
 import com.milaboratory.primitivio.blocks.PrimitivOBlocksStats;
+import com.milaboratory.util.FormatUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -40,18 +41,45 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 // TODO implement minimal budget in-memory analysis (don't use hdd if whole analysis can be done in memory)
-public class HashCollator<T> {
+
+/**
+ * Implements HDD-offloading sorter, that sorts objects by a defined hash code (specifically it's unsigned value) first,
+ * and by a defined comparator if objects has the same has code.
+ *
+ * @param <T> type of objects to sort
+ */
+public class HashSorter<T> {
     private static final int sizeRecheckPeriod = 1 << 15; // 32k
 
+    /** Object class, used in deserialization. */
     private final Class<T> clazz;
-    private final Comparator<T> comparator;
+
+    /** Target hash function */
     private final ToIntFunction<T> hash;
-    private final Path filePrefix;
+    /** Target comparator */
+    private final Comparator<T> comparator;
+
+    /** Has code bits per collation step */
     private final int bitsPerStep;
+    /** Maximal memory usage */
     private final long memoryBudget;
+
+    /** Object size initial guess */
+    private final long objectSizeInitialGuess;
+
+
+    /** Path prefix for temporary files */
+    private final Path filePrefix;
+
+    /** Maximal concurrency for IO operations */
     private final int readerConcurrency, writerConcurrency;
+
+    /** OState for serialization */
     private final PrimitivOState oState;
+    /** IState for deserialization */
     private final PrimitivIState iState;
+
+    // Stats
 
     private final AtomicLongArray timeOnLevel = new AtomicLongArray(32);
     private final AtomicLong
@@ -62,29 +90,29 @@ public class HashCollator<T> {
             timeInFinalSorting2 = new AtomicLong(),
             timeInFinalSorting3 = new AtomicLong();
 
-    public HashCollator(Class<T> clazz,
-                        ToIntFunction<T> hash, Comparator<T> comparator,
-                        Path filePrefix, int bitsPerStep,
-                        int readerConcurrency, int writerConcurrency) {
-        this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
-                PrimitivOState.INITIAL, PrimitivIState.INITIAL);
-    }
-
-    public HashCollator(Class<T> clazz,
-                        ToIntFunction<T> hash, Comparator<T> comparator,
-                        Path filePrefix, int bitsPerStep,
-                        int readerConcurrency, int writerConcurrency,
-                        PrimitivOState oState, PrimitivIState iState) {
-        this(clazz, hash, comparator, filePrefix, bitsPerStep, readerConcurrency, writerConcurrency,
-                oState, iState, 1 << 28 /* 256 Mb */);
-    }
-
-    public HashCollator(Class<T> clazz,
-                        ToIntFunction<T> hash, Comparator<T> comparator,
-                        Path filePrefix, int bitsPerStep,
-                        int readerConcurrency, int writerConcurrency,
-                        PrimitivOState oState, PrimitivIState iState,
-                        long memoryBudget) {
+    /**
+     * Creates hash sorter. Actual sorting starts on {@link #port(OutputPort)} invocation.
+     *
+     * @param clazz                  object class
+     * @param hash                   target hash function
+     * @param comparator             target comparator for objects with equal hash codes
+     * @param bitsPerStep            number of bits to use n each collation step;
+     *                               number of buckets on each step = 2 ^ bitsPerStep
+     * @param filePrefix             path prefix for temporary files
+     * @param readerConcurrency      read / deserialization concurrency
+     * @param writerConcurrency      write / serialization concurrency
+     * @param oState                 oState for serialization
+     * @param iState                 iState for deserialization
+     * @param memoryBudget           maximal allowed memory consumption
+     * @param objectSizeInitialGuess initial guess for single object size;
+     *                               underestimation of this value may lead to temporary overconsumption of memory
+     */
+    public HashSorter(Class<T> clazz,
+                      ToIntFunction<T> hash, Comparator<T> comparator,
+                      int bitsPerStep, Path filePrefix,
+                      int readerConcurrency, int writerConcurrency,
+                      PrimitivOState oState, PrimitivIState iState,
+                      long memoryBudget, long objectSizeInitialGuess) {
         this.clazz = clazz;
         this.hash = hash;
         this.comparator = comparator;
@@ -97,20 +125,21 @@ public class HashCollator<T> {
         this.oState = oState;
         this.iState = iState;
         this.memoryBudget = memoryBudget;
+        this.objectSizeInitialGuess = objectSizeInitialGuess;
     }
 
     public Comparator<T> effectiveComparator() {
-        return new HComparator<>(hash, comparator);
+        return effectiveComparator(hash, comparator);
     }
 
     public static <T> Comparator<T> effectiveComparator(ToIntFunction<T> hash, Comparator<T> comparator) {
-        return new HComparator<>(hash, comparator);
+        return (o1, o2) -> compare(hash, comparator, o1, o2);
     }
 
     public OutputPortCloseable<T> port(OutputPort<T> input) {
         Collater c = new Collater(input, filePrefix,
                 bitsPerStep, 32 - bitsPerStep,
-                128, true);
+                objectSizeInitialGuess, true);
         c.run();
         return c.port();
     }
@@ -381,21 +410,10 @@ public class HashCollator<T> {
         }
     }
 
-    private static final class HComparator<T> implements Comparator<T> {
-        final ToIntFunction<T> hash;
-        final Comparator<T> comparator;
-
-        public HComparator(ToIntFunction<T> hash, Comparator<T> comparator) {
-            this.hash = hash;
-            this.comparator = comparator;
-        }
-
-        @Override
-        public int compare(T o1, T o2) {
-            int c = Integer.compareUnsigned(hash.applyAsInt(o1), hash.applyAsInt(o2));
-            if (c != 0)
-                return c;
-            return comparator.compare(o1, o2);
-        }
+    public static <T> int compare(ToIntFunction<T> hash, Comparator<T> comparator, T o1, T o2) {
+        int c = Integer.compareUnsigned(hash.applyAsInt(o1), hash.applyAsInt(o2));
+        if (c != 0)
+            return c;
+        return comparator.compare(o1, o2);
     }
 }
