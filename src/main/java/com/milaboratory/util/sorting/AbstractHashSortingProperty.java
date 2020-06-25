@@ -19,26 +19,31 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.ToIntFunction;
 
-public abstract class AbstractHashSortingProperty<T, P> implements SortingProperty<T> {
+public abstract class AbstractHashSortingProperty<T, P> implements SortingProperty<T>, ToIntFunction<T> {
     @Override
     public final int compare(T o1, T o2) {
-        return HashSorter.compare(hashFunction(), comparator(), get(o1), get(o2));
+        return HashSorter.compare(propertyHashFunction(), propertyComparator(), get(o1), get(o2));
     }
 
-    protected abstract ToIntFunction<P> hashFunction();
+    @Override
+    public int applyAsInt(T value) {
+        return propertyHashFunction().applyAsInt(get(value));
+    }
 
-    protected abstract Comparator<P> comparator();
+    public abstract ToIntFunction<P> propertyHashFunction();
+
+    public abstract Comparator<P> propertyComparator();
 
     public abstract P get(T obj);
 
     public static abstract class Natural<T, P extends Comparable<P>> extends AbstractHashSortingProperty<T, P> {
         @Override
-        protected final ToIntFunction<P> hashFunction() {
+        public final ToIntFunction<P> propertyHashFunction() {
             return Objects::hashCode;
         }
 
         @Override
-        protected final Comparator<P> comparator() {
+        public final Comparator<P> propertyComparator() {
             return Comparator.naturalOrder();
         }
     }

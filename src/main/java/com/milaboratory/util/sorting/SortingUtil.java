@@ -16,22 +16,18 @@
 package com.milaboratory.util.sorting;
 
 import java.util.Comparator;
+import java.util.List;
 
-public abstract class AbstractSortingProperty<T, P> implements SortingProperty<T> {
-    @Override
-    public final int compare(T o1, T o2) {
-        return propertyComparator().compare(get(o1), get(o2));
+public final class SortingUtil {
+    private SortingUtil() {
     }
 
-    public abstract Comparator<P> propertyComparator();
-
-    @Override
-    public abstract P get(T obj);
-
-    public static abstract class Natural<T, P extends Comparable<P>> extends AbstractSortingProperty<T, P> {
-        @Override
-        public Comparator<P> propertyComparator() {
-            return Comparator.naturalOrder();
-        }
+    public static <T> Comparator<T> combine(List<Comparator<T>> comparators) {
+        if (comparators.size() == 0)
+            throw new IllegalArgumentException();
+        Comparator<T> comparator = comparators.get(0);
+        for (int i = 1; i < comparators.size(); i++)
+            comparator = comparator.thenComparing(comparators.get(i));
+        return comparator;
     }
 }
