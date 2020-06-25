@@ -15,6 +15,7 @@
  */
 package com.milaboratory.util.sorting;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -22,10 +23,14 @@ public final class SortingUtil {
     private SortingUtil() {
     }
 
-    public static <T> Comparator<T> combine(List<Comparator<T>> comparators) {
+    public static <T> Comparator<T> combine(Comparator<? super T>[] comparators) {
+        return combine(Arrays.asList(comparators));
+    }
+
+    public static <T> Comparator<T> combine(List<? extends Comparator<? super T>> comparators) {
         if (comparators.size() == 0)
             throw new IllegalArgumentException();
-        Comparator<T> comparator = comparators.get(0);
+        Comparator<T> comparator = (Comparator) comparators.get(0);
         for (int i = 1; i < comparators.size(); i++)
             comparator = comparator.thenComparing(comparators.get(i));
         return comparator;
