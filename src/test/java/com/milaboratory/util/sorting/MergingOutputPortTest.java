@@ -21,6 +21,7 @@ import cc.redberry.pipe.OutputPortCloseable;
 import com.milaboratory.core.Range;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.core.sequence.SequenceProperties;
+import com.milaboratory.core.sequence.SequencesUtils;
 import com.milaboratory.test.TestUtil;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well19937c;
@@ -50,8 +51,7 @@ public class MergingOutputPortTest {
                 Comparator.comparing(i -> i >>> 8),
                 ints.stream()
                         .map(CUtils::asOutputPort)
-                        .collect(Collectors.toList()),
-                true);
+                        .collect(Collectors.toList()));
 
         ArrayList<Integer> result = new ArrayList<>();
         CUtils.drain(mop, result::add);
@@ -66,7 +66,7 @@ public class MergingOutputPortTest {
     }
 
     @Test
-    public void joinTest1() {
+    public void joinTest1() throws InterruptedException {
         int N = 30;
         int K = 500;
 
@@ -75,14 +75,14 @@ public class MergingOutputPortTest {
             markerSequencesSet.add(TestUtil.randomSequence(NucleotideSequence.ALPHABET, 10, 10));
         NucleotideSequence[] mSequences = markerSequencesSet.toArray(new NucleotideSequence[0]);
 
-        List<SortingProperty<NucleotideSequence>> stream = Arrays.asList(
-                new SequenceProperties.Subsequence(new Range(10, 12)),
-                new SequenceProperties.Subsequence(new Range(17, 20))
+        List<SequenceProperties.Subsequence<NucleotideSequence>> stream = Arrays.asList(
+                new SequenceProperties.Subsequence<>(new Range(10, 12)),
+                new SequenceProperties.Subsequence<>(new Range(17, 20))
         );
 
-        List<SortingProperty<NucleotideSequence>> target = Arrays.asList(
-                new SequenceProperties.Subsequence(new Range(10, 13)),
-                new SequenceProperties.Subsequence(new Range(17, 18))
+        List<SequenceProperties.Subsequence<NucleotideSequence>> target = Arrays.asList(
+                new SequenceProperties.Subsequence<>(new Range(10, 13)),
+                new SequenceProperties.Subsequence<>(new Range(17, 18))
         );
 
         List<List<NucleotideSequence>> seqs = new ArrayList<>();
@@ -94,17 +94,38 @@ public class MergingOutputPortTest {
                 array.add(mSequences[i].concatenate(TestUtil.randomSequence(NucleotideSequence.ALPHABET, 10, 10)));
             }
             array.sort(SortingUtil.combine(stream));
-            seqs.add(array);
+            seqs.add(new ArrayList<>(array));
         }
 
         MergeStrategy<NucleotideSequence> mergeStrategy = MergeStrategy.calculateStrategy(stream, target);
         List<OutputPort<NucleotideSequence>> ops = seqs.stream()
                 .map(CUtils::asOutputPort)
                 .collect(Collectors.toList());
+
+        List<List<List<NucleotideSequence>>> result = new ArrayList<>();
         OutputPortCloseable<List<List<NucleotideSequence>>> join = MergingOutputPort.join(mergeStrategy, ops);
-        for (List<List<NucleotideSequence>> lists : CUtils.it(join)) {
-            System.out.println(lists);
+        CUtils.drain(join, result::add);
+        result.remove(result.size() - 1);
+
+        Map<NucleotideSequence, List<NucleotideSequence>[]> expectedMap = new HashMap<>();
+        for (int i = 0; i < seqs.size(); i++) {
+            List<NucleotideSequence> sseqs = seqs.get(i);
+            for (NucleotideSequence seq : sseqs) {
+                NucleotideSequence key = SequencesUtils.concatenate(target.stream().map(t -> t.get(seq)).toArray(NucleotideSequence[]::new));
+                List<NucleotideSequence>[] r = expectedMap.computeIfAbsent(key, __ -> {
+                    List[] lsts = new List[seqs.size()];
+                    for (int j = 0; j < lsts.length; j++)
+                        lsts[j] = new ArrayList();
+                    return lsts;
+                });
+                List<NucleotideSequence> b = r[i];
+                b.add(seq);
+            }
         }
-        System.out.println("a");
+        
+        Assert.assertEquals(
+                expectedMap.values().stream().map(Arrays::asList).collect(Collectors.toSet()),
+                new HashSet<>(result)
+        );
     }
 }

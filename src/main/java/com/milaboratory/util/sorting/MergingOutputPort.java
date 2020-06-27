@@ -24,7 +24,7 @@ import java.util.function.Function;
 /**
  * Merges several sorted output ports, into a single sorted output port.
  *
- * In strict mode, equal objects (in terms of provided comparator), will be outputted in the same order the originating
+ * Equal objects (in terms of provided comparator), will be outputted in the same order the originating
  * output ports were provided to the constructor of this instance.
  */
 public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
@@ -34,29 +34,16 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
 
     public MergingOutputPort(Comparator<T> comparator,
                              List<OutputPort<T>> outputPorts) {
-        this(comparator, outputPorts, false);
-    }
-
-    public MergingOutputPort(Comparator<T> comparator,
-                             List<OutputPort<T>> outputPorts,
-                             boolean strict) {
         this.comparator = comparator;
 
-        this.ports = strict
-
-                ? new TreeSet<>(Comparator
+        this.ports = new TreeSet<>(Comparator
                 .<OPWrapper, T>comparing(opw -> opw.nextValue, comparator)
-                .thenComparing(opw -> opw.index))
-
-                : new TreeSet<>(Comparator
-                .<OPWrapper, T>comparing(opw -> opw.nextValue, comparator));
+                .thenComparing(opw -> opw.index));
 
         for (int i = 0; i < outputPorts.size(); i++) {
             OPWrapper opw = new OPWrapper(i, outputPorts.get(i));
-            if (!opw.hasNextValue())
-                // Empty port
-                continue;
-            ports.add(opw);
+            if (opw.hasNextValue()) // Not empty port
+                ports.add(opw);
         }
     }
 
@@ -178,7 +165,7 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
      * Uses MergeStrategy, that can be calculated for the given streams ordering and required merge "keys".
      */
     public static <T> OutputPortCloseable<List<List<T>>> join(MergeStrategy<T> strategy, List<OutputPort<T>> ports) {
-        OutputPortCloseable<WithIndex<T>> indexed = new MergingOutputPort<>(SortingUtil.combine(strategy.trackChanges), ports, false).indexed();
+        OutputPortCloseable<WithIndex<T>> indexed = new MergingOutputPort<>(SortingUtil.combine(strategy.trackChanges), ports).indexed();
         GroupingOutputPort<WithIndex<T>> wiGrouped = new GroupingOutputPort<>(strategy.wrapped(withIndexUnWrapper()), indexed);
         return new OutputPortCloseable<List<List<T>>>() {
             @Override
