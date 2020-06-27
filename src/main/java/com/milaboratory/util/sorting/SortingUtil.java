@@ -18,6 +18,7 @@ package com.milaboratory.util.sorting;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
 
 public final class SortingUtil {
     private SortingUtil() {
@@ -34,5 +35,19 @@ public final class SortingUtil {
         for (int i = 1; i < comparators.size(); i++)
             comparator = comparator.thenComparing(comparators.get(i));
         return comparator;
+    }
+
+    static <T, E> SortingProperty<T> wrapped(SortingProperty<E> elementProperty, Function<T, E> extractor) {
+        return new SortingProperty<T>() {
+            @Override
+            public Object get(T obj) {
+                return elementProperty.get(extractor.apply(obj));
+            }
+
+            @Override
+            public int compare(T o1, T o2) {
+                return elementProperty.compare(extractor.apply(o1), extractor.apply(o2));
+            }
+        };
     }
 }

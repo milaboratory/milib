@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class describes the optimal strategy to group objects by a specific set of properties,
@@ -46,7 +48,17 @@ public final class MergeStrategy<T> {
     }
 
     public OutputPort<List<T>> group(OutputPort<T> origin) {
-        return new GroupingOutputPort<T>(origin, MergeStrategy.this);
+        return new GroupingOutputPort<T>(MergeStrategy.this, origin);
+    }
+
+    <U> MergeStrategy<U> wrapped(Function<U, T> extractor) {
+        return new MergeStrategy<>(
+                trackChanges.stream()
+                        .map(p -> SortingUtil.wrapped(p, extractor))
+                        .collect(Collectors.toList()),
+                postGrouping.stream()
+                        .map(p -> SortingUtil.wrapped(p, extractor))
+                        .collect(Collectors.toList()));
     }
 
     @Override
