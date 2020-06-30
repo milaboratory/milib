@@ -79,7 +79,7 @@ public final class PrimitivO implements DataOutput, AutoCloseable, HasPrimitivIO
     TObjectIntCustomHashMap<Object> currentReferences = null;
 
     public PrimitivO() {
-        this(new NullOutputStream());
+        this(NullOutputStream.NULL_OUTPUT_STREAM);
     }
 
     public PrimitivO(DataOutput output) {

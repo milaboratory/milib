@@ -15,7 +15,7 @@
  */
 package com.milaboratory.core.sequence;
 
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 public class TranslationParametersTest {
