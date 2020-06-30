@@ -165,7 +165,7 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
      * Uses MergeStrategy, that can be calculated for the given streams ordering and required merge "keys".
      */
     public static <T> OutputPortCloseable<List<List<T>>> join(MergeStrategy<T> strategy, List<OutputPort<T>> ports) {
-        OutputPortCloseable<WithIndex<T>> indexed = new MergingOutputPort<>(SortingUtil.combine(strategy.trackChanges), ports).indexed();
+        OutputPortCloseable<WithIndex<T>> indexed = new MergingOutputPort<>(SortingUtil.combine(strategy.streamGrouping), ports).indexed();
         GroupingOutputPort<WithIndex<T>> wiGrouped = new GroupingOutputPort<>(strategy.wrapped(withIndexUnWrapper()), indexed);
         return new OutputPortCloseable<List<List<T>>>() {
             @Override

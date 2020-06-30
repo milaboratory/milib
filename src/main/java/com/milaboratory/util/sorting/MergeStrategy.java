@@ -16,6 +16,7 @@
 package com.milaboratory.util.sorting;
 
 import cc.redberry.pipe.OutputPort;
+import cc.redberry.pipe.OutputPortCloseable;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,26 +35,34 @@ public final class MergeStrategy<T> {
     /**
      * Track changes in the following groups to create super-groups
      */
-    public final List<? extends SortingProperty<? super T>> trackChanges;
+    public final List<? extends SortingProperty<? super T>> streamGrouping;
     /**
      * Additionally group objects inside super-groups using the following groups to achieve desired grouping
      */
     public final List<? extends SortingProperty<? super T>> postGrouping;
 
-    public MergeStrategy(List<? extends SortingProperty<? super T>> trackChanges, List<? extends SortingProperty<? super T>> postGrouping) {
-        Objects.requireNonNull(trackChanges);
+    public MergeStrategy(List<? extends SortingProperty<? super T>> streamGrouping, List<? extends SortingProperty<? super T>> postGrouping) {
+        Objects.requireNonNull(streamGrouping);
         Objects.requireNonNull(postGrouping);
-        this.trackChanges = trackChanges;
+        this.streamGrouping = streamGrouping;
         this.postGrouping = postGrouping;
     }
 
-    public OutputPort<List<T>> group(OutputPort<T> origin) {
-        return new GroupingOutputPort<>(MergeStrategy.this, origin);
+    public boolean usesStreamOrdering() {
+        return !streamGrouping.isEmpty();
+    }
+
+    public OutputPortCloseable<List<List<T>>> join(List<OutputPort<T>> ports) {
+        return MergingOutputPort.join(this, ports);
+    }
+
+    public OutputPortCloseable<List<T>> group(OutputPort<T> origin) {
+        return new GroupingOutputPort<>(this, origin);
     }
 
     <U> MergeStrategy<U> wrapped(Function<U, T> extractor) {
         return new MergeStrategy<>(
-                trackChanges.stream()
+                streamGrouping.stream()
                         .map(p -> SortingUtil.wrapped(p, extractor))
                         .collect(Collectors.toList()),
                 postGrouping.stream()
@@ -66,19 +75,19 @@ public final class MergeStrategy<T> {
         if (this == o) return true;
         if (!(o instanceof MergeStrategy)) return false;
         MergeStrategy<?> that = (MergeStrategy<?>) o;
-        return trackChanges.equals(that.trackChanges) &&
+        return streamGrouping.equals(that.streamGrouping) &&
                 postGrouping.equals(that.postGrouping);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(trackChanges, postGrouping);
+        return Objects.hash(streamGrouping, postGrouping);
     }
 
     @Override
     public String toString() {
         return "CMergeStrategy{" +
-                "trackChanges=" + trackChanges +
+                "trackChanges=" + streamGrouping +
                 ", postGrouping=" + postGrouping +
                 '}';
     }
@@ -120,6 +129,6 @@ public final class MergeStrategy<T> {
             break;
         }
 
-        return new MergeStrategy<T>(superGrouping, (List<SortingProperty<T>>) targetGrouping);
+        return new MergeStrategy<T>(superGrouping, targetGrouping);
     }
 }

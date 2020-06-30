@@ -33,7 +33,7 @@ public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>>
     }
 
     private List<Object> extractSuperGroupValues(T obj) {
-        return groupingStrategy.trackChanges.stream()
+        return groupingStrategy.streamGrouping.stream()
                 .map(prop -> prop.get(obj))
                 .collect(Collectors.toList());
     }
