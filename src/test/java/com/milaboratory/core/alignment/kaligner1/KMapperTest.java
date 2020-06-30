@@ -21,9 +21,9 @@ import com.milaboratory.core.mutations.generator.MutationModels;
 import com.milaboratory.core.mutations.generator.NucleotideMutationModel;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.util.IntArrayList;
-import junit.framework.Assert;
 import org.apache.commons.math3.random.RandomDataGenerator;
 import org.apache.commons.math3.random.Well19937c;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -34,8 +34,8 @@ import static com.milaboratory.core.alignment.kaligner1.KMapper.getBestOffset;
 import static com.milaboratory.core.mutations.generator.MutationsGenerator.generateMutations;
 import static com.milaboratory.test.TestUtil.its;
 import static com.milaboratory.test.TestUtil.randomSequence;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class KMapperTest extends AlignmentTest {
     public static final KAlignerParameters gParams = new KAlignerParameters(5, false, false,
@@ -94,8 +94,8 @@ public class KMapperTest extends AlignmentTest {
         KMappingResult result =
                 aligner.align(new NucleotideSequence("GACATTATATACAGACATATAATAAATACGGATACGCTGTCGGCCTAGGCGCGTCGAACGCGC"));
 
-        Assert.assertEquals(1, result.hits.size());
-        Assert.assertEquals(2, result.hits.get(0).id);
+        assertEquals(1, result.hits.size());
+        assertEquals(2, result.hits.get(0).id);
     }
 
     @Test
@@ -161,7 +161,7 @@ public class KMapperTest extends AlignmentTest {
                         for (int j = refFrom; j < refFrom + ka.getKValue(); ++j)
                             kmer2 = kmer2 << 2 | ncs.get(hit.id).codeAt(j);
 
-                        Assert.assertEquals(kmer1, kmer2);
+                        assertEquals(kmer1, kmer2);
                     }
                     ++found;
                     continue OUTER;

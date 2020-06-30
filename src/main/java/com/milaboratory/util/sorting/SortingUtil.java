@@ -24,10 +24,6 @@ public final class SortingUtil {
     private SortingUtil() {
     }
 
-    public static <T> Comparator<T> combine(Comparator<? super T>[] comparators) {
-        return combine(Arrays.asList(comparators));
-    }
-
     public static <T> Comparator<T> combine(List<? extends Comparator<? super T>> comparators) {
         if (comparators.size() == 0)
             throw new IllegalArgumentException();
