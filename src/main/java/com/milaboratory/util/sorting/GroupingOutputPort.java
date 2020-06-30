@@ -16,18 +16,18 @@
 package com.milaboratory.util.sorting;
 
 import cc.redberry.pipe.OutputPort;
+import cc.redberry.pipe.OutputPortCloseable;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
-public final class GroupingOutputPort<T> implements OutputPort<List<T>> {
+public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>> {
     private T lastObject;
     private final OutputPort<T> innerOutputPort;
     private final MergeStrategy<T> groupingStrategy;
     private final Queue<List<T>> queue = new ArrayDeque<>();
 
-    public GroupingOutputPort(OutputPort<T> targetOutputPort,
-                              MergeStrategy<T> mergeStrategy) {
+    public GroupingOutputPort(MergeStrategy<T> mergeStrategy, OutputPort<T> targetOutputPort) {
         this.innerOutputPort = targetOutputPort;
         this.groupingStrategy = mergeStrategy;
     }
@@ -107,5 +107,16 @@ public final class GroupingOutputPort<T> implements OutputPort<List<T>> {
             if (!fillQueue())
                 return null;
         return queue.remove();
+    }
+
+    @Override
+    public void close() {
+        if (innerOutputPort instanceof AutoCloseable) {
+            try {
+                ((AutoCloseable) innerOutputPort).close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
