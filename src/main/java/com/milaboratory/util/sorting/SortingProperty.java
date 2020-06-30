@@ -29,7 +29,7 @@ public interface SortingProperty<T> extends Comparator<T> {
      * @param other other property defined for the same object type
      * @return relation to other property
      */
-    default SortingPropertyRelation relationTo(SortingProperty<T> other) {
+    default SortingPropertyRelation relationTo(SortingProperty<?> other) {
         return this.equals(other) ? SortingPropertyRelation.Equal : SortingPropertyRelation.None;
     }
 

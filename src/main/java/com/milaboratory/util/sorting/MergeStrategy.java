@@ -34,13 +34,13 @@ public final class MergeStrategy<T> {
     /**
      * Track changes in the following groups to create super-groups
      */
-    public final List<SortingProperty<T>> trackChanges;
+    public final List<? extends SortingProperty<? super T>> trackChanges;
     /**
      * Additionally group objects inside super-groups using the following groups to achieve desired grouping
      */
-    public final List<SortingProperty<T>> postGrouping;
+    public final List<? extends SortingProperty<? super T>> postGrouping;
 
-    public MergeStrategy(List<SortingProperty<T>> trackChanges, List<SortingProperty<T>> postGrouping) {
+    public MergeStrategy(List<? extends SortingProperty<? super T>> trackChanges, List<? extends SortingProperty<? super T>> postGrouping) {
         Objects.requireNonNull(trackChanges);
         Objects.requireNonNull(postGrouping);
         this.trackChanges = trackChanges;
@@ -48,7 +48,7 @@ public final class MergeStrategy<T> {
     }
 
     public OutputPort<List<T>> group(OutputPort<T> origin) {
-        return new GroupingOutputPort<T>(MergeStrategy.this, origin);
+        return new GroupingOutputPort<>(MergeStrategy.this, origin);
     }
 
     <U> MergeStrategy<U> wrapped(Function<U, T> extractor) {
@@ -93,25 +93,25 @@ public final class MergeStrategy<T> {
      * @return optimal merge strategy
      */
     public static <T> MergeStrategy<T> calculateStrategy(
-            List<? extends SortingProperty<T>> streamCollationLevels,
-            List<? extends SortingProperty<T>> targetGrouping) {
-        List<SortingProperty<T>> superGrouping = new ArrayList<>();
+            List<? extends SortingProperty<? super T>> streamCollationLevels,
+            List<? extends SortingProperty<? super T>> targetGrouping) {
+        List<SortingProperty<? super T>> superGrouping = new ArrayList<>();
 
         // Cloning target grouping, we will remove elements from it
         targetGrouping = new ArrayList<>(targetGrouping);
 
         outer:
-        for (SortingProperty<T> streamLevel : streamCollationLevels) {
-            Iterator<? extends SortingProperty<T>> it = targetGrouping.iterator();
+        for (SortingProperty<? super T> streamLevel : streamCollationLevels) {
+            Iterator<? extends SortingProperty<? super T>> it = targetGrouping.iterator();
             while (it.hasNext()) {
-                SortingProperty<T> target = it.next();
+                SortingProperty<? super T> target = it.next();
                 if (streamLevel.relationTo(target) == SortingPropertyRelation.Equal) {
                     superGrouping.add(streamLevel);
                     it.remove();
                     continue outer;
                 }
             }
-            for (SortingProperty<T> target : targetGrouping) {
+            for (SortingProperty<? super T> target : targetGrouping) {
                 if (streamLevel.relationTo(target) == SortingPropertyRelation.Necessary) {
                     superGrouping.add(streamLevel);
                     continue outer;
@@ -120,6 +120,6 @@ public final class MergeStrategy<T> {
             break;
         }
 
-        return new MergeStrategy<>(superGrouping, (List<SortingProperty<T>>) targetGrouping);
+        return new MergeStrategy<T>(superGrouping, (List<SortingProperty<T>>) targetGrouping);
     }
 }

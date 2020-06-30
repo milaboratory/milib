@@ -70,7 +70,7 @@ public class MergeStrategyTest {
         }
 
         @Override
-        public SortingPropertyRelation relationTo(SortingProperty<String> other) {
+        public SortingPropertyRelation relationTo(SortingProperty<?> other) {
             if (other instanceof Substring) {
                 int otherFrom = ((Substring) other).from;
                 int otherTo = ((Substring) other).to;

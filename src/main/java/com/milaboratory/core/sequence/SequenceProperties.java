@@ -29,7 +29,7 @@ public final class SequenceProperties {
         Range range();
 
         @Override
-        default SortingPropertyRelation relationTo(SortingProperty<T> other) {
+        default SortingPropertyRelation relationTo(SortingProperty<?> other) {
             Range ourRange = range();
 
             if (other instanceof Subseq) {

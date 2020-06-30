@@ -37,7 +37,7 @@ public final class SortingUtil {
         return comparator;
     }
 
-    static <T, E> SortingProperty<T> wrapped(SortingProperty<E> elementProperty, Function<T, E> extractor) {
+    static <T, E> SortingProperty<T> wrapped(SortingProperty<? super E> elementProperty, Function<T, E> extractor) {
         return new SortingProperty<T>() {
             @Override
             public Object get(T obj) {
