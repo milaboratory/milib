@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 MiLaboratory.com
+ * Copyright 2020 MiLaboratory, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,14 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.milaboratory.core.sequence;
+package com.milaboratory.primitivio;
 
-import org.junit.Assert;
-import org.junit.Test;
-
-public class TranslationParametersTest {
-    @Test
-    public void test1() throws Exception {
-        Assert.assertEquals("FromCenter", TranslationParameters.FromCenter.toString());
-    }
+public interface HasPrimitivIOState {
+    void putKnownObject(Object ref);
+    void putKnownReference(Object ref);
 }

@@ -89,6 +89,19 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
     private long initializationTimestamp = System.nanoTime();
 
     /**
+     * @param clazz       class to deserialize
+     * @param concurrency maximal number of concurrent deserializations, actual concurrency level is also limited by
+     *                    readAheadBlocks parameter (effective concurrency will be ~min(readAheadBlocks, concurrency))
+     *                    and IO speed
+     * @param inputState  stream state
+     */
+    public PrimitivIBlocks(Class<O> clazz, int concurrency, PrimitivIState inputState) {
+        this(clazz, PrimitivIOBlocksUtil.defaultExecutorService(),
+                concurrency, inputState,
+                PrimitivIOBlocksUtil.defaultLZ4Decompressor());
+    }
+
+    /**
      * @param clazz        class to deserialize
      * @param executor     executor to execute serialization process in
      *                     (the same executor service as used in target AsynchronousByteChannels is recommended)
@@ -294,6 +307,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
             this.readAheadBlocks = readAheadBlocks;
             this.specialHeaderAction = specialHeaderAction;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
+            activeRWs.incrementAndGet();
             readHeader();
             readBlocksIfNeeded();
         }
@@ -528,7 +542,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 // Blocking wait (the only blocking wait operation in this class),
                 // engaged in case the oldest block is still in IO or parsing stage
                 //
-                // This is the one out of two blocking operations for the whole PrimitivIOBlocks suite
+                // This is one out of two blocking operations for the whole PrimitivIOBlocks suite
                 block.latch.await();
 
                 checkException();
@@ -589,6 +603,8 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                 return;
 
             closed = true;
+
+            activeRWs.decrementAndGet();
 
             // Await all IO operations complete by syncing on the last block
             Block<O> lastBlock = blocks.peekLast();

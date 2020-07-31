@@ -44,6 +44,9 @@ public final class PrimitivIBlocksStats extends PrimitivIOBlocksStatsAbstract {
     @Override
     public String toString() {
         // long totalTimeNano = totalSerializationNanos + ioDelayNanos + concurrencyOverhead;
+        int concurrency = this.concurrency;
+        if (concurrency == 0)
+            concurrency = 1;
         long concurrencyAdjustedNanos = (totalDeserializationNanos + ioDelayNanos) / concurrency;
         return "Wall clock time: " + nanoTimeToString(wallClockTime) + "\n" +
                 "Total CPU time: " + nanoTimeToString(totalDeserializationNanos) + "\n" +

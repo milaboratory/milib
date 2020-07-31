@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -96,12 +97,25 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             compressionNanos = new AtomicLong(),
             ioDelayNanos = new AtomicLong(),
             uncompressedBytes = new AtomicLong(),
+            compressedBytes = new AtomicLong(),
             outputSize = new AtomicLong(),
             concurrencyOverhead = new AtomicLong(),
             blockCount = new AtomicLong(),
             objectCount = new AtomicLong();
 
     private long initializationTimestamp = System.nanoTime();
+
+    /**
+     * @param concurrency maximal number of concurrent serializations
+     * @param outputState knownReferences and objects, etc.
+     * @param blockSize   number of objects in a block
+     * @param compressor  block compressor
+     */
+    public PrimitivOBlocks(int concurrency,
+                           PrimitivOState outputState, int blockSize,
+                           LZ4Compressor compressor) {
+        this(ForkJoinPool.commonPool(), concurrency, outputState, blockSize, compressor);
+    }
 
     /**
      * @param executor    executor to execute serialization process in
@@ -112,12 +126,26 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
      * @param compressor  block compressor
      */
     public PrimitivOBlocks(ExecutorService executor, int concurrency,
+                           PrimitivOState outputState, int blockSize,
+                           LZ4Compressor compressor) {
+        this(executor, new Semaphore(concurrency), outputState, blockSize, compressor);
+    }
+
+    /**
+     * @param executor           executor to execute serialization process in
+     *                           (the same executor service as used in target AsynchronousByteChannels is recommended)
+     * @param concurrencyLimiter limiter of maximal number of concurrent serializations
+     * @param outputState        knownReferences and objects, etc.
+     * @param blockSize          number of objects in a block
+     * @param compressor         block compressor
+     */
+    public PrimitivOBlocks(ExecutorService executor, Semaphore concurrencyLimiter,
                            PrimitivOState outputState, int blockSize, LZ4Compressor compressor) {
-        super(executor, concurrency);
+        super(executor, concurrencyLimiter.availablePermits());
         this.compressor = compressor;
         this.outputState = outputState;
         this.blockSize = blockSize;
-        this.concurrencyLimiter = new Semaphore(concurrency);
+        this.concurrencyLimiter = concurrencyLimiter;
     }
 
     public void resetStats() {
@@ -195,7 +223,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
         int blockSize;
 
-        if (compressedLength > uncompressedOutput.size()) {
+        if (compressedLength >= uncompressedOutput.size()) {
             // Compression increased data size -> writing uncompressed block
             System.arraycopy(uncompressedOutput.getBuffer(), 0, block, BLOCK_HEADER_SIZE, uncompressedOutput.size());
             header.setDataSize(uncompressedOutput.size());
@@ -209,6 +237,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
         header.writeTo(block, 0);
 
+        compressedBytes.addAndGet(blockSize - BLOCK_HEADER_SIZE);
         objectCount.addAndGet(content.size());
         blockCount.incrementAndGet();
 
@@ -226,8 +255,8 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         return createAsyncChannel(path, additionalOptions, StandardOpenOption.CREATE, StandardOpenOption.WRITE);
     }
 
-    public Writer newWriter(Path channel) throws IOException {
-        return newWriter(createAsyncChannel(channel), 0, true);
+    public Writer newWriter(Path path) throws IOException {
+        return newWriter(createAsyncChannel(path), 0, true);
     }
 
     public Writer newWriter(AsynchronousFileChannel channel, long position) {
@@ -254,6 +283,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
         Writer(AsynchronousByteChannel channel, boolean closeUnderlyingChannel) {
             this.channel = channel;
             this.closeUnderlyingChannel = closeUnderlyingChannel;
+            activeRWs.incrementAndGet();
         }
 
         public PrimitivOBlocks<O> getParent() {
@@ -474,6 +504,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 sync();
 
                 closed = true;
+                activeRWs.decrementAndGet();
 
                 if (closeUnderlyingChannel)
                     channel.close();
@@ -491,7 +522,8 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
     public PrimitivOBlocksStats getStats() {
         return new PrimitivOBlocksStats(System.nanoTime() - initializationTimestamp,
                 totalSerializationNanos.get(), serializationNanos.get(), checksumNanos.get(),
-                compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(), concurrencyOverhead.get(),
+                compressionNanos.get(), ioDelayNanos.get(), uncompressedBytes.get(),
+                compressedBytes.get(), concurrencyOverhead.get(),
                 outputSize.get(), blockCount.get(), objectCount.get(),
                 ongoingSerdes.get(), ongoingIOOps.get(), pendingOps.get(),
                 concurrency);

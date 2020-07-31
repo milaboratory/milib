@@ -21,7 +21,6 @@ import com.milaboratory.util.io.AsynchronousFileChannelAdapter;
 import com.milaboratory.util.io.HasMutablePosition;
 import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
 import org.apache.commons.io.output.CloseShieldOutputStream;
 import org.apache.commons.io.output.CountingOutputStream;
 
@@ -31,8 +30,9 @@ import java.nio.channels.AsynchronousByteChannel;
 import java.nio.channels.Channels;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
+
+import static java.nio.file.StandardOpenOption.*;
 
 /**
  * Helper class to mix synchronous PrimitivO writing with asynchronous / parallel PrimitivOBlocks serialization
@@ -66,13 +66,17 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
 
     private PrimitivOBlocks.Writer primitivOBlocks;
 
+    public PrimitivOHybrid(Path file) throws IOException {
+        this(PrimitivIOBlocksUtil.defaultExecutorService(), file, PrimitivOState.INITIAL);
+    }
+
     public PrimitivOHybrid(ExecutorService executorService, Path file) throws IOException {
         this(executorService, file, PrimitivOState.INITIAL);
     }
 
     public PrimitivOHybrid(ExecutorService executorService, Path file, PrimitivOState state) throws IOException {
         this(executorService, new AsynchronousFileChannelAdapter(PrimitivIOBlocksAbstract.createAsyncChannel(
-                executorService, file, new OpenOption[0], StandardOpenOption.CREATE, StandardOpenOption.WRITE), 0),
+                executorService, file, new OpenOption[0], CREATE, WRITE, TRUNCATE_EXISTING), 0),
                 state);
     }
 
@@ -114,7 +118,7 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
 
     @Override
     public void setPosition(long newPosition) {
-        if(isInPrimitivOMode() || isInPrimitivOBlocksMode())
+        if (isInPrimitivOMode() || isInPrimitivOBlocksMode())
             throw new IllegalStateException();
         ((HasMutablePosition) byteChannel).setPosition(newPosition);
     }
@@ -155,13 +159,15 @@ public final class PrimitivOHybrid implements AutoCloseable, HasMutablePosition 
                 ));
     }
 
-    static final LZ4Factory lz4Factory = LZ4Factory.fastestInstance();
-    static final LZ4Compressor lz4Compressor = lz4Factory.fastCompressor();
+    public <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
+        return beginPrimitivOBlocks(concurrency, blockSize, PrimitivIOBlocksUtil.defaultLZ4Compressor());
+    }
 
-    public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize) {
+    public synchronized <O> PrimitivOBlocks<O>.Writer beginPrimitivOBlocks(int concurrency, int blockSize,
+                                                                           LZ4Compressor compressor) {
         checkNullState(true);
         final PrimitivOBlocks<O> oPrimitivOBlocks = new PrimitivOBlocks<>(executorService, concurrency,
-                primitivOState, blockSize, lz4Compressor);
+                primitivOState, blockSize, compressor);
         //noinspection unchecked
         return primitivOBlocks = oPrimitivOBlocks.newWriter(byteChannel, false);
     }

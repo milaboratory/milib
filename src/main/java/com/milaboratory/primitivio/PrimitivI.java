@@ -20,7 +20,7 @@ import org.apache.commons.io.input.NullInputStream;
 import java.io.*;
 import java.util.ArrayList;
 
-public final class PrimitivI implements DataInput, AutoCloseable {
+public final class PrimitivI implements DataInput, AutoCloseable, HasPrimitivIOState {
     boolean closed = false;
     final DataInput input;
     final SerializersManager manager;
@@ -91,10 +91,12 @@ public final class PrimitivI implements DataInput, AutoCloseable {
         return new PrimitivI(input, manager, knownReferences, knownObjects);
     }
 
+    @Override
     public void putKnownObject(Object ref) {
         knownObjects.add(ref);
     }
 
+    @Override
     public void putKnownReference(Object ref) {
         if (depth > 0) {
             putKnownAfterReset.add(ref);

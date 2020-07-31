@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class PrimitivIOBlocksAbstract {
     protected static final int HASH_SEED = 0xD5D20F71;
@@ -36,6 +37,12 @@ public abstract class PrimitivIOBlocksAbstract {
             ongoingSerdes = new AtomicInteger(),
             ongoingIOOps = new AtomicInteger(),
             pendingOps = new AtomicInteger();
+
+    /**
+     * Number of active readers and writers
+     */
+    protected final AtomicInteger
+            activeRWs = new AtomicInteger();
 
     /**
      * Executor for the deserialization routines
@@ -62,6 +69,7 @@ public abstract class PrimitivIOBlocksAbstract {
             throw new IllegalArgumentException("concurrency must be a positive integer");
         this.executor = executor;
         this.concurrency = concurrency;
+        runStatReporterIfDebug();
     }
 
     protected void _ex(Throwable ex) {
@@ -95,4 +103,52 @@ public abstract class PrimitivIOBlocksAbstract {
     }
 
     public abstract PrimitivIOBlocksStatsAbstract getStats();
+
+    private static final AtomicLong ID_COUNTER;
+    private static final AtomicLong ACTIVE_REPORTERS = new AtomicLong();
+
+    static {
+        AtomicLong counter = null;
+        try {
+            String debugDefined = System.getenv("PRIMITIVIO_DEBUG");
+            if (debugDefined != null)
+                counter = new AtomicLong();
+        } catch (Exception e) {
+        }
+        ID_COUNTER = counter;
+    }
+
+    /**
+     * ID for debugging
+     */
+    private final long id = ID_COUNTER == null ? -1 : ID_COUNTER.getAndIncrement();
+
+    protected void runStatReporterIfDebug() {
+        if (id >= 0 && ACTIVE_REPORTERS.get() < 1) {
+            ACTIVE_REPORTERS.incrementAndGet();
+            Thread thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        boolean lastNoRW = false;
+                        while (true) {
+                            Thread.sleep(100);
+                            if (lastNoRW && activeRWs.get() == 0)
+                                return;
+                            PrimitivIOBlocksStatsAbstract stats = getStats();
+                            System.out.println("IO: " + id);
+                            System.out.println(stats.toString());
+                            Thread.sleep(10000);
+                            lastNoRW = activeRWs.get() == 0;
+                        }
+                    } catch (Exception e) {
+                    } finally {
+                        ACTIVE_REPORTERS.decrementAndGet();
+                    }
+                }
+            });
+            thread.setDaemon(true);
+            thread.start();
+        }
+    }
 }

@@ -154,6 +154,8 @@ public class PrimitivOBlocksTest {
                 PrimitivOBlocks<SingleRead>.Writer writer = io.newWriter(target);
                 PrimitivOHybrid ho = new PrimitivOHybrid(executorService, hybridTarget)) {
 
+            writer.run(c -> anchorPositions.offer(((HasPosition) c).getPosition()));
+
             // Raw Blocks io
             for (int i = 0; i < repeats; i++) {
                 int els = 1 + RandomUtil.getThreadLocalRandom().nextInt(elementsInRepeat - 1);
@@ -166,6 +168,8 @@ public class PrimitivOBlocksTest {
             }
 
             writer.sync();
+
+            Assert.assertEquals(Long.valueOf(0), anchorPositions.poll());
             Assert.assertEquals(repeats * 2, anchorPositions.size());
 
             // Hybrid

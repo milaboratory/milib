@@ -5,7 +5,7 @@ import cc.redberry.pipe.OutputPort;
 import com.milaboratory.core.alignment.batch.PipedAlignmentResult;
 import com.milaboratory.core.sequence.NucleotideSequence;
 import com.milaboratory.test.TestUtil;
-import junit.framework.Assert;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;

@@ -35,8 +35,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ForkJoinPool;
 import java.util.function.Function;
+
+import static com.milaboratory.primitivio.blocks.PrimitivIOBlocksUtil.defaultExecutorService;
 
 // FIXME update docs with RandomAccess options
 
@@ -92,15 +93,19 @@ public final class PrimitivIHybrid implements HasMutablePosition, AutoCloseable 
     private PrimitivIBlocks.Reader continuousBlocksReader;
 
     public PrimitivIHybrid(Path file, int concurrency) throws IOException {
-        this(ForkJoinPool.commonPool(), file, PrimitivIState.INITIAL, new LambdaSemaphore(concurrency));
+        this(file, new LambdaSemaphore(concurrency));
+    }
+
+    public PrimitivIHybrid(Path file, LambdaSemaphore concurrencyLimiter) throws IOException {
+        this(defaultExecutorService(), file, PrimitivIState.INITIAL, concurrencyLimiter);
     }
 
     public PrimitivIHybrid(Path file, PrimitivIState primitivIState, int concurrency) throws IOException {
-        this(ForkJoinPool.commonPool(), file, primitivIState, new LambdaSemaphore(concurrency));
+        this(defaultExecutorService(), file, primitivIState, new LambdaSemaphore(concurrency));
     }
 
     public PrimitivIHybrid(Path file, PrimitivIState primitivIState, LambdaSemaphore concurrencyLimiter) throws IOException {
-        this(ForkJoinPool.commonPool(), file, primitivIState, concurrencyLimiter);
+        this(defaultExecutorService(), file, primitivIState, concurrencyLimiter);
     }
 
     public PrimitivIHybrid(ExecutorService executorService, Path file, int concurrency) throws IOException {

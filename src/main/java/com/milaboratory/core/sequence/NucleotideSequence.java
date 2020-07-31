@@ -169,8 +169,8 @@ public final class NucleotideSequence extends AbstractArraySequence<NucleotideSe
 
         if (range.length() == 1)
             return range.isReverse()
-                    ? getOneLetterSequence(NucleotideAlphabet.complementCode(data[range.getFrom()]))
-                    : getOneLetterSequence(data[range.getFrom()]);
+                    ? getOneLetterSequence(NucleotideAlphabet.complementCode(data[range.getLower()]))
+                    : getOneLetterSequence(data[range.getLower()]);
 
         if (range.isReverse())
             return new NucleotideSequence(

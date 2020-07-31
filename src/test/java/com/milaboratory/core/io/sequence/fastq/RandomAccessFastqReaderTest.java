@@ -17,9 +17,9 @@ package com.milaboratory.core.io.sequence.fastq;
 
 import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.util.FileIndex;
-import junit.framework.Assert;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well1024a;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;

@@ -55,7 +55,7 @@ public final class PrimitivOState {
     }
 
     public PrimitivO createPrimitivO() {
-        return createPrimitivO(new NullOutputStream());
+        return createPrimitivO(NullOutputStream.NULL_OUTPUT_STREAM);
     }
 
     public PrimitivO createPrimitivO(DataOutput output) {
