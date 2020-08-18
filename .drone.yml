@@ -27,17 +27,17 @@ steps:
       mount:
         - .m2
 
-  - name: build_and_test
-    image: maven:3-adoptopenjdk-14
-    commands:
-      - mvn clean test
-    environment:
-      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+#  - name: build_and_test
+#    image: maven:3-adoptopenjdk-14
+#    commands:
+#      - mvn clean test
+#    environment:
+#      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
 
   - name: deploy
     image: maven:3-adoptopenjdk-14
     commands:
-      - mvn deploy -DskipTests -DaltDeploymentRepository= -Drevision=1.14-test
+      - mvn deploy -DskipTests -DaltDeploymentRepository=${DEPLOY_REPO} -Drevision=${DRONE_COMMIT_SHA:0:8}
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
       DEPLOY_REPO:
@@ -58,3 +58,5 @@ steps:
       rebuild: true
       mount:
         - .m2
+
+
