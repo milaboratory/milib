@@ -23,3 +23,4 @@ out
 /blast
 src/test/resources/big
 benchmark-data
+.flattened-pom.xml
