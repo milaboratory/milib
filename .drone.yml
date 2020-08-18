@@ -26,6 +26,8 @@ steps:
       restore: true
       mount:
         - .m2
+        - src/test/resources/big
+        - blast
 
   - name: deploy
     image: maven:3-adoptopenjdk-8
@@ -49,6 +51,7 @@ steps:
   - name: build_and_test
     image: maven:3-adoptopenjdk-8
     commands:
+      - ./init.sh
       - mvn clean test
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
@@ -68,9 +71,11 @@ steps:
       rebuild: true
       mount:
         - .m2
+        - src/test/resources/big
+        - blast
 
 ---
 kind: signature
-hmac: bdb3272f93844ad8d4e181824ed026889945ab8cb72ee4479e79ae6183e25a74
+hmac: afe34f42ed4bc5842fa6c8a0e1188219eac9697f037bcb63ef2a718bf24bc66b
 
 ...
