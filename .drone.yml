@@ -1,0 +1,60 @@
+---
+kind: pipeline
+type: docker
+name: linux
+
+platform:
+  os: linux
+  arch: amd64
+
+event:
+  - push
+
+steps:
+  - name: restore_cache
+    image: appleboy/drone-sftp-cache
+    settings:
+      server:
+        from_secret: sftp-cache-host
+      port:
+        from_secret: sftp-cache-port
+      username:
+        from_secret: sftp-cache-user
+      password:
+        from_secret: sftp-cache-password
+      path: /home
+      restore: true
+      mount:
+        - .m2
+
+  - name: build_and_test
+    image: maven:3-adoptopenjdk-14
+    commands:
+      - mvn clean test
+    environment:
+      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+
+  - name: deploy
+    image: maven:3-adoptopenjdk-14
+    commands:
+      - mvn deploy -DskipTests -DaltDeploymentRepository= -Drevision=1.14-test
+    environment:
+      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+      DEPLOY_REPO:
+        from_secret: deploy-repo
+
+  - name: rebuild_cache
+    image: appleboy/drone-sftp-cache
+    settings:
+      server:
+        from_secret: sftp-cache-host
+      port:
+        from_secret: sftp-cache-port
+      username:
+        from_secret: sftp-cache-user
+      password:
+        from_secret: sftp-cache-password
+      path: /home
+      rebuild: true
+      mount:
+        - .m2
