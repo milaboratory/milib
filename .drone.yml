@@ -27,21 +27,31 @@ steps:
       mount:
         - .m2
 
-#  - name: build_and_test
-#    image: maven:3-adoptopenjdk-14
-#    commands:
-#      - mvn clean test
-#    environment:
-#      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
-
   - name: deploy
-    image: maven:3-adoptopenjdk-14
+    image: maven:3-adoptopenjdk-8
     commands:
-      - mvn deploy -DskipTests -DaltDeploymentRepository=${DEPLOY_REPO} -Drevision=${DRONE_COMMIT_SHA:0:8}
+      - mkdir -p $${HOME}/.m2
+      - echo '<settings><servers><server><id>therepo</id><username>$${repo.user}</username><password>$${repo.pass}</password></server></servers></settings>' > $${HOME}/.m2/settings.xml
+      - mvn deploy -DskipTests -DaltDeploymentRepository=therepo::default::$${DEPLOY_REPO} -Drepo.user=$${DEPLOY_USER} -Drepo.pass=$${DEPLOY_PASS} -Drevision=${DRONE_COMMIT_SHA:0:7}
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
       DEPLOY_REPO:
-        from_secret: deploy-repo
+        from_secret: maven-deploy-repo
+      DEPLOY_USER:
+        from_secret: maven-deploy-user
+      DEPLOY_PASS:
+        from_secret: maven-deploy-pass
+    when:
+      event:
+        exclude:
+          - pull_request
+
+  - name: build_and_test
+    image: maven:3-adoptopenjdk-8
+    commands:
+      - mvn clean test
+    environment:
+      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
 
   - name: rebuild_cache
     image: appleboy/drone-sftp-cache
@@ -59,4 +69,8 @@ steps:
       mount:
         - .m2
 
+---
+kind: signature
+hmac: bdb3272f93844ad8d4e181824ed026889945ab8cb72ee4479e79ae6183e25a74
 
+...
