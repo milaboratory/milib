@@ -12,22 +12,17 @@ event:
 
 steps:
   - name: restore_cache
-    image: appleboy/drone-sftp-cache
-    settings:
-      server:
-        from_secret: sftp-cache-host
-      port:
-        from_secret: sftp-cache-port
-      username:
-        from_secret: sftp-cache-user
-      password:
-        from_secret: sftp-cache-password
-      path: /home
-      restore: true
-      mount:
-        - .m2
-        - src/test/resources/big
-        - blast
+    image: curlimages/curl
+    user: root
+    environment:
+      WEBDAV_CACHE_ADDRESS:
+        from_secret: webdav-cache-address
+      WEBDAV_CACHE_USERNAME:
+        from_secret: webdav-cache-username
+      WEBDAV_CACHE_PASSWORD:
+        from_secret: webdav-cache-password
+    commands:
+      - echo .m2 src/test/resources/big blast | tr ' ' '\n' | xargs -P5 -i /bin/sh -c 'mkdir -p {} && curl --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH}/$$(echo {} | tr -d / ) | tar -xC {} || true'
 
   - name: deploy
     image: maven:3-adoptopenjdk-8
@@ -57,25 +52,22 @@ steps:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
 
   - name: rebuild_cache
-    image: appleboy/drone-sftp-cache
-    settings:
-      server:
-        from_secret: sftp-cache-host
-      port:
-        from_secret: sftp-cache-port
-      username:
-        from_secret: sftp-cache-user
-      password:
-        from_secret: sftp-cache-password
-      path: /home
-      rebuild: true
-      mount:
-        - .m2
-        - src/test/resources/big
-        - blast
+    image: curlimages/curl
+    user: root
+    environment:
+      WEBDAV_CACHE_ADDRESS:
+        from_secret: webdav-cache-address
+      WEBDAV_CACHE_USERNAME:
+        from_secret: webdav-cache-username
+      WEBDAV_CACHE_PASSWORD:
+        from_secret: webdav-cache-password
+    commands:
+      - curl -X MKCOL --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME} || true
+      - curl -X MKCOL --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH} || true
+      - echo .m2 src/test/resources/big blast | tr ' ' '\n' | xargs -P5 -i /bin/sh -c 'tar -C {} -c . | curl -T - --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH}/$$(echo {} | tr -d / ) || true'
 
 ---
 kind: signature
-hmac: afe34f42ed4bc5842fa6c8a0e1188219eac9697f037bcb63ef2a718bf24bc66b
+hmac: 659253c12203fee6a2e7ee4e5d100c696f2d8c6890b2f0d98254d0b2824befaa
 
 ...
