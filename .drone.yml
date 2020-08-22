@@ -21,6 +21,7 @@ steps:
     pull: true
     settings:
       restore: true
+      cache_key: '{{ .Commit.Branch }}'
       bucket:
         from_secret: aws-cache-bucket
       region:
@@ -67,6 +68,7 @@ steps:
         from_secret: aws-secret-key
     settings:
       rebuild: true
+      cache_key: '{{ .Commit.Branch }}'
       bucket:
         from_secret: aws-cache-bucket
       region:
@@ -78,6 +80,6 @@ steps:
 
 ---
 kind: signature
-hmac: 6a7bb32b764f0e8a8f096d6219ddc83f35af3eb0ed237af4c3f7d26acb5f5838
+hmac: 51266f5c8f242a8b0dc309f328558806107fa72473331147f5c6847465f8d0f2
 
 ...
