@@ -62,11 +62,6 @@ steps:
 
   - name: rebuild_cache
     image: meltwater/drone-cache
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: aws-key-id
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: aws-secret-key
     settings:
       rebuild: true
       debug: true
@@ -87,6 +82,6 @@ steps:
 
 ---
 kind: signature
-hmac: 386e83b3404b4a3dae58871816a75e52c3f07d42fac4a09a4b5d44ca8b5d6471
+hmac: 431b9173f36bff30f4dcaccda3e29713e295911e5aa3ca54c56a9454a57598b7
 
 ...
