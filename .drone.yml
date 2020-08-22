@@ -27,6 +27,7 @@ steps:
   - name: deploy
     image: maven:3-adoptopenjdk-8
     commands:
+      - df -h
       - mkdir -p $${HOME}/.m2
       - echo '<settings><servers><server><id>therepo</id><username>$${repo.user}</username><password>$${repo.pass}</password></server></servers></settings>' > $${HOME}/.m2/settings.xml
       - mvn deploy -DskipTests -DaltDeploymentRepository=therepo::default::$${DEPLOY_REPO} -Drepo.user=$${DEPLOY_USER} -Drepo.pass=$${DEPLOY_PASS} -Drevision=${DRONE_COMMIT_SHA:0:7}
@@ -68,6 +69,6 @@ steps:
 
 ---
 kind: signature
-hmac: 659253c12203fee6a2e7ee4e5d100c696f2d8c6890b2f0d98254d0b2824befaa
+hmac: 3a0f030510e5cb7ca34c78934d0eec00c4253b036810650ac6984dd3489f2512
 
 ...
