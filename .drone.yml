@@ -12,17 +12,23 @@ event:
 
 steps:
   - name: restore_cache
-    image: curlimages/curl
-    user: root
+    image: meltwater/drone-cache
     environment:
-      WEBDAV_CACHE_ADDRESS:
-        from_secret: webdav-cache-address
-      WEBDAV_CACHE_USERNAME:
-        from_secret: webdav-cache-username
-      WEBDAV_CACHE_PASSWORD:
-        from_secret: webdav-cache-password
-    commands:
-      - echo .m2 src/test/resources/big blast | tr ' ' '\n' | xargs -P5 -i /bin/sh -c 'mkdir -p {} && curl --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH}/$$(echo {} | tr -d / ) | tar -xC {} || true'
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws-key-id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws-secret-key
+    pull: true
+    settings:
+      restore: true
+      bucket:
+        from_secret: aws-cache-bucket
+      region:
+        from_secret: aws-region
+      mount:
+        - .m2
+        - src/test/resources/big
+        - blast
 
   - name: deploy
     image: maven:3-adoptopenjdk-8
@@ -44,31 +50,34 @@ steps:
         exclude:
           - pull_request
 
-  - name: build_and_test
-    image: maven:3-adoptopenjdk-8
-    commands:
-      - ./init.sh
-      - mvn clean test
-    environment:
-      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+#  - name: build_and_test
+#    image: maven:3-adoptopenjdk-8
+#    commands:
+#      - ./init.sh
+#      - mvn clean test
+#    environment:
+#      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
 
   - name: rebuild_cache
-    image: curlimages/curl
-    user: root
+    image: meltwater/drone-cache
     environment:
-      WEBDAV_CACHE_ADDRESS:
-        from_secret: webdav-cache-address
-      WEBDAV_CACHE_USERNAME:
-        from_secret: webdav-cache-username
-      WEBDAV_CACHE_PASSWORD:
-        from_secret: webdav-cache-password
-    commands:
-      - curl -X MKCOL --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME} || true
-      - curl -X MKCOL --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH} || true
-      - echo .m2 src/test/resources/big blast | tr ' ' '\n' | xargs -P5 -i /bin/sh -c 'tar -C {} -c . | curl -T - --user "$${WEBDAV_CACHE_USERNAME}:$${WEBDAV_CACHE_PASSWORD}" $${WEBDAV_CACHE_ADDRESS}/${DRONE_REPO_NAME}/${DRONE_BRANCH}/$$(echo {} | tr -d / ) || true'
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws-key-id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws-secret-key
+    settings:
+      rebuild: true
+      bucket:
+        from_secret: aws-cache-bucket
+      region:
+        from_secret: aws-region
+      mount:
+        - .m2
+        - src/test/resources/big
+        - blast
 
 ---
 kind: signature
-hmac: 3a0f030510e5cb7ca34c78934d0eec00c4253b036810650ac6984dd3489f2512
+hmac: 6a7bb32b764f0e8a8f096d6219ddc83f35af3eb0ed237af4c3f7d26acb5f5838
 
 ...
