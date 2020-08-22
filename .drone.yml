@@ -13,19 +13,20 @@ event:
 steps:
   - name: restore_cache
     image: meltwater/drone-cache
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: aws-key-id
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: aws-secret-key
     pull: true
     settings:
       restore: true
+      debug: true
       cache_key: '{{ .Commit.Branch }}'
+      access_key:
+        from_secret: aws-key-id
+      secret_key:
+        from_secret: aws-secret-key
       bucket:
         from_secret: aws-cache-bucket
       region:
         from_secret: aws-region
+      local_root: /drone/src
       mount:
         - .m2
         - src/test/resources/big
@@ -34,10 +35,10 @@ steps:
   - name: deploy
     image: maven:3-adoptopenjdk-8
     commands:
-      - df -h
       - mkdir -p $${HOME}/.m2
       - echo '<settings><servers><server><id>therepo</id><username>$${repo.user}</username><password>$${repo.pass}</password></server></servers></settings>' > $${HOME}/.m2/settings.xml
       - mvn deploy -DskipTests -DaltDeploymentRepository=therepo::default::$${DEPLOY_REPO} -Drepo.user=$${DEPLOY_USER} -Drepo.pass=$${DEPLOY_PASS} -Drevision=${DRONE_COMMIT_SHA:0:7}
+      - ls -la
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
       DEPLOY_REPO:
@@ -51,13 +52,13 @@ steps:
         exclude:
           - pull_request
 
-#  - name: build_and_test
-#    image: maven:3-adoptopenjdk-8
-#    commands:
-#      - ./init.sh
-#      - mvn clean test
-#    environment:
-#      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+  - name: build_and_test
+    image: maven:3-adoptopenjdk-8
+    commands:
+      - ./init.sh
+      - mvn clean test
+    environment:
+      MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
 
   - name: rebuild_cache
     image: meltwater/drone-cache
@@ -68,11 +69,17 @@ steps:
         from_secret: aws-secret-key
     settings:
       rebuild: true
+      debug: true
       cache_key: '{{ .Commit.Branch }}'
+      access_key:
+        from_secret: aws-key-id
+      secret_key:
+        from_secret: aws-secret-key
       bucket:
         from_secret: aws-cache-bucket
       region:
         from_secret: aws-region
+      local_root: /drone/src
       mount:
         - .m2
         - src/test/resources/big
@@ -80,6 +87,6 @@ steps:
 
 ---
 kind: signature
-hmac: 51266f5c8f242a8b0dc309f328558806107fa72473331147f5c6847465f8d0f2
+hmac: 386e83b3404b4a3dae58871816a75e52c3f07d42fac4a09a4b5d44ca8b5d6471
 
 ...
