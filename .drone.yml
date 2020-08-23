@@ -16,7 +16,7 @@ steps:
     pull: true
     settings:
       restore: true
-      debug: true
+      # debug: true
       cache_key: '{{ .Commit.Branch }}'
       access_key:
         from_secret: aws-key-id
@@ -63,7 +63,7 @@ steps:
     image: meltwater/drone-cache
     settings:
       rebuild: true
-      debug: true
+      # debug: true
       cache_key: '{{ .Commit.Branch }}'
       access_key:
         from_secret: aws-key-id
@@ -81,6 +81,6 @@ steps:
 
 ---
 kind: signature
-hmac: c0d5920bf7b5766590688f359afdad388840ef9c2aa95f5bfea0205171a5d420
+hmac: 0b76706ab00524dba2ed1a3da288bb2f4e4f212dbc6a15e71b3949d46fed178f
 
 ...
