@@ -157,7 +157,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <revision>SNAPSHOT</revision>
-        <wagon.version>3.4.1</wagon.version>
     </properties>
 
     <scm>
@@ -240,9 +239,9 @@
     <build>
         <extensions>
             <extension>
-                <groupId>org.apache.maven.wagon</groupId>
-                <artifactId>wagon-webdav-jackrabbit</artifactId>
-                <version>${wagon.version}</version>
+                <groupId>org.zalando.org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE-zal-2</version>
             </extension>
         </extensions>
 
