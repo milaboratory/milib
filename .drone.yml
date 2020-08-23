@@ -41,12 +41,14 @@ steps:
       - ls -la
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
+      AWS_REGION:
+        from_secret: aws-region
       DEPLOY_REPO:
         from_secret: maven-deploy-repo
       DEPLOY_USER:
-        from_secret: maven-deploy-user
+        from_secret: aws-key-id
       DEPLOY_PASS:
-        from_secret: maven-deploy-pass
+        from_secret: aws-secret-key
     when:
       event:
         exclude:
@@ -82,6 +84,6 @@ steps:
 
 ---
 kind: signature
-hmac: 431b9173f36bff30f4dcaccda3e29713e295911e5aa3ca54c56a9454a57598b7
+hmac: d02746c6286deb3080bbebb9d8240797c418e8e8228df21b6bed55938a50ed26
 
 ...
