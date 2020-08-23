@@ -35,11 +35,7 @@ steps:
   - name: deploy
     image: maven:3-adoptopenjdk-8
     commands:
-      # - mkdir -p $${HOME}/.m2
-      # - echo '<settings><servers><server><id>therepo</id><username>$${repo.user}</username><password>$${repo.pass}</password></server></servers></settings>' > $${HOME}/.m2/settings.xml
-      # -Drepo.user=$${DEPLOY_USER} -Drepo.pass=$${DEPLOY_PASS}
       - mvn deploy -DskipTests -DaltDeploymentRepository=therepo::default::$${DEPLOY_REPO} -Drevision=${DRONE_COMMIT_SHA:0:7}
-      - ls -la
     environment:
       MAVEN_OPTS: "-Dmaven.repo.local=/drone/src/.m2"
       AWS_DEFAULT_REGION:
@@ -85,6 +81,6 @@ steps:
 
 ---
 kind: signature
-hmac: c4e36d35aebf91383f6ab997318431be4aff635b15017afbc6e0ad750006f6df
+hmac: c0d5920bf7b5766590688f359afdad388840ef9c2aa95f5bfea0205171a5d420
 
 ...
