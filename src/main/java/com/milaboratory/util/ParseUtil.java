@@ -97,4 +97,30 @@ public final class ParseUtil {
             return types.size();
         }
     }
+
+    public static String stripAllQuotes(String str) {
+        String strippedStr = str;
+        boolean finished = false;
+        do {
+            if (strippedStr.length() > 0) {
+                char firstChar = strippedStr.charAt(0);
+                if (firstChar == '\'')
+                    strippedStr = stripSingleQuotes(strippedStr);
+                else if (firstChar == '"')
+                    strippedStr = stripDoubleQuotes(strippedStr);
+                else
+                    finished = true;
+            } else
+                finished = true;
+        } while (!finished);
+        return strippedStr;
+    }
+
+    public static String stripSingleQuotes(String str) {
+        return str.replaceAll("^'|'$", "");
+    }
+
+    public static String stripDoubleQuotes(String str) {
+        return str.replaceAll("^\"|\"$", "");
+    }
 }

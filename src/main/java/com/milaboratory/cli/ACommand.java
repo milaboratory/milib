@@ -20,13 +20,15 @@ import picocli.CommandLine.Option;
 import java.io.File;
 import java.util.*;
 
+import static com.milaboratory.util.ParseUtil.stripAllQuotes;
+
 public abstract class ACommand extends ABaseCommand implements Runnable {
     public ACommand(String appName) {
         super(appName);
     }
 
     /** queue of warning messages */
-    private List<String> warningsQueue = new ArrayList<>();
+    private final List<String> warningsQueue = new ArrayList<>();
     /** flag that signals we are entered the run method */
     private boolean running;
 
@@ -68,7 +70,8 @@ public abstract class ACommand extends ABaseCommand implements Runnable {
 
     /** Validate injected parameters and options */
     public void validate() {
-        for (String in : getInputFiles()) {
+        for (String rawIn : getInputFiles()) {
+            String in = stripAllQuotes(rawIn);
             if (!new File(in).exists())
                 throwValidationException("ERROR: input file \"" + in + "\" does not exist.", false);
             validateInfo(in);
