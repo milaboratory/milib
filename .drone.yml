@@ -29,8 +29,6 @@ steps:
       local_root: /drone/src
       mount:
         - .m2
-        - src/test/resources/big
-        - blast
 
   - name: deploy
     image: maven:3-adoptopenjdk-8
@@ -50,6 +48,44 @@ steps:
       event:
         exclude:
           - pull_request
+
+---
+
+kind: pipeline
+type: docker
+name: test
+
+platform:
+  os: linux
+  arch: amd64
+
+node:
+  type: highcpu
+
+event:
+  - push
+
+steps:
+  - name: restore_cache
+    image: meltwater/drone-cache
+    pull: true
+    settings:
+      restore: true
+      # debug: true
+      cache_key: '{{ .Commit.Branch }}'
+      access_key:
+        from_secret: aws-key-id
+      secret_key:
+        from_secret: aws-secret-key
+      bucket:
+        from_secret: aws-cache-bucket
+      region:
+        from_secret: aws-region
+      local_root: /drone/src
+      mount:
+        - .m2
+        - src/test/resources/big
+        - blast
 
   - name: build_and_test
     image: maven:3-adoptopenjdk-8
@@ -81,6 +117,6 @@ steps:
 
 ---
 kind: signature
-hmac: b456feb0e63e87fddbabc71a5a93f0f138f1c7baa3170127e765814be12e6360
+hmac: 24b456983d31a71834422f7aede609b6f87654d14c63c2f776a02b8d3cfcf4a0
 
 ...
