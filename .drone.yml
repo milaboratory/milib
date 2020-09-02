@@ -49,6 +49,35 @@ steps:
         exclude:
           - pull_request
 
+  - name: Send Telegram Notification
+    image: appleboy/drone-telegram
+    when:
+      status:
+        - success
+        - failure
+    settings:
+      token:
+        from_secret: telegram-token
+      to:
+        from_secret: telegram-chat-id-micore
+      format: markdown
+      message: >
+        {{#success build.status}}
+        ✅ MiLib deploy {{build.number}} success (branch {{commit.branch}}).
+
+        ```
+
+        <groupId>com.milaboratory</groupId>
+
+        <artifactId>milib</artifactId>
+
+        <version>1.14-{{truncate commit.sha 7}}</version>
+        ```
+        {{else}}
+        ❌ MiLib deploy {{build.number}} failure (branch {{commit.branch}}).
+        🌐 {{build.link}}
+        {{/success}}
+
 ---
 
 kind: pipeline
@@ -117,6 +146,6 @@ steps:
 
 ---
 kind: signature
-hmac: 24b456983d31a71834422f7aede609b6f87654d14c63c2f776a02b8d3cfcf4a0
+hmac: 64792dd5d8a95a2fffe3ac96ec56e11c9b36ab83d6bd7140b16e84c2b1028663
 
 ...
