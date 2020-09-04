@@ -34,6 +34,11 @@ public class CacheTest {
             cache.store(i, i, i);
             cache.store(i, i, i, i);
             cache.store(i, i, i, i, i);
+
+            cache.store(-i, null);
+            cache.store(-i, -i, null);
+            cache.store(-i, -i, -i, null);
+            cache.store(-i, -i, -i, -i, null);
         }
 
         int good = 0;
@@ -46,8 +51,17 @@ public class CacheTest {
                 ++good;
             if (cache.<Integer>get(i, i, i, i) != null)
                 ++good;
+
+            if (cache.<Integer>computeIfAbsent(-i, () -> 1) == null)
+                ++good;
+            if (cache.<Integer>computeIfAbsent(-i, -i, () -> 1) == null)
+                ++good;
+            if (cache.<Integer>computeIfAbsent(-i, -i, -i, () -> 1) == null)
+                ++good;
+            if (cache.<Integer>computeIfAbsent(-i, -i, -i, -i, () -> 1) == null)
+                ++good;
         }
 
-        Assert.assertTrue(good > 350);
+        Assert.assertTrue(good > 700);
     }
 }

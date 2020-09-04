@@ -18,8 +18,10 @@ package com.milaboratory.util;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.function.Supplier;
 
 public class Cache {
+    private static final Object NULL = new Object();
     private HashMap<Object, WeakReference<Object>> map;
 
     private void ensureInitialized() {
@@ -31,7 +33,7 @@ public class Cache {
         map.entrySet().removeIf(e -> e.getValue().get() == null);
     }
 
-    public <T> T get(Object key0) {
+    private Object _get(Object key0) {
         if (map == null)
             return null;
         WeakReference<Object> ref = map.get(key0);
@@ -40,7 +42,12 @@ public class Cache {
         Object o = ref.get();
         if (o == null)
             clean();
-        return (T) o;
+        return o;
+    }
+
+    public <T> T get(Object key0) {
+        Object o = _get(key0);
+        return o == NULL ? null : (T) o;
     }
 
     public <T> T get(Object key0, Object key1) {
@@ -57,7 +64,10 @@ public class Cache {
 
     public <T> T store(Object key0, T value) {
         ensureInitialized();
-        map.put(key0, new WeakReference<>(value));
+        if (value == null)
+            map.put(key0, new WeakReference<>(NULL));
+        else
+            map.put(key0, new WeakReference<>(value));
         return value;
     }
 
@@ -71,6 +81,27 @@ public class Cache {
 
     public <T> T store(Object key0, Object key1, Object key2, Object key3, T value) {
         return store(new Tuple4(key0, key1, key2, key3), value);
+    }
+
+    public <T> T computeIfAbsent(Object key0, Supplier<T> func) {
+        Object o = _get(key0);
+        if (o == null) {
+            o = func.get();
+            store(key0, o);
+        }
+        return o == NULL ? null : (T) o;
+    }
+
+    public <T> T computeIfAbsent(Object key0, Object key1, Supplier<T> func) {
+        return computeIfAbsent(new Tuple2(key0, key1), func);
+    }
+
+    public <T> T computeIfAbsent(Object key0, Object key1, Object key2, Supplier<T> func) {
+        return computeIfAbsent(new Tuple3(key0, key1, key2), func);
+    }
+
+    public <T> T computeIfAbsent(Object key0, Object key1, Object key2, Object key3, Supplier<T> func) {
+        return computeIfAbsent(new Tuple4(key0, key1, key2, key3), func);
     }
 
     private final static class Tuple2 {
