@@ -63,5 +63,7 @@ public class CacheTest {
         }
 
         Assert.assertTrue(good > 700);
+        System.out.println("Cache misses:" + Cache.totalCacheMisses());
+        System.out.println("Cache hits:" + Cache.totalCacheHits());
     }
 }

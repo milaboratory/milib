@@ -18,9 +18,11 @@ package com.milaboratory.util;
 import java.lang.ref.WeakReference;
 import java.util.HashMap;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 public class Cache {
+    private static AtomicLong cacheHit = new AtomicLong(), cacheMiss = new AtomicLong();
     private static final Object NULL = new Object();
     private HashMap<Object, WeakReference<Object>> map;
 
@@ -34,14 +36,21 @@ public class Cache {
     }
 
     private Object _get(Object key0) {
-        if (map == null)
+        if (map == null) {
+            cacheMiss.incrementAndGet();
             return null;
+        }
         WeakReference<Object> ref = map.get(key0);
-        if (ref == null)
+        if (ref == null) {
+            cacheMiss.incrementAndGet();
             return null;
+        }
         Object o = ref.get();
-        if (o == null)
+        if (o == null) {
+            cacheMiss.incrementAndGet();
             clean();
+        } else
+            cacheHit.incrementAndGet();
         return o;
     }
 
@@ -102,6 +111,14 @@ public class Cache {
 
     public <T> T computeIfAbsent(Object key0, Object key1, Object key2, Object key3, Supplier<T> func) {
         return computeIfAbsent(new Tuple4(key0, key1, key2, key3), func);
+    }
+
+    public static long totalCacheHits() {
+        return cacheHit.get();
+    }
+
+    public static long totalCacheMisses() {
+        return cacheMiss.get();
     }
 
     private final static class Tuple2 {
