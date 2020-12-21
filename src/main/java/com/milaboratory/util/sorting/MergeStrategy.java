@@ -18,10 +18,7 @@ package com.milaboratory.util.sorting;
 import cc.redberry.pipe.OutputPort;
 import cc.redberry.pipe.OutputPortCloseable;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -44,8 +41,8 @@ public final class MergeStrategy<T> {
     public MergeStrategy(List<? extends SortingProperty<? super T>> streamGrouping, List<? extends SortingProperty<? super T>> postGrouping) {
         Objects.requireNonNull(streamGrouping);
         Objects.requireNonNull(postGrouping);
-        this.streamGrouping = streamGrouping;
-        this.postGrouping = postGrouping;
+        this.streamGrouping = Collections.unmodifiableList(streamGrouping);
+        this.postGrouping = Collections.unmodifiableList(postGrouping);
     }
 
     public boolean usesStreamOrdering() {

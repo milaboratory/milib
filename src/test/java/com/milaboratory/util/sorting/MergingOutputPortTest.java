@@ -67,8 +67,8 @@ public class MergingOutputPortTest {
 
     @Test
     public void joinTest1() throws InterruptedException {
-        int N = 30;
-        int K = 500;
+        int N = 300;
+        int K = 5000;
 
         Set<NucleotideSequence> markerSequencesSet = new HashSet<>();
         while (markerSequencesSet.size() < N)

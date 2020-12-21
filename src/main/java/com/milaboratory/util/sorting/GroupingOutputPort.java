@@ -22,6 +22,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>> {
+    private final Object mutex = new Object();
     private T lastObject;
     private final OutputPort<T> innerOutputPort;
     private final MergeStrategy<T> groupingStrategy;
@@ -38,10 +39,35 @@ public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>>
                 .collect(Collectors.toList());
     }
 
+    private int compareBySuperGroup(T o1, T o2) {
+        int compare;
+        for (int i = 0; i < groupingStrategy.streamGrouping.size(); i++) {
+            SortingProperty<? super T> sortingProperty = groupingStrategy.streamGrouping.get(i);
+            if ((compare = sortingProperty.compare(o1, o2)) != 0)
+                return compare;
+        }
+
+        return 0;
+    }
+
     private List<Object> extractPostGroupValues(T obj) {
         return groupingStrategy.postGrouping.stream()
                 .map(prop -> prop.get(obj))
                 .collect(Collectors.toList());
+    }
+
+    private final class PostGroupsComparator implements Comparator<T> {
+        @Override
+        public int compare(T o1, T o2) {
+            int compare;
+            for (int i = 0; i < groupingStrategy.postGrouping.size(); i++) {
+                SortingProperty<? super T> grp = groupingStrategy.postGrouping.get(i);
+                if ((compare = grp.compare(o1, o2)) != 0)
+                    return compare;
+            }
+
+            return 0;
+        }
     }
 
     /**
@@ -51,23 +77,30 @@ public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>>
      * in the underlying iterator
      */
     private boolean fillQueue() {
-        assert queue.isEmpty();
+        if (!queue.isEmpty())
+            throw new IllegalStateException("Queue not empty.");
 
+        // innerOutputPort was empty from the very beginning
+        // or call to take() after the whole object was closed
         if (lastObject == null
-                && (lastObject = innerOutputPort.take()) == null)
+                && (lastObject = innerOutputPort.take()) == null) // this loads value from innerOutputPort if lastObject == null
             return false;
 
-        List<Object> currentSGV = extractSuperGroupValues(lastObject);
+        T keyObject = this.lastObject;
 
         if (groupingStrategy.postGrouping.isEmpty()) {
             List<T> group = new ArrayList<>();
-            group.add(lastObject);
-            lastObject = null;
+            group.add(keyObject);
+            this.lastObject = null;
 
             T next;
             while ((next = innerOutputPort.take()) != null) {
-                if (!extractSuperGroupValues(next).equals(currentSGV)) {
-                    lastObject = next;
+                int cmp = compareBySuperGroup(keyObject, next);
+                if (cmp > 0)
+                    throw new IllegalArgumentException("Input port soring is not compatible " +
+                            "with the provided grouping strategy");
+                if (cmp != 0) {
+                    this.lastObject = next;
                     break;
                 }
                 group.add(next);
@@ -76,21 +109,24 @@ public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>>
             queue.add(group);
         } else {
             // postGroupingValues -> group
-            Map<List<Object>, List<T>> groups = new HashMap<>();
-            groups.put(extractPostGroupValues(lastObject),
+            SortedMap<T, List<T>> groups = new TreeMap<>(new PostGroupsComparator());
+            groups.put(lastObject,
                     new ArrayList<>(Collections.singletonList(lastObject)));
             lastObject = null;
 
             T next;
             while ((next = innerOutputPort.take()) != null) {
-
-                if (!extractSuperGroupValues(next).equals(currentSGV)) {
+                int cmp = compareBySuperGroup(keyObject, next);
+                if (cmp > 0)
+                    throw new IllegalArgumentException("Input port soring is not compatible " +
+                            "with the provided grouping strategy");
+                if (cmp != 0) {
                     lastObject = next;
                     break;
                 }
 
                 groups.computeIfAbsent(
-                        extractPostGroupValues(next),
+                        next,
                         __ -> new ArrayList<>()
                 ).add(next);
             }
@@ -103,19 +139,23 @@ public final class GroupingOutputPort<T> implements OutputPortCloseable<List<T>>
 
     @Override
     public List<T> take() {
-        while (queue.isEmpty())
-            if (!fillQueue())
-                return null;
-        return queue.remove();
+        synchronized (mutex) {
+            while (queue.isEmpty())
+                if (!fillQueue())
+                    return null;
+            return queue.remove();
+        }
     }
 
     @Override
     public void close() {
-        if (innerOutputPort instanceof AutoCloseable) {
-            try {
-                ((AutoCloseable) innerOutputPort).close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+        synchronized (mutex) {
+            if (innerOutputPort instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) innerOutputPort).close();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
