@@ -330,9 +330,10 @@ public class HashSorter<T> {
                 // <- requires additional HDD based collate procedure
 
                 // Bits to fit each sub-bucket into budget
-                int nextBitCount = 64 - Long.numberOfLeadingZeros(bucketSizes[i] * objectSize / memoryBudget - 1);
-                nextBitCount += 1;
-                nextBitCount = Math.min(nextBitCount, bitCount);
+                // int nextBitCount = 64 - Long.numberOfLeadingZeros(bucketSizes[i] * objectSize / memoryBudget - 1);
+                // nextBitCount += 1;
+                int nextBitCount = bitCount;
+                // nextBitCount = Math.min(nextBitCount, bitCount);
 
                 int newOffset = bitOffset - nextBitCount;
                 if (newOffset < 0)
