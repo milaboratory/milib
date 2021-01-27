@@ -158,6 +158,7 @@ public class HashSorter<T> {
         final Path prefix;
         final int numberOfBuckets, bitCount, bitMask, bitOffset;
         final int[] bucketSizes;
+        final boolean[] singleHash;
         final boolean rootCollater;
         final AtomicBoolean initialized = new AtomicBoolean();
         long objectSize;
@@ -175,6 +176,7 @@ public class HashSorter<T> {
             this.objectSize = objectSizeInitialValue;
             this.rootCollater = rootCollater;
             this.bucketSizes = new int[numberOfBuckets];
+            this.singleHash = new boolean[numberOfBuckets];
         }
 
         public Path getBucketPath(int i) {
@@ -202,6 +204,9 @@ public class HashSorter<T> {
                 // Bucket writers
                 PrimitivOBlocks<T>.Writer[] os = new PrimitivOBlocks.Writer[numberOfBuckets];
 
+                Integer[] firstHash = new Integer[numberOfBuckets];
+                Arrays.fill(singleHash, true);
+
                 for (int i = 0; i < numberOfBuckets; i++) {
                     blocks[i] = new ArrayList<>();
                     os[i] = o.newWriter(getBucketPath(i));
@@ -212,9 +217,15 @@ public class HashSorter<T> {
                 long objectSize = this.objectSize;
                 int recheckCounter = sizeRecheckPeriod;
                 while ((obj = source.take()) != null) {
-                    int bucketId = bitMask & (hash.applyAsInt(obj) >>> bitOffset);
+                    int hashValue = hash.applyAsInt(obj);
+                    int bucketId = bitMask & (hashValue >>> bitOffset);
                     blocks[bucketId].add(obj);
                     objectsCount++;
+
+                    if (firstHash[bucketId] == null)
+                        firstHash[bucketId] = hashValue;
+                    else if (firstHash[bucketId] != hashValue)
+                        singleHash[bucketId] = false;
 
                     // Adjusting object size estimate based ob observed serialized size
                     // Dynamic adjustment performed only for root collater,
@@ -269,7 +280,7 @@ public class HashSorter<T> {
             timeInCollate.addAndGet(System.nanoTime() - runStart);
         }
 
-        private OutputPort<T> getBucketRawPort(int i) {
+        private OutputPortCloseable<T> getBucketRawPort(int i) {
             try {
                 PrimitivIBlocks<T> input = new PrimitivIBlocks<>(clazz, readerConcurrency, iState);
                 Path bucketPath = getBucketPath(i);
@@ -312,6 +323,9 @@ public class HashSorter<T> {
                 throw new IllegalStateException();
 
             if (bucketSizes[i] * objectSize > memoryBudget) {
+
+                if (singleHash[i])
+                    return getBucketRawPort(i);
 
                 // <- requires additional HDD based collate procedure
 
