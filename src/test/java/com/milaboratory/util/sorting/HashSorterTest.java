@@ -88,4 +88,56 @@ public class HashSorterTest {
 
         c.printStat();
     }
+
+    @Test
+    public void test2() {
+        List<NucleotideSequence> seqsList = new ArrayList<>();
+        for (int i = 0; i < 2; i++)
+            seqsList.add(TestUtil.randomSequence(NucleotideSequence.ALPHABET, 15000, 20000));
+
+        RandomGenerator rg = new Well19937c(1234);
+
+        int N = 500000;
+        AtomicInteger unorderedHash = new AtomicInteger(0);
+        OutputPort<NucleotideSequence> seqs = new OutputPort<NucleotideSequence>() {
+            @Override
+            public synchronized NucleotideSequence take() {
+                NucleotideSequence seq = seqsList.get(rg.nextInt(seqsList.size()));
+                unorderedHash.accumulateAndGet(seq.hashCode(), (left, right) -> left + right);
+                return seq;
+            }
+        };
+        seqs = new CountLimitingOutputPort<>(seqs, N);
+
+        File dir = TempFileManager.getTempDir();
+        System.out.println(dir);
+
+        HashSorter<NucleotideSequence> c = new HashSorter<>(
+                NucleotideSequence.class,
+                Objects::hashCode, Comparator.naturalOrder(),
+                5, dir.toPath(), 4, 6,
+                PrimitivOState.INITIAL, PrimitivIState.INITIAL,
+                1 << 20, 128);
+
+        Comparator<NucleotideSequence> ec = c.effectiveComparator();
+
+        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
+        long actualN = 0;
+        int uh = unorderedHash.get();
+        NucleotideSequence previous = null;
+        for (NucleotideSequence ns : CUtils.it(port)) {
+            ++actualN;
+            uh -= ns.hashCode();
+            if (previous != null) {
+                int compare = ec.compare(previous, ns);
+                Assert.assertTrue(compare <= 0);
+            }
+            previous = ns;
+        }
+
+        Assert.assertEquals(N, actualN);
+        Assert.assertEquals(0, uh);
+
+        c.printStat();
+    }
 }

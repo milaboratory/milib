@@ -24,7 +24,7 @@ import java.util.Comparator;
  */
 public interface SortingProperty<T> extends Comparator<T> {
     /**
-     * Returns relation to other property
+     * Returns relation to other property. See docs for {@link SortingPropertyRelation} for details.
      *
      * @param other other property defined for the same object type
      * @return relation to other property

@@ -28,6 +28,7 @@ import java.util.function.Function;
  * output ports were provided to the constructor of this instance.
  */
 public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
+    private final Object mutex = new Object();
     private final Comparator<T> comparator;
     private final SortedSet<OPWrapper> ports;
     private volatile int lastPortIndex = -1;
@@ -48,18 +49,20 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
     }
 
     @Override
-    public synchronized T take() {
-        if (ports.isEmpty()) {
-            lastPortIndex = -1;
-            return null;
+    public T take() {
+        synchronized (mutex) {
+            if (ports.isEmpty()) {
+                lastPortIndex = -1;
+                return null;
+            }
+            OPWrapper op = ports.first();
+            ports.remove(op);
+            T value = op.nextValue;
+            lastPortIndex = op.index;
+            if (op.advance())
+                ports.add(op);
+            return value;
         }
-        OPWrapper op = ports.first();
-        ports.remove(op);
-        T value = op.nextValue;
-        lastPortIndex = op.index;
-        if (op.advance())
-            ports.add(op);
-        return value;
     }
 
     /**
@@ -75,7 +78,7 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
 
             @Override
             public WithIndex<T> take() {
-                synchronized (MergingOutputPort.this) {
+                synchronized (mutex) {
                     T obj = MergingOutputPort.this.take();
                     return obj == null ? null : new WithIndex<>(MergingOutputPort.this.lastPortIndex, obj);
                 }
@@ -84,14 +87,16 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
     }
 
     @Override
-    public synchronized void close() {
-        try {
-            for (OPWrapper port : ports)
-                if (port.port instanceof AutoCloseable)
-                    ((AutoCloseable) port.port).close();
-            ports.clear();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    public void close() {
+        synchronized (mutex) {
+            try {
+                for (OPWrapper port : ports)
+                    if (port.port instanceof AutoCloseable)
+                        ((AutoCloseable) port.port).close();
+                ports.clear();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -103,20 +108,21 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
         final OutputPort<T> port;
         T nextValue;
 
-        public OPWrapper(int index, OutputPort<T> port) {
+        OPWrapper(int index, OutputPort<T> port) {
             this.index = index;
             this.port = port;
             advance();
         }
 
-        public boolean advance() {
+        boolean advance() {
             T next = port.take();
-            assert next == null || nextValue == null || comparator.compare(nextValue, next) <= 0 : "Output port not sorted";
+            if (next != null && nextValue != null && comparator.compare(nextValue, next) > 0)
+                throw new IllegalArgumentException("Output port not sorted");
             this.nextValue = next;
             return this.nextValue != null;
         }
 
-        public boolean hasNextValue() {
+        boolean hasNextValue() {
             return nextValue != null;
         }
     }
@@ -183,7 +189,7 @@ public final class MergingOutputPort<T> implements OutputPortCloseable<T> {
                 for (WithIndex<T> wi : grp) {
                     List<T> col = row[wi.index];
                     if (col == null)
-                        col = row[wi.index] = new ArrayList<>(1);
+                        row[wi.index] = col = new ArrayList<>(1);
                     col.add(wi.obj);
                 }
 
