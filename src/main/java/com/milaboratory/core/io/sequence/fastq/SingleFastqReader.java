@@ -253,7 +253,7 @@ public final class SingleFastqReader implements SingleReader, CanReportProgress,
 
         //Guessing quality format
         if (guessQualityFormat) {
-            recordsReader.fillBuffer(DEFAULT_BUFFER_SIZE);
+            recordsReader.fillBuffer(bufferSize);
             QualityFormat f = guessFormat(); //Buffer minus ~ one read.
             this.recordsReader.pointer = 0;
 
