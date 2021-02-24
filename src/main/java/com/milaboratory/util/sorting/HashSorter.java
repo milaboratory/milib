@@ -49,6 +49,8 @@ import java.util.stream.Stream;
 public class HashSorter<T> {
     private static final int sizeRecheckPeriod = 1 << 15; // 32k objects
 
+    private static final long maxBlockSize = 1 << 23; // 8 Mb (more or less optimal for LZ4 compressor)
+
     /** Object class, used in deserialization. */
     private final Class<T> clazz;
 
@@ -152,6 +154,13 @@ public class HashSorter<T> {
         return c.port();
     }
 
+    /**
+     * After successful collation this method returns number of hash-sorting nodes (external files) utilized in the process.
+     */
+    public int getNumberOfNodes() {
+        return nodeInfos.size();
+    }
+
     public void printStat() {
         printStat(true);
     }
@@ -176,7 +185,7 @@ public class HashSorter<T> {
 
         final SortedMap<T, Long> objectStats = new TreeMap<>(getEffectiveComparator());
 
-        long sampledObjectCount = 0, sampledNonSingletonObjectCount = 0;
+        long sampledObjectCount = 0, sampledNonSingletonObjectCount = 0, skippedObjects = 0;
         double samplingCounter = 0;
 
         public CollatorStatAggregator(int maxSingletonBuckets, double samplingPeriod, double samplingPeriodMultiplier) {
@@ -197,17 +206,28 @@ public class HashSorter<T> {
             return objectStats.keySet().toArray(new Object[0]);
         }
 
+        boolean isSingleton() {
+            return skippedObjects == 0 && objectStats.size() == 1;
+        }
+
         void putObject(T object) {
-            samplingCounter += 1;
-            if (samplingCounter >= 0)
-                samplingCounter -= (samplingPeriod *= samplingPeriodMultiplier);
-            else
-                return;
+            // Activating down-sampling after at least two different objects are found
+            if (objectStats.size() > 1) {
+                samplingCounter += 1;
+                if (samplingCounter >= 0)
+                    samplingCounter -= (samplingPeriod *= samplingPeriodMultiplier);
+                else {
+                    ++skippedObjects;
+                    return;
+                }
+            }
 
             ++sampledObjectCount;
 
-            if (maxSingletonBuckets == 0)
+            if (maxSingletonBuckets == 0) {
+                ++skippedObjects;
                 return;
+            }
 
             objectStats.compute(object, (__, n) -> n == null ? 1 : n + 1);
             if (objectStats.size() > maxSingletonBuckets) {
@@ -381,8 +401,9 @@ public class HashSorter<T> {
                 int objectsCount = 0;
                 long objectSize = this.objectSize;
                 int recheckCounter = sizeRecheckPeriod;
+                int maxBucketSize = 0, maxBucketId = 0;
                 while ((obj = source.take()) != null) {
-                    // Adjusting object size estimate based ob observed serialized size
+                    // Adjusting object size estimate based on observed serialized size
                     // Dynamic adjustment performed only for root collator,
                     // nested collators uses fixed value from the root
                     if (address.isRoot() && recheckCounter-- == 0) {
@@ -394,6 +415,12 @@ public class HashSorter<T> {
 
                     int bucketId = mapping.getBucketId(obj);
                     blocks[bucketId].add(obj);
+
+                    if (blocks[bucketId].size() > maxBucketSize) {
+                        maxBucketId = bucketId;
+                        maxBucketSize = blocks[bucketId].size();
+                    }
+
                     if (collatorInitializers[bucketId] != null) {
                         long start = System.nanoTime();
                         collatorInitializers[bucketId].putObject(obj);
@@ -401,15 +428,8 @@ public class HashSorter<T> {
                     }
                     objectsCount++;
 
-                    if (objectsCount * objectSize >= availableMemoryBudget()) { // Memory budget over
-                        // Finding biggest bucket
-                        int maxBucketSize = 0, maxBucketId = 0;
-                        for (int i = 0; i < mapping.getNumberOfBuckets(); i++)
-                            if (blocks[i].size() > maxBucketSize) {
-                                maxBucketId = i;
-                                maxBucketSize = blocks[i].size();
-                            }
-
+                    if (objectsCount * objectSize >= availableMemoryBudget() ||
+                            maxBucketSize * objectSize >= maxBlockSize) { // Memory budget overflow, or max block size reached
                         // Lazy writer initialization
                         if (os[maxBucketId] == null)
                             os[maxBucketId] = o.newWriter(getBucketPath(maxBucketId));
@@ -424,6 +444,15 @@ public class HashSorter<T> {
                         blocks[maxBucketId] = new ArrayList<>();
                         // Counting number of objects in the bucket
                         bucketObjectCounts[maxBucketId] += maxBucketSize;
+
+                        // Refreshing biggest bucket index
+                        maxBucketSize = 0;
+                        maxBucketId = 0;
+                        for (int i = 0; i < mapping.getNumberOfBuckets(); i++)
+                            if (blocks[i].size() > maxBucketSize) {
+                                maxBucketId = i;
+                                maxBucketSize = blocks[i].size();
+                            }
                     }
                 }
 
@@ -454,7 +483,7 @@ public class HashSorter<T> {
                                     mapping.numberOfBuckets, mapping.bitCount, mapping.bitOffset,
                                     bucketObjectCounts[i],
                                     os[i].getPosition(),
-                                    mapping.isSingletonBucket(i)));
+                                    mapping.isSingletonBucket(i) || collatorInitializers[i].isSingleton()));
                 }
 
                 // Initialization done
@@ -519,7 +548,7 @@ public class HashSorter<T> {
             if (!initialized.get())
                 throw new IllegalStateException();
 
-            if (mapping.isSingletonBucket(i))
+            if (mapping.isSingletonBucket(i) || collatorInitializers[i].isSingleton())
                 return getBucketRawPort(i);
 
             if (bucketObjectCounts[i] * objectSize > memoryBudget) {

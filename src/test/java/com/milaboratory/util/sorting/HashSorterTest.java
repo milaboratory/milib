@@ -198,7 +198,7 @@ public class HashSorterTest {
                 Objects::hashCode, Comparator.naturalOrder(),
                 5, dir.toPath(), 4, 6,
                 PrimitivOState.INITIAL, PrimitivIState.INITIAL,
-                1 << 20, 128);
+                1 << 20, 1 << 15);
 
         Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
@@ -220,5 +220,42 @@ public class HashSorterTest {
         Assert.assertEquals(0, uh);
 
         c.printStat();
+    }
+
+    @Test
+    public void testSingleton() {
+        NucleotideSequence seq = TestUtil.randomSequence(NucleotideSequence.ALPHABET, 15000, 20000);
+
+        int N = 50000;
+        AtomicInteger unorderedHash = new AtomicInteger(0);
+        OutputPort<NucleotideSequence> seqs = new OutputPort<NucleotideSequence>() {
+            @Override
+            public synchronized NucleotideSequence take() {
+                return seq;
+            }
+        };
+        seqs = new CountLimitingOutputPort<>(seqs, N);
+
+        File dir = TempFileManager.getTempDir();
+        System.out.println(dir);
+
+        HashSorter<NucleotideSequence> c = new HashSorter<>(
+                NucleotideSequence.class,
+                Objects::hashCode, Comparator.naturalOrder(),
+                5, dir.toPath(), 4, 6,
+                PrimitivOState.INITIAL, PrimitivIState.INITIAL,
+                1 << 20, 128);
+
+        Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
+
+        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
+        long actualN = 0;
+        for (NucleotideSequence ignored : CUtils.it(port))
+            ++actualN;
+
+        Assert.assertEquals(N, actualN);
+
+        c.printStat();
+        Assert.assertEquals(1, c.getNumberOfNodes());
     }
 }
