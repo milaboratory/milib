@@ -512,25 +512,31 @@ public class HashSorter<T> {
                 Path bucketPath = getBucketPath(i);
                 PrimitivIBlocks<T>.Reader reader = input.newReader(bucketPath, readerConcurrency);
                 return new OutputPortCloseable<T>() {
+                    final AtomicBoolean closed = new AtomicBoolean();
+
                     @Override
                     public T take() {
+                        T obj;
+
                         try {
                             long start = System.nanoTime();
-                            T obj = reader.take();
+                            obj = reader.take();
                             timeAwaitingI.addAndGet(System.nanoTime() - start);
-                            if (obj == null)
-                                Files.delete(bucketPath);
-                            return obj;
                         } catch (RuntimeException e) {
-                            reader.close();
+                            close();
                             throw e;
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
                         }
+
+                        if (obj == null)
+                            close();
+
+                        return obj;
                     }
 
                     @Override
                     public void close() {
+                        if (!closed.compareAndSet(false, true))
+                            return;
                         try {
                             reader.close();
                             Files.delete(bucketPath);

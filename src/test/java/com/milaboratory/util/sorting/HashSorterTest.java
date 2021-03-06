@@ -150,24 +150,25 @@ public class HashSorterTest {
 
         Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
-        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long actualN = 0;
-        int uh = unorderedHash.get();
-        NucleotideSequence previous = null;
-        for (NucleotideSequence ns : CUtils.it(port)) {
-            ++actualN;
-            uh -= ns.hashCode();
-            if (previous != null) {
-                int compare = ec.compare(previous, ns);
-                Assert.assertTrue(compare <= 0);
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            int uh = unorderedHash.get();
+            NucleotideSequence previous = null;
+            for (NucleotideSequence ns : CUtils.it(port)) {
+                ++actualN;
+                uh -= ns.hashCode();
+                if (previous != null) {
+                    int compare = ec.compare(previous, ns);
+                    Assert.assertTrue(compare <= 0);
+                }
+                previous = ns;
             }
-            previous = ns;
+
+            Assert.assertEquals(N, actualN);
+            Assert.assertEquals(0, uh);
+
+            c.printStat();
         }
-
-        Assert.assertEquals(N, actualN);
-        Assert.assertEquals(0, uh);
-
-        c.printStat();
     }
 
     @Test
@@ -202,24 +203,25 @@ public class HashSorterTest {
 
         Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
-        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long actualN = 0;
-        int uh = unorderedHash.get();
-        NucleotideSequence previous = null;
-        for (NucleotideSequence ns : CUtils.it(port)) {
-            ++actualN;
-            uh -= ns.hashCode();
-            if (previous != null) {
-                int compare = ec.compare(previous, ns);
-                Assert.assertTrue(compare <= 0);
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            int uh = unorderedHash.get();
+            NucleotideSequence previous = null;
+            for (NucleotideSequence ns : CUtils.it(port)) {
+                ++actualN;
+                uh -= ns.hashCode();
+                if (previous != null) {
+                    int compare = ec.compare(previous, ns);
+                    Assert.assertTrue(compare <= 0);
+                }
+                previous = ns;
             }
-            previous = ns;
+
+            Assert.assertEquals(N, actualN);
+            Assert.assertEquals(0, uh);
+
+            c.printStat();
         }
-
-        Assert.assertEquals(N, actualN);
-        Assert.assertEquals(0, uh);
-
-        c.printStat();
     }
 
     @Test
@@ -248,14 +250,15 @@ public class HashSorterTest {
 
         Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
-        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long actualN = 0;
-        for (NucleotideSequence ignored : CUtils.it(port))
-            ++actualN;
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            for (NucleotideSequence ignored : CUtils.it(port))
+                ++actualN;
 
-        Assert.assertEquals(N, actualN);
+            Assert.assertEquals(N, actualN);
 
-        c.printStat();
-        Assert.assertEquals(1, c.getNumberOfNodes());
+            c.printStat();
+            Assert.assertEquals(1, c.getNumberOfNodes());
+        }
     }
 }
