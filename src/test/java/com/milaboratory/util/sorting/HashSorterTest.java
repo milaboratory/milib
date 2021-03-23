@@ -38,6 +38,87 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HashSorterTest {
     @Test
+    public void testMapping1() {
+        HashSorter.BucketMapping<Long> mapping = new HashSorter.BucketMapping<>(
+                Long::intValue, Comparator.<Long>naturalOrder(),
+                4, 0, new Object[0]);
+        Assert.assertEquals(16, mapping.getNumberOfBuckets());
+        for (int i = 0; i < 16; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i));
+            Assert.assertEquals(i, mapping.getBucketId((long) i));
+        }
+    }
+
+    @Test
+    public void testMapping2() {
+        HashSorter.BucketMapping<Long> mapping = new HashSorter.BucketMapping<>(
+                Long::intValue, Comparator.<Long>naturalOrder(),
+                4, 0, new Object[]{3 + 16L});
+        Assert.assertEquals(18, mapping.getNumberOfBuckets());
+        for (int i = 0; i < 4; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i));
+            Assert.assertEquals(i, mapping.getBucketId((long) i));
+        }
+        for (int i = 4; i < 16; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i + 2));
+            Assert.assertEquals(i + 2, mapping.getBucketId((long) i));
+        }
+        Assert.assertEquals(4, mapping.getBucketId(3 + 16L));
+    }
+
+    @Test
+    public void testMapping3() {
+        HashSorter.BucketMapping<Long> mapping = new HashSorter.BucketMapping<>(
+                Long::intValue, Comparator.<Long>naturalOrder(),
+                4, 0, new Object[]{3 + 16L, 3 + 3 * 16L});
+        Assert.assertEquals(20, mapping.getNumberOfBuckets());
+        for (int i = 0; i < 4; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i));
+            Assert.assertEquals(i, mapping.getBucketId((long) i));
+        }
+        for (int i = 4; i < 16; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i + 4));
+            Assert.assertEquals(i + 4, mapping.getBucketId((long) i));
+        }
+        Assert.assertTrue(mapping.isSingletonBucket(4));
+        Assert.assertEquals(4, mapping.getBucketId(3 + 16L));
+        Assert.assertFalse(mapping.isSingletonBucket(5));
+        Assert.assertEquals(5, mapping.getBucketId(3 + 2 * 16L));
+        Assert.assertTrue(mapping.isSingletonBucket(6));
+        Assert.assertEquals(6, mapping.getBucketId(3 + 3 * 16L));
+        Assert.assertFalse(mapping.isSingletonBucket(7));
+        Assert.assertEquals(7, mapping.getBucketId(3 + 4 * 16L));
+    }
+
+    @Test
+    public void testMapping4() {
+        HashSorter.BucketMapping<Long> mapping = new HashSorter.BucketMapping<>(
+                Long::intValue, Comparator.<Long>naturalOrder(),
+                4, 0, new Object[]{3 + 16L, 4 + 3 * 16L});
+        Assert.assertEquals(20, mapping.getNumberOfBuckets());
+        for (int i = 0; i < 4; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i));
+            Assert.assertEquals(i, mapping.getBucketId((long) i));
+        }
+        Assert.assertFalse(mapping.isSingletonBucket(4 + 2));
+        Assert.assertEquals(4 + 2, mapping.getBucketId((long) 4));
+        for (int i = 5; i < 16; i++) {
+            Assert.assertFalse(mapping.isSingletonBucket(i + 4));
+            Assert.assertEquals(i + 4, mapping.getBucketId((long) i));
+        }
+        Assert.assertTrue(mapping.isSingletonBucket(4));
+        Assert.assertEquals(4, mapping.getBucketId(3 + 16L));
+        Assert.assertFalse(mapping.isSingletonBucket(5));
+        Assert.assertEquals(5, mapping.getBucketId(3 + 2 * 16L));
+        Assert.assertFalse(mapping.isSingletonBucket(6));
+        Assert.assertEquals(6, mapping.getBucketId(4 + 16L));
+        Assert.assertTrue(mapping.isSingletonBucket(7));
+        Assert.assertEquals(7, mapping.getBucketId(4 + 3 * 16L));
+        Assert.assertFalse(mapping.isSingletonBucket(8));
+        Assert.assertEquals(8, mapping.getBucketId(4 + 4 * 16L));
+    }
+
+    @Test
     public void test1() {
         List<NucleotideSequence> seqsList = new ArrayList<>();
         for (int i = 0; i < 1 << 15; i++)
@@ -67,32 +148,33 @@ public class HashSorterTest {
                 PrimitivOState.INITIAL, PrimitivIState.INITIAL,
                 1 << 23, 128);
 
-        Comparator<NucleotideSequence> ec = c.effectiveComparator();
+        Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
-        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long actualN = 0;
-        int uh = unorderedHash.get();
-        NucleotideSequence previous = null;
-        for (NucleotideSequence ns : CUtils.it(port)) {
-            ++actualN;
-            uh -= ns.hashCode();
-            if (previous != null) {
-                int compare = ec.compare(previous, ns);
-                Assert.assertTrue(compare <= 0);
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            int uh = unorderedHash.get();
+            NucleotideSequence previous = null;
+            for (NucleotideSequence ns : CUtils.it(port)) {
+                ++actualN;
+                uh -= ns.hashCode();
+                if (previous != null) {
+                    int compare = ec.compare(previous, ns);
+                    Assert.assertTrue(compare <= 0);
+                }
+                previous = ns;
             }
-            previous = ns;
+
+            Assert.assertEquals(N, actualN);
+            Assert.assertEquals(0, uh);
+
+            c.printStat();
         }
-
-        Assert.assertEquals(N, actualN);
-        Assert.assertEquals(0, uh);
-
-        c.printStat();
     }
 
     @Test
     public void test2() {
         List<NucleotideSequence> seqsList = new ArrayList<>();
-        for (int i = 0; i < 2; i++)
+        for (int i = 0; i < 15; i++)
             seqsList.add(TestUtil.randomSequence(NucleotideSequence.ALPHABET, 15000, 20000));
 
         RandomGenerator rg = new Well19937c(1234);
@@ -103,7 +185,54 @@ public class HashSorterTest {
             @Override
             public synchronized NucleotideSequence take() {
                 NucleotideSequence seq = seqsList.get(rg.nextInt(seqsList.size()));
-                unorderedHash.accumulateAndGet(seq.hashCode(), (left, right) -> left + right);
+                unorderedHash.accumulateAndGet(seq.hashCode(), Integer::sum);
+                return seq;
+            }
+        };
+        seqs = new CountLimitingOutputPort<>(seqs, N);
+
+        File dir = TempFileManager.getTempDir();
+        System.out.println(dir);
+
+        HashSorter<NucleotideSequence> c = new HashSorter<>(
+                NucleotideSequence.class,
+                Objects::hashCode, Comparator.naturalOrder(),
+                5, dir.toPath(), 4, 6,
+                PrimitivOState.INITIAL, PrimitivIState.INITIAL,
+                1 << 20, 1 << 15);
+
+        Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
+
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            int uh = unorderedHash.get();
+            NucleotideSequence previous = null;
+            for (NucleotideSequence ns : CUtils.it(port)) {
+                ++actualN;
+                uh -= ns.hashCode();
+                if (previous != null) {
+                    int compare = ec.compare(previous, ns);
+                    Assert.assertTrue(compare <= 0);
+                }
+                previous = ns;
+            }
+
+            Assert.assertEquals(N, actualN);
+            Assert.assertEquals(0, uh);
+
+            c.printStat();
+        }
+    }
+
+    @Test
+    public void testSingleton() {
+        NucleotideSequence seq = TestUtil.randomSequence(NucleotideSequence.ALPHABET, 15000, 20000);
+
+        int N = 50000;
+        AtomicInteger unorderedHash = new AtomicInteger(0);
+        OutputPort<NucleotideSequence> seqs = new OutputPort<NucleotideSequence>() {
+            @Override
+            public synchronized NucleotideSequence take() {
                 return seq;
             }
         };
@@ -119,25 +248,17 @@ public class HashSorterTest {
                 PrimitivOState.INITIAL, PrimitivIState.INITIAL,
                 1 << 20, 128);
 
-        Comparator<NucleotideSequence> ec = c.effectiveComparator();
+        Comparator<NucleotideSequence> ec = c.getEffectiveComparator();
 
-        OutputPortCloseable<NucleotideSequence> port = c.port(seqs);
-        long actualN = 0;
-        int uh = unorderedHash.get();
-        NucleotideSequence previous = null;
-        for (NucleotideSequence ns : CUtils.it(port)) {
-            ++actualN;
-            uh -= ns.hashCode();
-            if (previous != null) {
-                int compare = ec.compare(previous, ns);
-                Assert.assertTrue(compare <= 0);
-            }
-            previous = ns;
+        try (OutputPortCloseable<NucleotideSequence> port = c.port(seqs)) {
+            long actualN = 0;
+            for (NucleotideSequence ignored : CUtils.it(port))
+                ++actualN;
+
+            Assert.assertEquals(N, actualN);
+
+            c.printStat();
+            Assert.assertEquals(1, c.getNumberOfNodes());
         }
-
-        Assert.assertEquals(N, actualN);
-        Assert.assertEquals(0, uh);
-
-        c.printStat();
     }
 }
