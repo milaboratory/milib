@@ -538,7 +538,7 @@ public final class RandomAccessFastaIndex {
                 byte b = buffer[offset + i];
 
                 // Processing line breaks
-                if (b == '\n' || b == '\r') {
+                if (b == '\n' || b == '\r' || Character.isSpaceChar(b)) {
                     if (!onLineStart)
                         lastNonLineBreakPosition = streamPosition - 1;
                     onLineStart = true;
