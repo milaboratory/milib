@@ -72,7 +72,8 @@ steps:
     image: alpine
     commands:
       - apk add jq
-      - jq ".url_secret = \"$${URL_SECRET}\"" build_info.json
+      - jq ".urlsecret=\"$${URL_SECRET}\"" build_info.json > build_info.json.1
+      - mv build_info.json.1 build_info.json
     environment:
       URL_SECRET:
         from_secret: url-secret
@@ -98,15 +99,6 @@ steps:
     commands:
       - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} test
 
-  - <<: *gradle_task
-    name: test_report
-    commands:
-      - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} testReport
-    when:
-      status:
-        - success
-        - failure
-
   - name: test_report_upload
     image: amazon/aws-cli
     when:
@@ -114,7 +106,7 @@ steps:
         - success
         - failure
     commands:
-      - aws s3 cp --recursive build/reports/tests s3://$${DEPLOY_S3_CDN_BUCKET}/$${DEPLOY_S3_CDN_PREFIX}/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-$${URL_SECRET}/tests/
+      - aws s3 cp --recursive build/reports/tests/test s3://$${DEPLOY_S3_CDN_BUCKET}/$${DEPLOY_S3_CDN_PREFIX}/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-$${URL_SECRET}/tests/
     environment:
       <<: *aws_credentials
       DEPLOY_S3_CDN_BUCKET:
@@ -148,7 +140,7 @@ steps:
         🌐 {{build.link}}
 
 
-        [📊 Test Report](https://cdn.milaboratory.com/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-{{tpl.url_secret}}/tests/index.html)
+        [📊 Test Report](https://cdn.milaboratory.com/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-{{tpl.urlsecret}}/tests/index.html)
 
   - name: rebuild_cache
     image: meltwater/drone-cache
@@ -158,6 +150,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7e8f87f7588bdd1522b61a0550766bf3c052d381d91d10b1c3a0e7a22d2ef4c8
+hmac: 9ce48be04ceef1fbbfff043be9f2e38358f7f0c3d25b50e14506b73ee216e55f
 
 ...
