@@ -105,13 +105,15 @@ steps:
         - success
         - failure
     commands:
-      - aws s3 cp --recursive build/reports/tests s3://$${DEPLOY_S3_CDN_BUCKET}/$${DEPLOY_S3_CDN_PREFIX}/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}/tests/
+      - aws s3 cp --recursive build/reports/tests s3://$${DEPLOY_S3_CDN_BUCKET}/$${DEPLOY_S3_CDN_PREFIX}/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-$${URL_SECRET}/tests/
     environment:
       <<: *aws_credentials
       DEPLOY_S3_CDN_BUCKET:
         from_secret: cdn-s3-bucket
       DEPLOY_S3_CDN_PREFIX:
         from_secret: cdn-s3-prefix
+      URL_SECRET:
+        from_secret: url-secret
 
   - name: telegram
     image: appleboy/drone-telegram
@@ -126,6 +128,9 @@ steps:
         from_secret: telegram-chat-id-micore
       format: markdown
       template_vars_file: build_info.json
+      template_vars:
+        url_secret:
+          from_secret: url-secret
       message: >
         {{#success build.status}}
         ✅ MiLib build {{build.number}} by {{commit.author}} on {{commit.branch}} success.
@@ -137,7 +142,7 @@ steps:
         🌐 {{build.link}}
 
 
-        [📊 Test Report](https://cdn.milaboratory.com/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}/tests/index.html)
+        [📊 Test Report](https://cdn.milaboratory.com/internal/ci/${DRONE_REPO}/${DRONE_COMMIT}-${DRONE_BUILD_NUMBER}-{{tpl.url_secret}}/tests/index.html)
 
   - name: rebuild_cache
     image: meltwater/drone-cache
@@ -147,6 +152,6 @@ steps:
 
 ---
 kind: signature
-hmac: 58078f80d556c1c7ac26e568a837c97f97d841277e94e627ed64596da64441d4
+hmac: c612202db47e6302368cb9e2831acedbc0786bb9ec1f13843375a9b7213074fd
 
 ...
