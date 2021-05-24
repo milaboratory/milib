@@ -63,7 +63,7 @@ public class PrimitivOBlocksTest {
     public void test1() throws IOException {
         AtomicInteger counter = new AtomicInteger();
         HashMap<Integer, Integer> cSlots = new HashMap<>();
-        for (int elements : new int[]{100000})
+        for (int elements : new int[]{TestUtil.its(20000, 100000)})
             for (boolean highCompression : new boolean[]{false, true})
                 for (int concurrency : new int[]{4, 1})
                     for (int blockSize : new int[]{172, 1024}) {
