@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
+
 public class RandomAccessFastaReaderTest {
     @Before
     public void setUp() throws Exception {
@@ -48,7 +50,7 @@ public class RandomAccessFastaReaderTest {
 
     @Test
     public void test1() throws Exception {
-        Path path = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/some_fasta.fasta").toURI()).toPath();
+        Path path = getTestFile("sequences/some_fasta.fasta").toPath();
         List<FastaRecord<AminoAcidSequence>> seqs = new ArrayList<>();
 
         try (FastaReader<AminoAcidSequence> r = new FastaReader<>(path.toFile(), AminoAcidSequence.ALPHABET)) {
