@@ -175,7 +175,7 @@ steps:
     name: test
     commands:
       - ./init.sh
-      - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} test
+      - gradle -i --no-daemon -PlongTests=true -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} test
 
   - name: test_report_upload
     image: amazon/aws-cli
@@ -228,6 +228,6 @@ steps:
 
 ---
 kind: signature
-hmac: 8010c031683f04e5ac95a67dd9b729eb3a3990f21490d3a7198320f03ef50991
+hmac: 557badcc717a734bffbeb668ce118a0eb08076e788e2b70cb146bde52ff31119
 
 ...
