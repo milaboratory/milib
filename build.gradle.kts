@@ -23,6 +23,8 @@ version =
     else "${gitDetails.lastTag}-${gitDetails.commitDistance}-${gitDetails.gitHash}"
 description = "MiLib"
 
+java.sourceCompatibility = JavaVersion.VERSION_1_8
+
 tasks.register("createInfoFile") {
     doLast {
         projectDir
@@ -56,11 +58,6 @@ dependencies {
 
 java.sourceCompatibility = JavaVersion.VERSION_1_8
 
-// val testsJar by tasks.registering(Jar::class) {
-//     archiveClassifier.set("tests")
-//     from(sourceSets.test.get().output)
-// }
-
 publishing {
     repositories {
         maven {
@@ -78,7 +75,6 @@ publishing {
 
     publications.create<MavenPublication>("maven") {
         from(components["java"])
-        // artifact(testsJar)
     }
 }
 

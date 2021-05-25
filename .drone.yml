@@ -84,7 +84,7 @@ steps:
         from_secret: telegram-chat-id-micore
       format: markdown
       template_vars_file: build_info.json
-      message: 🧩 build {{build.number}} published ```com.milaboratory:milib:{{tpl.version}}```
+      message: 🧩 build {{build.number}} on {{commit.branch}} published ```com.milaboratory:milib:{{tpl.version}}```
 
 ---
 
@@ -228,6 +228,6 @@ steps:
 
 ---
 kind: signature
-hmac: 557badcc717a734bffbeb668ce118a0eb08076e788e2b70cb146bde52ff31119
+hmac: af6fd29e244bfc8f49f7570ebdbd3da560b94cb8d33c97f4c2b375028e94f638
 
 ...
