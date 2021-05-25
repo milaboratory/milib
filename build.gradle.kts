@@ -85,7 +85,10 @@ publishing {
             withXml {
                 asNode().apply {
                     appendNode("name", "MiLib")
-                    appendNode("description", "Yet another Java library for Next Generation Sequencing (NGS) data processing.")
+                    appendNode(
+                        "description",
+                        "Yet another Java library for Next Generation Sequencing (NGS) data processing."
+                    )
                     appendNode("url", "https://milaboratory.com/")
                 }
             }
@@ -119,13 +122,15 @@ publishing {
     }
 }
 
-signing {
-    val signingKey: String? by project
-    useInMemoryPgpKeys(
-        Base64.getMimeDecoder().decode(signingKey).decodeToString(),
-        ""
-    )
-    sign(publishing.publications["mavenJava"])
+val signingKey: String? by project
+if (signingKey != null) {
+    signing {
+        useInMemoryPgpKeys(
+            Base64.getMimeDecoder().decode(signingKey).decodeToString(),
+            ""
+        )
+        sign(publishing.publications["mavenJava"])
+    }
 }
 
 tasks.withType<Javadoc> {
