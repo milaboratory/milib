@@ -1,10 +1,12 @@
 import com.palantir.gradle.gitversion.VersionDetails
 import groovy.lang.Closure
+import java.util.Base64
 
 plugins {
     `java-library`
     `java-test-fixtures`
     `maven-publish`
+    signing
     id("io.github.gradle-nexus.publish-plugin") version "1.1.0"
     id("com.palantir.git-version") version "0.12.3"
 }
@@ -23,7 +25,11 @@ version =
     else "${gitDetails.lastTag}-${gitDetails.commitDistance}-${gitDetails.gitHash}"
 description = "MiLib"
 
-java.sourceCompatibility = JavaVersion.VERSION_1_8
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
 
 tasks.register("createInfoFile") {
     doLast {
@@ -73,9 +79,57 @@ publishing {
         }
     }
 
-    publications.create<MavenPublication>("maven") {
+    publications.create<MavenPublication>("mavenJava") {
         from(components["java"])
+        pom {
+            withXml {
+                asNode().apply {
+                    appendNode("name", "MiLib")
+                    appendNode("description", "Yet another Java library for Next Generation Sequencing (NGS) data processing.")
+                    appendNode("url", "https://milaboratory.com/")
+                }
+            }
+            licenses {
+                license {
+                    name.set("The Apache License, Version 2.0")
+                    url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+                }
+            }
+            developers {
+                developer {
+                    id.set("dbolotin")
+                    name.set("Dmitry Bolotin")
+                    email.set("bolotin.dmitriy@gmail.com")
+                }
+                developer {
+                    id.set("PoslavskySV")
+                    name.set("Stanislav Poslavsky")
+                    email.set("stvlpos@mail.ru")
+                }
+                developer {
+                    id.set("mikesh")
+                    name.set("Mikhail Shugay")
+                    email.set("mikhail.shugay@gmail.com")
+                }
+            }
+            scm {
+                url.set("https://github.com/milaboratory/milib")
+            }
+        }
     }
+}
+
+signing {
+    val signingKey: String? by project
+    useInMemoryPgpKeys(
+        Base64.getMimeDecoder().decode(signingKey).decodeToString(),
+        ""
+    )
+    sign(publishing.publications["mavenJava"])
+}
+
+tasks.withType<Javadoc> {
+    (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
 }
 
 tasks.withType<JavaCompile>() {
@@ -88,4 +142,10 @@ tasks.test {
     maxHeapSize = "2048m"
 
     longTests?.let { systemProperty("longTests", it) }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype()
+    }
 }
