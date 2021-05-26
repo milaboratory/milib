@@ -317,7 +317,7 @@ steps:
   - <<: *gradle_task
     name: publish_to_maven_central
     commands:
-      - gradle --no-daemon -i -x test publishToSonatype closeSonatypeStagingRepository
+      - gradle --no-daemon -i -x test publishToSonatype closeAndReleaseSonatypeStagingRepository
 
   - name: telegram_published
     image: appleboy/drone-telegram
@@ -332,6 +332,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4be03b1ff712e9c30e6a1105a7f11ebf99c57fe1285d372739b2906f795e546a
+hmac: a448e04745c4cd872bc4b9016bd0a32bbc1febc71be48776130a92a781a3b03a
 
 ...
