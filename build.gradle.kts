@@ -20,9 +20,10 @@ val gitDetails = versionDetails()
 val longTests: String? by project
 
 group = "com.milaboratory"
+val gitLastTag = gitDetails.lastTag.removePrefix("v")
 version =
-    if (gitDetails.commitDistance == 0) gitDetails.lastTag
-    else "${gitDetails.lastTag}-${gitDetails.commitDistance}-${gitDetails.gitHash}"
+    if (gitDetails.commitDistance == 0) gitLastTag
+    else "${gitLastTag}-${gitDetails.commitDistance}-${gitDetails.gitHash}"
 description = "MiLib"
 
 java {
