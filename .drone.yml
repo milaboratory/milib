@@ -84,97 +84,6 @@ steps:
 
 kind: pipeline
 type: docker
-name: maven_central
-
-platform:
-  os: linux
-  arch: amd64
-
-trigger:
-  event:
-    - tag
-
-image_pull_secrets:
-  - docker-dockerconfig
-  - quay-dockerconfig
-
-anchors:
-  gradle_task: &gradle_task
-    image: gradle:7.0.2-jdk8-hotspot
-    environment:
-      # Gradle folder
-      GRADLE_USER_HOME: "/drone/src/.gradle"
-
-      # MiLab repository credentials
-      ORG_GRADLE_PROJECT_miRepoAccessKeyId:
-        from_secret: aws-key-id
-      ORG_GRADLE_PROJECT_miRepoSecretAccessKey:
-        from_secret: aws-secret-key
-
-      # For Maven Central release
-      ORG_GRADLE_PROJECT_sonatypeUsername:
-        from_secret: sonatype-username
-      ORG_GRADLE_PROJECT_sonatypePassword:
-        from_secret: sonatype-password
-      ORG_GRADLE_PROJECT_signingKey:
-        from_secret: signing-key
-
-  cache_settings: &cache_settings
-    # debug: true
-    cache_key: '{{ .Commit.Branch }}'
-    access_key:
-      from_secret: aws-key-id
-    secret_key:
-      from_secret: aws-secret-key
-    bucket:
-      from_secret: aws-cache-bucket
-    region:
-      from_secret: aws-region
-    local_root: /drone/src
-    mount:
-      - .gradle
-      - src/test/resources/big
-      - blast
-
-steps:
-  - name: fetch
-    image: alpine/git
-    commands:
-      - git fetch --tags
-
-  - name: restore_cache
-    image: meltwater/drone-cache
-    pull: true
-    settings:
-      restore: true
-      <<: *cache_settings
-
-  - <<: *gradle_task
-    name: initialization
-    commands:
-      - echo "{}" > build_info.json
-      - gradle -i --no-daemon CreateInfoFile
-
-  - <<: *gradle_task
-    name: publish_to_maven_central
-    commands:
-      - gradle --no-daemon -i -x test publishToSonatype closeSonatypeStagingRepository
-
-  - name: telegram_published
-    image: appleboy/drone-telegram
-    settings:
-      token:
-        from_secret: telegram-token
-      to:
-        from_secret: telegram-chat-id-micore
-      format: markdown
-      template_vars_file: build_info.json
-      message: 🧩🎉 build {{build.number}} on `{{commit.branch}}` published to Maven Central ```com.milaboratory:milib:{{tpl.version}}```
-
----
-
-kind: pipeline
-type: docker
 name: test
 
 platform:
@@ -187,6 +96,7 @@ node:
 trigger:
   event:
     - push
+    - tag
 
 image_pull_secrets:
   - docker-dockerconfig
@@ -315,7 +225,101 @@ steps:
       <<: *cache_settings
 
 ---
+
+kind: pipeline
+type: docker
+name: maven_central
+
+platform:
+  os: linux
+  arch: amd64
+
+depends_on:
+  - test
+
+trigger:
+  event:
+    - tag
+
+image_pull_secrets:
+  - docker-dockerconfig
+  - quay-dockerconfig
+
+anchors:
+  gradle_task: &gradle_task
+    image: gradle:7.0.2-jdk8-hotspot
+    environment:
+      # Gradle folder
+      GRADLE_USER_HOME: "/drone/src/.gradle"
+
+      # MiLab repository credentials
+      ORG_GRADLE_PROJECT_miRepoAccessKeyId:
+        from_secret: aws-key-id
+      ORG_GRADLE_PROJECT_miRepoSecretAccessKey:
+        from_secret: aws-secret-key
+
+      # For Maven Central release
+      ORG_GRADLE_PROJECT_sonatypeUsername:
+        from_secret: sonatype-username
+      ORG_GRADLE_PROJECT_sonatypePassword:
+        from_secret: sonatype-password
+      ORG_GRADLE_PROJECT_signingKey:
+        from_secret: signing-key
+
+  cache_settings: &cache_settings
+    # debug: true
+    cache_key: '{{ .Commit.Branch }}'
+    access_key:
+      from_secret: aws-key-id
+    secret_key:
+      from_secret: aws-secret-key
+    bucket:
+      from_secret: aws-cache-bucket
+    region:
+      from_secret: aws-region
+    local_root: /drone/src
+    mount:
+      - .gradle
+      - src/test/resources/big
+      - blast
+
+steps:
+  - name: fetch
+    image: alpine/git
+    commands:
+      - git fetch --tags
+
+  - name: restore_cache
+    image: meltwater/drone-cache
+    pull: true
+    settings:
+      restore: true
+      <<: *cache_settings
+
+  - <<: *gradle_task
+    name: initialization
+    commands:
+      - echo "{}" > build_info.json
+      - gradle -i --no-daemon CreateInfoFile
+
+  - <<: *gradle_task
+    name: publish_to_maven_central
+    commands:
+      - gradle --no-daemon -i -x test publishToSonatype closeSonatypeStagingRepository
+
+  - name: telegram_published
+    image: appleboy/drone-telegram
+    settings:
+      token:
+        from_secret: telegram-token
+      to:
+        from_secret: telegram-chat-id-micore
+      format: markdown
+      template_vars_file: build_info.json
+      message: 🧩🎉 build {{build.number}} on `{{commit.branch}}` published to Maven Central ```com.milaboratory:milib:{{tpl.version}}```
+
+---
 kind: signature
-hmac: d748f9e33783377076cab954adac8e50e143f4a69406a4c41f0dfe58eb4b857b
+hmac: e9e42b59457bc78682ce6fb5bd8fbac1c78a34b8e87114a410a7308c4d7e4ede
 
 ...
