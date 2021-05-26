@@ -55,6 +55,10 @@ public class TestUtil {
                 Objects.equals(System.getProperty("longTest"), "true");
     }
 
+    public static void assumeLongTest() {
+        Assume.assumeTrue(lt());
+    }
+
     @Test
     public void testLT() throws Exception {
         if (lt())
@@ -102,7 +106,7 @@ public class TestUtil {
     public static String getBigTestResource(String name, String file) {
         try {
             URL resource = TestUtil.class.getResource(BIG_TEST_RESOURCE_PREFIX + file);
-            Assume.assumeNotNull(resource);
+            Assume.assumeTrue(resource != null);
             Path path = Paths.get(resource.toURI()).toAbsolutePath().resolveSibling(name);
             return path.toString();
         } catch (AssumptionViolatedException e) {

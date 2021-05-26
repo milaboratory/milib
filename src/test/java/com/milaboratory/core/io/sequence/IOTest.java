@@ -21,6 +21,7 @@ import com.milaboratory.core.io.sequence.fastq.SingleFastqReader;
 import com.milaboratory.core.io.sequence.fastq.SingleFastqReaderTest;
 import com.milaboratory.primitivio.PrimitivI;
 import com.milaboratory.primitivio.PrimitivO;
+import com.milaboratory.test.TestUtil;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,12 +31,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
 import static org.junit.Assert.*;
 
 public class IOTest {
     @Test
     public void sequenceReadIOTestS() throws Exception {
-        File r1 = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File r1 = getTestFile("sequences/sample_r1.fastq");
 
         List<SequenceRead> reads = new ArrayList<>();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
@@ -63,8 +65,8 @@ public class IOTest {
 
     @Test
     public void sequenceReadIOTestP() throws Exception {
-        File r1 = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
-        File r2 = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r2.fastq").toURI());
+        File r1 = getTestFile("sequences/sample_r1.fastq");
+        File r2 = getTestFile("sequences/sample_r2.fastq");
 
         List<SequenceRead> reads = new ArrayList<>();
         ByteArrayOutputStream bos = new ByteArrayOutputStream();

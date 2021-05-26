@@ -37,10 +37,18 @@ public class TempFileManager {
     }
 
     public static File getTempFile() {
-        return getTempFile(null);
+        return getTempFile(null, null);
+    }
+
+    public static File getTempFile(String suffix) {
+        return getTempFile(null, suffix);
     }
 
     public static File getTempFile(Path tmpDir) {
+        return getTempFile(tmpDir, null);
+    }
+
+    public static File getTempFile(Path tmpDir, String suffix) {
         try {
             ensureInitialized();
 
@@ -51,7 +59,7 @@ public class TempFileManager {
                 synchronized (privateRandom) {
                     name = prefix + privateRandom.nextHexString(40);
                 }
-                file = tmpDir == null ? Files.createTempFile(name, null).toFile() : Files.createTempFile(tmpDir, name, null).toFile();
+                file = tmpDir == null ? Files.createTempFile(name, suffix).toFile() : Files.createTempFile(tmpDir, name, suffix).toFile();
             } while (createdFiles.putIfAbsent(name, file) != null);
 
             if (file.length() != 0)

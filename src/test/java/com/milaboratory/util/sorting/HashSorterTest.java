@@ -173,6 +173,8 @@ public class HashSorterTest {
 
     @Test
     public void test2() {
+        TestUtil.assumeLongTest();
+
         List<NucleotideSequence> seqsList = new ArrayList<>();
         for (int i = 0; i < 15; i++)
             seqsList.add(TestUtil.randomSequence(NucleotideSequence.ALPHABET, 15000, 20000));

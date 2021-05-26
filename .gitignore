@@ -24,3 +24,5 @@ out
 src/test/resources/big
 benchmark-data
 .flattened-pom.xml
+
+build_info.json
