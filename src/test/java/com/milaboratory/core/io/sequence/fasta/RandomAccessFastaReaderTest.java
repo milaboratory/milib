@@ -47,7 +47,6 @@ public class RandomAccessFastaReaderTest {
         LongProcessReporter.DefaultLongProcessReporter.INSTANCE = AbstractLongProcessReporter.stderrReporter();
     }
 
-
     @Test
     public void test1() throws Exception {
         Path path = getTestFile("sequences/some_fasta.fasta").toPath();
@@ -59,6 +58,19 @@ public class RandomAccessFastaReaderTest {
         }
 
         assertRA(seqs, path, AminoAcidSequence.ALPHABET, false);
+    }
+
+    @Test
+    public void test1nt() throws Exception {
+        Path path = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/some_fasta.fasta").toURI()).toPath();
+        List<FastaRecord<NucleotideSequence>> seqs = new ArrayList<>();
+
+        try (FastaReader<NucleotideSequence> r = new FastaReader<>(path.toFile(), NucleotideSequence.ALPHABET)) {
+            for (FastaRecord<NucleotideSequence> rec : CUtils.it(r))
+                seqs.add(rec);
+        }
+
+        assertRA(seqs, path, NucleotideSequence.ALPHABET, false);
     }
 
     @Test

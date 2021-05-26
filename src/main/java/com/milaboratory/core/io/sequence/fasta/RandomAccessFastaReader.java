@@ -30,9 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
-import static com.milaboratory.core.io.sequence.fasta.RandomAccessFastaIndex.extractFilePosition;
-import static com.milaboratory.core.io.sequence.fasta.RandomAccessFastaIndex.extractSkipLetters;
-import static com.milaboratory.core.io.sequence.fasta.RandomAccessFastaIndex.index;
+import static com.milaboratory.core.io.sequence.fasta.RandomAccessFastaIndex.*;
 
 public final class RandomAccessFastaReader<S extends Sequence<S>> implements AutoCloseable {
     public static final int DEFAULT_BUFFER_SIZE = 4096;
@@ -131,7 +129,7 @@ public final class RandomAccessFastaReader<S extends Sequence<S>> implements Aut
                     b = buffer.get();
 
                     // Skipping delimiters
-                    if (b == '\n' || b == '\r')
+                    if (b == '\n' || b == '\r' || Character.isSpaceChar(b))
                         continue;
 
                     // Processing letters
