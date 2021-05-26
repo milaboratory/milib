@@ -25,10 +25,12 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
+
 public class LightFileDescriptorTest {
     @Test
     public void test1() throws URISyntaxException {
-        Path f = Paths.get(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        Path f = getTestFile("sequences/sample_r1.fastq").toPath();
         LightFileDescriptor d1 = LightFileDescriptor.calculate(f);
         LightFileDescriptor d2 = LightFileDescriptor.calculate(f, true, false);
         LightFileDescriptor d3 = LightFileDescriptor.calculate(f, false, true);
@@ -48,7 +50,7 @@ public class LightFileDescriptorTest {
 
     @Test
     public void test2() throws URISyntaxException {
-        Path f = Paths.get(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        Path f = getTestFile("sequences/sample_r1.fastq").toPath();
         LightFileDescriptor d1 = LightFileDescriptor.calculate(f, true, true, 1000000);
         LightFileDescriptor d2 = LightFileDescriptor.calculate(f, true, false, 1000000);
         LightFileDescriptor d3 = LightFileDescriptor.calculate(f, false, true, 1000000);
@@ -59,7 +61,7 @@ public class LightFileDescriptorTest {
 
     @Test
     public void test3() throws URISyntaxException, IOException {
-        Path f = Paths.get(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        Path f = getTestFile("sequences/sample_r1.fastq").toPath();
         LightFileDescriptor d = LightFileDescriptor.calculate(f, true, true, 1000000);
         String serialized = GlobalObjectMappers.PRETTY.writeValueAsString(d);
         LightFileDescriptor deserialized = GlobalObjectMappers.PRETTY.readValue(serialized, LightFileDescriptor.class);

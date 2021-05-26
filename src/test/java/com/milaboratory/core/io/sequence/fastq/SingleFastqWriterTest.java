@@ -18,6 +18,7 @@ package com.milaboratory.core.io.sequence.fastq;
 import cc.redberry.pipe.CUtils;
 import com.milaboratory.core.io.CompressionType;
 import com.milaboratory.core.io.sequence.SingleRead;
+import com.milaboratory.test.TestUtil;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -26,12 +27,13 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
 import static org.junit.Assert.*;
 
 public class SingleFastqWriterTest {
     @Test
     public void test1() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
 
         List<SingleRead> reads = new ArrayList<>();
         try (SingleFastqReader reader = new SingleFastqReader(sample, false)) {
@@ -56,7 +58,7 @@ public class SingleFastqWriterTest {
 
     @Test
     public void test2() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
 
         List<SingleRead> reads = new ArrayList<>();
         try (SingleFastqReader reader = new SingleFastqReader(sample, false)) {
