@@ -17,9 +17,10 @@ package com.milaboratory.core.io.sequence.fastq;
 
 import com.milaboratory.core.io.sequence.SingleRead;
 import com.milaboratory.core.io.util.FileIndex;
-import junit.framework.Assert;
+import com.milaboratory.test.TestUtil;
 import org.apache.commons.math3.random.RandomGenerator;
 import org.apache.commons.math3.random.Well1024a;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
@@ -28,10 +29,12 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
+
 public class RandomAccessFastqReaderTest {
     @Test
     public void test1() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
         SingleFastqReader reader = new SingleFastqReader(sample);
 
         SingleFastqIndexer indexer = new SingleFastqIndexer(reader, 3);
@@ -52,7 +55,7 @@ public class RandomAccessFastqReaderTest {
 
     @Test
     public void test2() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
         SingleFastqReader reader = new SingleFastqReader(sample);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         for (int step = 1; step < 5; ++step) {
@@ -77,7 +80,7 @@ public class RandomAccessFastqReaderTest {
 
     @Test
     public void test3() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
         RandomGenerator rnd = new Well1024a();
         for (int step = 1; step < 5; ++step) {
             SingleRead[] reads = allReads(sample);
@@ -95,7 +98,7 @@ public class RandomAccessFastqReaderTest {
 
     @Test
     public void test4() throws Exception {
-        File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/sample_r1.fastq").toURI());
+        File sample = getTestFile("sequences/sample_r1.fastq");
         for (int step = 1; step < 5; ++step) {
             SingleRead[] reads = allReads(sample);
             FileIndex index = buildeIndex(sample, step);

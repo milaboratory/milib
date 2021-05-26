@@ -18,6 +18,7 @@ package com.milaboratory.core.io.sequence.fastq;
 import cc.redberry.pipe.CUtils;
 import com.milaboratory.core.io.CompressionType;
 import com.milaboratory.core.io.sequence.SingleRead;
+import com.milaboratory.test.TestUtil;
 import com.milaboratory.util.HashFunctions;
 import org.junit.Assert;
 import org.junit.Test;
@@ -28,6 +29,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Comparator;
 import java.util.TreeSet;
+
+import static com.milaboratory.core.io.util.IOTestUtil.getTestFile;
 
 /**
  * @author Dmitry Bolotin
@@ -64,8 +67,8 @@ public class SingleFastqReaderTest {
         for (int wc = 0; wc < 2; ++wc) {
             boolean replaceWildcards = (wc == 1);
 
-            File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
-            File sampleGZIP = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file + ".gz").toURI());
+            File sample = getTestFile("sequences/" + file);
+            File sampleGZIP = getTestFile("sequences/" + file + ".gz");
             // Without wildcards replacement
             TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
 
@@ -123,7 +126,7 @@ public class SingleFastqReaderTest {
         for (int wc = 0; wc < 2; ++wc) {
             boolean replaceWildcards = (wc == 1);
 
-            File sample = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/" + file).toURI());
+            File sample = getTestFile("sequences/" + file);
             TreeSet<SingleRead> set = new TreeSet<>(SINGLE_READ_COMPARATOR);
 
             try (SingleFastqReader reader = new SingleFastqReader(

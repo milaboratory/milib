@@ -318,7 +318,7 @@ public class ClusteringTest {
         }
 
         @Override
-        public TreeSearchParameters getSearchParameters() {
+        public TreeSearchParameters getSearchParameters(Cluster<TestObject> cluster) {
             return parameters;
         }
 

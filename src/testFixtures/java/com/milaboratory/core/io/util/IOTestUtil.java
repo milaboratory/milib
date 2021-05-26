@@ -15,11 +15,15 @@
  */
 package com.milaboratory.core.io.util;
 
+import com.milaboratory.test.TestUtil;
+import com.milaboratory.util.TempFileManager;
 import org.apache.commons.math3.random.Well1024a;
 import org.junit.Assert;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class IOTestUtil {
 
@@ -100,4 +104,30 @@ public class IOTestUtil {
         }
     }
 
+    private static Map<String, File> testFileCache = new HashMap<>();
+
+    public synchronized static File getTestFile(String fileName) {
+        File file = testFileCache.get(fileName);
+        if (file != null)
+            return file;
+
+        String suffix = fileName.substring(fileName.indexOf('.', fileName.lastIndexOf('/')));
+
+        file = TempFileManager.getTempFile(suffix);
+        try (
+                InputStream is = TestUtil.class.getClassLoader().getResourceAsStream(fileName);
+                OutputStream os = new FileOutputStream(file)
+        ) {
+            byte[] buf = new byte[1 << 15];
+            int n;
+            while ((n = is.read(buf)) != -1)
+                os.write(buf, 0, n);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        testFileCache.put(fileName, file);
+
+        return file;
+    }
 }

@@ -26,6 +26,7 @@ public abstract class AbstractSeq<S extends AbstractSeq<S>> implements Seq<S> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public S concatenate(S other) {
         return getBuilder()
                 .ensureCapacity(other.size() + size())

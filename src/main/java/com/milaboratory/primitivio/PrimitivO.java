@@ -18,6 +18,7 @@ package com.milaboratory.primitivio;
 import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.custom_hash.TObjectIntCustomHashMap;
 import gnu.trove.strategy.IdentityHashingStrategy;
+import org.apache.commons.io.output.NullOutputStream;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -25,7 +26,7 @@ import java.util.ArrayList;
 import static com.milaboratory.primitivio.Util.zigZagEncodeInt;
 import static com.milaboratory.primitivio.Util.zigZagEncodeLong;
 
-public final class PrimitivO implements DataOutput, AutoCloseable {
+public final class PrimitivO implements DataOutput, AutoCloseable, HasPrimitivIOState {
     static final int NULL_ID = 0;
     static final int NEW_OBJECT_ID = 1;
     private static final float RELOAD_FACTOR = 0.5f;
@@ -34,6 +35,11 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
      * Underlying output stream
      */
     final DataOutput output;
+
+    /**
+     * Tracking closed state (used in PrimitivIOHybrid)
+     */
+    boolean closed = false;
 
     /**
      * Holds serializers for this stream
@@ -53,7 +59,7 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
     /**
      * This REFERENCES will be replaced by "known reference token". This map holds references between serialization
-     * rounds (more persistent then currentReferences).
+     * rounds ("more persistent" then currentReferences).
      */
     final TObjectIntCustomHashMap<Object> knownReferences;
 
@@ -72,6 +78,18 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
      */
     TObjectIntCustomHashMap<Object> currentReferences = null;
 
+    public PrimitivO() {
+        this(NullOutputStream.NULL_OUTPUT_STREAM);
+    }
+
+    public PrimitivO(DataOutput output) {
+        this(output, new SerializersManager());
+    }
+
+    public PrimitivO(OutputStream output) {
+        this(new DataOutputStream(output), new SerializersManager());
+    }
+
     PrimitivO(DataOutput output, SerializersManager manager,
               TObjectIntCustomHashMap<Object> knownReferences, TObjectIntMap<Object> knownObjects) {
         this.output = output;
@@ -86,12 +104,8 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         );
     }
 
-    public PrimitivO(DataOutput output) {
-        this(output, new SerializersManager());
-    }
-
-    public PrimitivO(OutputStream output) {
-        this(new DataOutputStream(output), new SerializersManager());
+    public boolean isClosed() {
+        return closed;
     }
 
     /**
@@ -104,6 +118,25 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
         return new PrimitivOState(manager, knownReferences, knownObjects);
     }
 
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivO substituteStream(OutputStream output) {
+        return substituteStream((DataOutput) new DataOutputStream(output));
+    }
+
+    /**
+     * Transfers the mutable state of this primitivI to an object wrapping another stream.
+     * Basically creates the primitivI withe the shared mutable state, but different inner stream.
+     */
+    public PrimitivO substituteStream(DataOutput output) {
+        if (depth != 0)
+            throw new IllegalStateException("Can't substitute stream during serialization.");
+        return new PrimitivO(output, manager, knownReferences, knownObjects);
+    }
+
     public SerializersManager getSerializersManager() {
         return manager;
     }
@@ -113,13 +146,12 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
             currentReferences = new TObjectIntCustomHashMap<>(IdentityHashingStrategy.INSTANCE, knownReferences);
     }
 
-    public int putKnownObject(Object object) {
-        // Sequential id
-        int id = knownObjects.size();
-        knownObjects.put(object, id);
-        return id;
+    @Override
+    public void putKnownObject(Object object) {
+        knownObjects.put(object, knownObjects.size()); // Sequential id
     }
 
+    @Override
     public void putKnownReference(Object object) {
         if (depth > 0)
             putKnownAfterReset.add(object);
@@ -174,16 +206,17 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
             boolean writeIdAfter = false;
             if (serializer.isReference()) {
+                int id;
+
                 // Checking if it is a known object
-                int id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object);
-                if (id != Integer.MIN_VALUE) {
+                if ((id = knownObjects.isEmpty() ? Integer.MIN_VALUE : knownObjects.get(object))
+                        != Integer.MIN_VALUE) {
                     writeKnownObject(id);
                     return;
                 }
 
                 // Checking if it is a known reference
-                id = currentReferences.get(object);
-                if (id != Integer.MIN_VALUE) {
+                if ((id = currentReferences.get(object)) != Integer.MIN_VALUE) {
                     writeObjectReference(id);
                     return;
                 }
@@ -379,7 +412,10 @@ public final class PrimitivO implements DataOutput, AutoCloseable {
 
     @Override
     public void close() {
+        if (closed)
+            return;
         try {
+            closed = true;
             if (output instanceof Closeable)
                 ((Closeable) output).close();
         } catch (IOException e) {
