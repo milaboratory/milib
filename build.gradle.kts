@@ -43,11 +43,13 @@ repositories {
     mavenCentral()
 }
 
+val jacksonVersion = "2.12.3"
+
 dependencies {
     api("org.apache.commons:commons-math3:3.6.1")
     api("cc.redberry:pipe:1.0.0-alpha0")
 
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.11.4")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     implementation("org.apache.commons:commons-compress:1.20")
     implementation("commons-io:commons-io:2.7")
     implementation("org.lz4:lz4-java:1.7.1")
@@ -55,8 +57,8 @@ dependencies {
     implementation("info.picocli:picocli:4.1.2")
     implementation("net.sf.trove4j:trove4j:3.0.3")
 
-    testFixturesImplementation("com.fasterxml.jackson.core:jackson-databind:2.11.4")
     testFixturesImplementation("junit:junit:4.13.2")
+    testFixturesImplementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-all:1.10.19")

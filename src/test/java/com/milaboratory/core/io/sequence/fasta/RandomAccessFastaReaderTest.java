@@ -62,7 +62,7 @@ public class RandomAccessFastaReaderTest {
 
     @Test
     public void test1nt() throws Exception {
-        Path path = new File(SingleFastqReaderTest.class.getClassLoader().getResource("sequences/some_fasta.fasta").toURI()).toPath();
+        Path path = getTestFile("sequences/some_fasta.fasta").toPath();
         List<FastaRecord<NucleotideSequence>> seqs = new ArrayList<>();
 
         try (FastaReader<NucleotideSequence> r = new FastaReader<>(path.toFile(), NucleotideSequence.ALPHABET)) {

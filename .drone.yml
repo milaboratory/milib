@@ -16,22 +16,17 @@ image_pull_secrets:
   - quay-dockerconfig
 
 anchors:
-  aws_credentials: &aws_credentials
-    AWS_DEFAULT_REGION:
-      from_secret: aws-region
-    AWS_ACCESS_KEY_ID:
-      from_secret: aws-key-id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: aws-secret-key
-
   gradle_task: &gradle_task
     image: gradle:7.0.2-jdk8-hotspot
     environment:
       # Gradle folder
       GRADLE_USER_HOME: "/drone/src/.gradle"
 
-      # For interaction with repositories
-      <<: *aws_credentials
+      # MiLab repository credentials
+      ORG_GRADLE_PROJECT_miRepoAccessKeyId:
+        from_secret: aws-key-id
+      ORG_GRADLE_PROJECT_miRepoSecretAccessKey:
+        from_secret: aws-secret-key
 
   cache_settings: &cache_settings
     # debug: true
@@ -67,12 +62,12 @@ steps:
     name: initialization
     commands:
       - echo "{}" > build_info.json
-      - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} CreateInfoFile
+      - gradle -i --no-daemon CreateInfoFile
 
   - <<: *gradle_task
     name: publish_to_mipub
     commands:
-      - gradle --no-daemon -i -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} -x test PublishAllPublicationsToMiPubRepository
+      - gradle --no-daemon -i -x test PublishAllPublicationsToMiPubRepository
 
   - name: telegram_published
     image: appleboy/drone-telegram
@@ -83,7 +78,7 @@ steps:
         from_secret: telegram-chat-id-micore
       format: markdown
       template_vars_file: build_info.json
-      message: 🧩 build {{build.number}} on {{commit.branch}} published ```com.milaboratory:milib:{{tpl.version}}```
+      message: 🧩 build {{build.number}} on `{{commit.branch}}` published ```com.milaboratory:milib:{{tpl.version}}```
 
 ---
 
@@ -104,29 +99,25 @@ image_pull_secrets:
   - quay-dockerconfig
 
 anchors:
-  aws_credentials: &aws_credentials
-    AWS_DEFAULT_REGION:
-      from_secret: aws-region
-    AWS_ACCESS_KEY_ID:
-      from_secret: aws-key-id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: aws-secret-key
-
   gradle_task: &gradle_task
     image: gradle:7.0.2-jdk8-hotspot
     environment:
       # Gradle folder
       GRADLE_USER_HOME: "/drone/src/.gradle"
 
+      # MiLab repository credentials
+      ORG_GRADLE_PROJECT_miRepoAccessKeyId:
+        from_secret: aws-key-id
+      ORG_GRADLE_PROJECT_miRepoSecretAccessKey:
+        from_secret: aws-secret-key
+
+      # For Maven Central release
       ORG_GRADLE_PROJECT_sonatypeUsername:
         from_secret: sonatype-username
       ORG_GRADLE_PROJECT_sonatypePassword:
         from_secret: sonatype-password
       ORG_GRADLE_PROJECT_signingKey:
         from_secret: signing-key
-
-      # For interaction with repositories
-      <<: *aws_credentials
 
   cache_settings: &cache_settings
     # debug: true
@@ -162,12 +153,12 @@ steps:
     name: initialization
     commands:
       - echo "{}" > build_info.json
-      - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} CreateInfoFile
+      - gradle -i --no-daemon CreateInfoFile
 
   - <<: *gradle_task
     name: publish_to_maven_central
     commands:
-      - gradle --no-daemon -i -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} -x test publishToSonatype closeSonatypeStagingRepository
+      - gradle --no-daemon -i -x test publishToSonatype closeSonatypeStagingRepository
 
   - name: telegram_published
     image: appleboy/drone-telegram
@@ -178,7 +169,7 @@ steps:
         from_secret: telegram-chat-id-micore
       format: markdown
       template_vars_file: build_info.json
-      message: 🧩 build {{build.number}} on {{commit.branch}} published to Maven Central ```com.milaboratory:milib:{{tpl.version}}```
+      message: 🧩🎉 build {{build.number}} on `{{commit.branch}}` published to Maven Central ```com.milaboratory:milib:{{tpl.version}}```
 
 ---
 
@@ -216,8 +207,11 @@ anchors:
       # Gradle folder
       GRADLE_USER_HOME: "/drone/src/.gradle"
 
-      # For interaction with repositories
-      <<: *aws_credentials
+      # MiLab repository credentials
+      ORG_GRADLE_PROJECT_miRepoAccessKeyId:
+        from_secret: aws-key-id
+      ORG_GRADLE_PROJECT_miRepoSecretAccessKey:
+        from_secret: aws-secret-key
 
   cache_settings: &cache_settings
     # debug: true
@@ -253,7 +247,7 @@ steps:
     name: initialization
     commands:
       - echo "{}" > build_info.json
-      - gradle -i --no-daemon -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} CreateInfoFile
+      - gradle -i --no-daemon CreateInfoFile
 
   - name: add_url_secret
     image: alpine
@@ -269,7 +263,7 @@ steps:
     name: test
     commands:
       - ./init.sh
-      - gradle -i --no-daemon -PlongTests=true -PmiRepoAccessKeyId=$${AWS_ACCESS_KEY_ID} -PmiRepoSecretAccessKey=$${AWS_SECRET_ACCESS_KEY} test
+      - gradle -i --no-daemon -PlongTests=true test
 
   - name: test_report_upload
     image: amazon/aws-cli
@@ -303,9 +297,9 @@ steps:
       template_vars_file: build_info.json
       message: >
         {{#success build.status}}
-        ✅ MiLib build {{build.number}} by {{commit.author}} on {{commit.branch}} test success.
+        ✅ MiLib build {{build.number}} by {{commit.author}} on `{{commit.branch}}` test success.
         {{else}}
-        ❌ MiLib build {{build.number}} by {{commit.author}} on {{commit.branch}} test failure.
+        ❌ MiLib build {{build.number}} by {{commit.author}} on `{{commit.branch}}` test failure.
         {{/success}}
 
 
@@ -322,6 +316,6 @@ steps:
 
 ---
 kind: signature
-hmac: f670b76cbd21c5519181279bbaee070b302292b6189793ddb9ab2d4f90aebdb4
+hmac: d748f9e33783377076cab954adac8e50e143f4a69406a4c41f0dfe58eb4b857b
 
 ...
