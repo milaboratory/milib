@@ -170,10 +170,22 @@ steps:
         from_secret: url-secret
 
   - <<: *gradle_task
-    name: test
+    name: long_test
+    when:
+      event:
+        - push
     commands:
       - ./init.sh
       - gradle -i --no-daemon -PlongTests=true test
+
+  - <<: *gradle_task
+    name: short_test
+    when:
+      event:
+        - tag
+    commands:
+      - ./init.sh
+      - gradle -i --no-daemon test
 
   - name: test_report_upload
     image: amazon/aws-cli
@@ -320,6 +332,6 @@ steps:
 
 ---
 kind: signature
-hmac: e9e42b59457bc78682ce6fb5bd8fbac1c78a34b8e87114a410a7308c4d7e4ede
+hmac: 4be03b1ff712e9c30e6a1105a7f11ebf99c57fe1285d372739b2906f795e546a
 
 ...
