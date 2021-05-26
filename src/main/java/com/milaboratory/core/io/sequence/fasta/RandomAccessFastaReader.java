@@ -136,7 +136,7 @@ public final class RandomAccessFastaReader<S extends Sequence<S>> implements Aut
                     if (toSkip > 0)
                         --toSkip;
                     else {
-                        builder.append(alphabet.symbolToCode((char) b));
+                        builder.append(alphabet.symbolToCodeWithException((char) b));
                         --toRead;
                     }
                 }
