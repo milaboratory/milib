@@ -484,7 +484,6 @@ public final class RandomAccessFastaIndex {
          * -1 = builder finished it's work and invalidated
          */
         long currentStreamPosition = 0;
-        long lastNonLineBreakPosition = -1;
         /**
          * Counter of sequence position
          */
@@ -538,9 +537,7 @@ public final class RandomAccessFastaIndex {
                 byte b = buffer[offset + i];
 
                 // Processing line breaks
-                if (b == '\n' || b == '\r' || Character.isSpaceChar(b)) {
-                    if (!onLineStart)
-                        lastNonLineBreakPosition = streamPosition - 1;
+                if (b == '\n' || b == '\r') {
                     onLineStart = true;
                     continue;
                 }
@@ -564,6 +561,8 @@ public final class RandomAccessFastaIndex {
                 }
 
                 if (headerBufferPointer == -1) {
+                    if (Character.isSpaceChar(b))
+                        continue;
                     long sequencePosition = currentSequencePosition++;
                     if (sequencePosition != 0 && sequencePosition % builder.indexStep == 0)
                         builder.addIndexPoint(streamPosition);

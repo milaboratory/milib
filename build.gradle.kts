@@ -65,8 +65,6 @@ dependencies {
     testImplementation("org.mockito:mockito-all:1.10.19")
 }
 
-java.sourceCompatibility = JavaVersion.VERSION_1_8
-
 publishing {
     repositories {
         maven {
@@ -119,7 +117,7 @@ publishing {
                 }
             }
             scm {
-                url.set("https://github.com/milaboratory/milib")
+                url.set("scm:git:https://github.com/milaboratory/milib")
             }
         }
     }
