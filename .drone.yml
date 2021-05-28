@@ -329,9 +329,3 @@ steps:
       format: markdown
       template_vars_file: build_info.json
       message: 🧩🎉 build {{build.number}} on `{{commit.branch}}` published to Maven Central ```com.milaboratory:milib:{{tpl.version}}```
-
----
-kind: signature
-hmac: a448e04745c4cd872bc4b9016bd0a32bbc1febc71be48776130a92a781a3b03a
-
-...
