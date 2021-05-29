@@ -44,25 +44,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class AlignerTest {
-    public static <S extends Sequence<S>> void assertAlignment(Alignment<S> alignment, S s2) {
-        Assert.assertEquals(
-                alignment.getRelativeMutations().mutate(alignment.sequence1.getRange(
-                        alignment.getSequence1Range())), s2.getRange(alignment.getSequence2Range()));
-    }
-
-    public static <S extends Sequence<S>> void assertAlignment(Alignment<S> alignment, S s2, AlignmentScoring<S> scoring) {
-        assertAlignment(alignment, s2);
-        int calculatedScoring = alignment.calculateScore(scoring);
-        if (calculatedScoring != alignment.getScore()) {
-            System.out.println("Actual score: " + alignment.getScore());
-            System.out.println("Expected score: " + calculatedScoring);
-            System.out.println("Actual alignment: ");
-            System.out.println(alignment);
-            System.out.println();
-        }
-        Assert.assertEquals(calculatedScoring, alignment.getScore(), 0.1);
-    }
-
     @Test
     public void testExtractSubstitutions1() throws Exception {
         NucleotideSequence seq1 = new NucleotideSequence("ATTAGACA"),
@@ -336,11 +317,11 @@ public class AlignerTest {
                 Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
                         mutated.getRange(r.getSequence2Range()));
 
-                AlignerTest.assertAlignment(r, mutated, sc);
+                AlignmantTestUtils.assertAlignment(r, mutated, sc);
                 Assert.assertTrue(mutScore <= r.calculateScore(sc));
 
                 r = Aligner.alignGlobal(sc, mutated, sequence);
-                AlignerTest.assertAlignment(r, sequence, sc);
+                AlignmantTestUtils.assertAlignment(r, sequence, sc);
 
                 Assert.assertEquals(r.getRelativeMutations().mutate(mutated.getRange(r.getSequence1Range())),
                         sequence.getRange(r.getSequence2Range()));
@@ -362,7 +343,7 @@ public class AlignerTest {
 
         Alignment<NucleotideSequence> actual = Aligner.alignGlobalAffine(scoring, seq2, seq1);
 
-        assertAlignment(actual, seq1);
+        AlignmantTestUtils.assertAlignment(actual, seq1);
         assertEquals(actual.calculateScore(scoring), actual.score, 0.001);
         assertTrue(actual.score >= expected.score);
     }
@@ -521,11 +502,11 @@ public class AlignerTest {
                 Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
                         mutated.getRange(r.getSequence2Range()));
 
-                AlignerTest.assertAlignment(r, mutated, sc);
+                AlignmantTestUtils.assertAlignment(r, mutated, sc);
                 Assert.assertTrue(mutScore <= r.calculateScore(sc));
 
                 r = Aligner.alignLocal(sc, mutated, sequence);
-                AlignerTest.assertAlignment(r, sequence, sc);
+                AlignmantTestUtils.assertAlignment(r, sequence, sc);
 
                 Assert.assertEquals(r.getRelativeMutations().mutate(mutated.getRange(r.getSequence1Range())),
                         sequence.getRange(r.getSequence2Range()));

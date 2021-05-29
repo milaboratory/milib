@@ -44,17 +44,17 @@ public class AlignmentTrimmerTest {
                 NucleotideSequence seq2 = mutations.mutate(seq1);
                 Alignment<NucleotideSequence> al0 = new Alignment<>(seq1, mutations, scoring);
 
-                AlignerTest.assertAlignment(al0, seq2, scoring);
+                AlignmantTestUtils.assertAlignment(al0, seq2, scoring);
 
                 Alignment al0LTrimmed = AlignmentTrimmer.leftTrimAlignment(al0, scoring);
-                AlignerTest.assertAlignment(al0LTrimmed, seq2, scoring);
+                AlignmantTestUtils.assertAlignment(al0LTrimmed, seq2, scoring);
                 Assert.assertTrue(al0.getScore() <= al0LTrimmed.getScore());
 
                 if (al0.getScore() < al0LTrimmed.getScore())
                     ++lTrimmed;
 
                 Alignment al0RTrimmed = AlignmentTrimmer.rightTrimAlignment(al0, scoring);
-                AlignerTest.assertAlignment(al0RTrimmed, seq2, scoring);
+                AlignmantTestUtils.assertAlignment(al0RTrimmed, seq2, scoring);
                 Assert.assertTrue(al0.getScore() <= al0RTrimmed.getScore());
 
                 if (al0.getScore() < al0RTrimmed.getScore())
