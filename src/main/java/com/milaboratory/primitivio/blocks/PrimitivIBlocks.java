@@ -422,7 +422,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                         inputSize.addAndGet(headerBytes.length);
 
                         setHeader(headerBytes);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         _ex(e); // see finally for concurrencyLimiter.release()
                     } finally {
                         // Allowing next IO operation
@@ -493,7 +493,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
 
                         // Recording total deserialization time
                         totalDeserializationNanos.addAndGet(System.nanoTime() - start);
-                    } catch (Exception e) {
+                    } catch (Throwable e) {
                         _ex(e);
                     } finally {
                         // Opening next latch if it was not yet opened
@@ -569,7 +569,7 @@ public final class PrimitivIBlocks<O> extends PrimitivIOBlocksAbstract {
                     } else
                         currentBlock.port = CUtils.asOutputPort(block.content);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 _ex(e);
 
                 // Rethrowing exception right away

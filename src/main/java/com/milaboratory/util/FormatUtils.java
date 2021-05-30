@@ -36,6 +36,10 @@ public class FormatUtils {
 
     public static final long NANOSECONDS_IN_SECOND = 1_000_000_000;
 
+    public static final long MILLISECONDS_IN_SECOND = 1_000;
+
+    public static final long NANOSECONDS_IN_MILLISECOND = 1_000_000;
+
     public static String percent(double numerator, double denominator) {
         return PERCENT_FORMAT.format((denominator == 0) ? 0 : 100.0 * numerator / denominator) + "%";
     }
