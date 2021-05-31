@@ -488,6 +488,9 @@ public class HashSorter<T> {
 
                 // Initialization done
                 initialized.set(true);
+
+                // Saving actual object size
+                this.objectSize = objectSize;
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -562,10 +565,10 @@ public class HashSorter<T> {
                 // <- requires additional HDD based collate procedure
 
                 // Bits to fit each sub-bucket into budget
-                // int nextBitCount = 64 - Long.numberOfLeadingZeros(bucketSizes[i] * objectSize / memoryBudget - 1);
-                // nextBitCount += 1;
-                int nextBitCount = mapping.bitCount;
-                // nextBitCount = Math.min(nextBitCount, bitCount);
+                int nextBitCount = Math.min(
+                        mapping.bitCount,
+                        minimalNumberOfBits(bucketObjectCounts[i] * objectSize, memoryBudget)
+                );
 
                 int newOffset = mapping.bitOffset - nextBitCount;
                 if (newOffset < 0)
@@ -581,7 +584,9 @@ public class HashSorter<T> {
 
                 return c.port();
             } else {
-                // Reading bucket into memory (it is small enough to fit into memory budget)
+
+                // <- reading bucket into memory (it is small enough to fit into memory budget)
+
                 int fBitCount = Math.min(mapping.bitOffset, 15);
                 int fNumberOfBuckets = 1 << fBitCount;
                 int fOffset = mapping.bitOffset - fBitCount;
@@ -719,5 +724,9 @@ public class HashSorter<T> {
                     " objs=" + bucketObjectCount +
                     " size=" + FormatUtils.bytesToString(bucketSize);
         }
+    }
+
+    static int minimalNumberOfBits(long size, long maxPartSize) {
+        return 64 - Long.numberOfLeadingZeros((size + maxPartSize - 1) / maxPartSize - 1);
     }
 }
