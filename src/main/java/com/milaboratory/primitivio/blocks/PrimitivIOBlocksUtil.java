@@ -50,4 +50,10 @@ public final class PrimitivIOBlocksUtil {
     public static LZ4FastDecompressor defaultLZ4Decompressor() {
         return lz4Decompressor;
     }
+
+    public static LZ4Compressor getCompressor(boolean highCompression) {
+        return highCompression
+                ? highLZ4Compressor()
+                : fastLZ4Compressor();
+    }
 }
