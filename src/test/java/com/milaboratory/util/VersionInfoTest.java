@@ -22,6 +22,7 @@ public class VersionInfoTest {
     @Test
     public void test1() throws Exception {
         VersionInfo versionInfo = VersionInfo.getVersionInfo("com.milaboratory.util.VersionInfo","/util/milib-build.properties");
+        Assert.assertNotNull(versionInfo);
         Assert.assertEquals("1.1.3-SNAPSHOT", versionInfo.version);
         Assert.assertEquals("6a235a64bf84b829f28b0ef3cfb03bd41d2e74eb", versionInfo.revision);
     }
@@ -35,6 +36,7 @@ public class VersionInfoTest {
     @Test
     public void test3() throws Exception {
         VersionInfo versionInfo = VersionInfo.getVersionInfoForArtifact("milib");
+        Assert.assertNotNull(versionInfo);
         System.out.println(versionInfo);
     }
 }

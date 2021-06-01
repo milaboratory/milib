@@ -40,6 +40,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -324,7 +325,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
                 try {
                     if (executeInErrorState || stateOk())
                         lambda.accept(channel);
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     _ex(e);
                 } finally {
                     nextLatch.open();
@@ -409,7 +410,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
                 ongoingIOOps.incrementAndGet();
                 long ioBegin = System.nanoTime();
-                channel.write(block, null,
+                writeFully(channel, block, null,
                         new CHAbstract(nextLatch) {
                             @Override
                             public void completed(Integer result, Object attachment) {
@@ -474,7 +475,7 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
 
                     scheduleIOOperation(previousLatch, nextLatch, block);
 
-                } catch (RuntimeException e) { // From serializeBlock
+                } catch (Throwable e) { // From serializeBlock
 
                     _ex(e);
 
@@ -553,5 +554,41 @@ public final class PrimitivOBlocks<O> extends PrimitivIOBlocksAbstract {
             // Releasing all the locks associated with this IO operation
             nextLambdaLatch.open();
         }
+    }
+
+    public static <A> void writeFully(AsynchronousByteChannel channel,
+                                      ByteBuffer src,
+                                      A attachment,
+                                      CompletionHandler<Integer, ? super A> handler) {
+
+        long limit = src.limit();
+
+        // Tracking the total number of written bytes
+        AtomicInteger sumWritten = new AtomicInteger(0);
+
+        CompletionHandler<Integer, ? super A> outerHandler = new CompletionHandler<Integer, A>() {
+            @Override
+            public void completed(Integer result, A attachment) {
+                if (sumWritten.addAndGet(result) < limit) {
+                    if (src.limit() != limit - sumWritten.get())
+                        // Just in case
+                        throw new IllegalStateException("Unexpected buffer behaviour");
+
+                    // Recursive write operation
+                    channel.write(src, attachment, this);
+                } else {
+                    assert sumWritten.get() == limit;
+                    handler.completed(sumWritten.get(), attachment);
+                }
+            }
+
+            @Override
+            public void failed(Throwable exc, A attachment) {
+                handler.failed(exc, attachment);
+            }
+        };
+
+        // Initiating write
+        channel.write(src, attachment, outerHandler);
     }
 }

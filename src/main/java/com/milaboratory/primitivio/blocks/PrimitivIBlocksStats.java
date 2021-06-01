@@ -56,10 +56,10 @@ public final class PrimitivIBlocksStats extends PrimitivIOBlocksStatsAbstract {
                 "Total IO delay: " + nanoTimeToString(ioDelayNanos) + "\n" +
                 "Input size: " + bytesToString(inputSize) + "\n" +
                 "Decompressed size: " + bytesToString(uncompressedBytes) + " (compression = " + percent(inputSize, uncompressedBytes) + ")\n" +
-                "IO speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * inputSize, ioDelayNanos) + "/s\n" +
-                "Concurrency adjusted uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, concurrencyAdjustedNanos) + "/s\n" +
-                "Actual uncompressed speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * uncompressedBytes, wallClockTime) + "/s\n" +
-                "Actual speed: " + bytesToStringDiv(NANOSECONDS_IN_SECOND * inputSize, wallClockTime) + "/s\n" +
+                "IO speed: " + bytesToStringDiv(MILLISECONDS_IN_SECOND * inputSize, ioDelayNanos / NANOSECONDS_IN_MILLISECOND) + "/s\n" +
+                "Concurrency adjusted uncompressed speed: " + bytesToStringDiv(MILLISECONDS_IN_SECOND * uncompressedBytes, concurrencyAdjustedNanos / NANOSECONDS_IN_MILLISECOND) + "/s\n" +
+                "Actual uncompressed speed: " + bytesToStringDiv(MILLISECONDS_IN_SECOND * uncompressedBytes, wallClockTime / NANOSECONDS_IN_MILLISECOND) + "/s\n" +
+                "Actual speed: " + bytesToStringDiv(MILLISECONDS_IN_SECOND * inputSize, wallClockTime / NANOSECONDS_IN_MILLISECOND) + "/s\n" +
                 "Objects: " + objectCount + "\n" +
                 "Average object size uncompressed: " + bytesToStringDiv(uncompressedBytes, objectCount) + "\n" +
                 "Average object size compressed: " + bytesToStringDiv(inputSize, objectCount) + "\n" +

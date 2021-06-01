@@ -38,6 +38,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class HashSorterTest {
     @Test
+    public void numberOfBits() {
+        Assert.assertEquals(1, HashSorter.minimalNumberOfBits(10, 5));
+        Assert.assertEquals(1, HashSorter.minimalNumberOfBits(10, 7));
+        Assert.assertEquals(2, HashSorter.minimalNumberOfBits(10, 4));
+        Assert.assertEquals(0, HashSorter.minimalNumberOfBits(10, 10));
+    }
+
+    @Test
     public void testMapping1() {
         HashSorter.BucketMapping<Long> mapping = new HashSorter.BucketMapping<>(
                 Long::intValue, Comparator.<Long>naturalOrder(),

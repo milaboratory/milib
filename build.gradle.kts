@@ -1,6 +1,7 @@
 import com.palantir.gradle.gitversion.VersionDetails
 import groovy.lang.Closure
 import java.util.Base64
+import java.net.InetAddress
 
 plugins {
     `java-library`
@@ -63,6 +64,20 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-all:1.10.19")
+}
+
+val writeBuildProperties by tasks.registering(WriteProperties::class) {
+    outputFile = file("${sourceSets.main.get().output.resourcesDir}/${project.name}-build.properties")
+    property("version", version)
+    property("name", "MiLib")
+    property("revision", gitDetails.gitHash)
+    property("branch", gitDetails.branchName)
+    property("host", InetAddress.getLocalHost().hostName)
+    property("timestamp", System.currentTimeMillis())
+}
+
+tasks.processResources {
+    dependsOn(writeBuildProperties)
 }
 
 publishing {

@@ -15,7 +15,7 @@ import org.junit.Test;
 
 import java.util.Arrays;
 
-import static com.milaboratory.core.alignment.AlignerTest.assertAlignment;
+import static com.milaboratory.core.alignment.AlignmantTestUtils.assertAlignment;
 import static com.milaboratory.core.alignment.BandedAffineAligner.semiLocalLeft;
 import static com.milaboratory.test.TestUtil.its;
 import static com.milaboratory.test.TestUtil.randomSequence;
@@ -382,11 +382,11 @@ public class BandedAffineAlignerTest {
                 Assert.assertEquals(r.getRelativeMutations().mutate(sequence.getRange(r.getSequence1Range())),
                         mutated.getRange(r.getSequence2Range()));
 
-                AlignerTest.assertAlignment(r, mutated, sc);
+                AlignmantTestUtils.assertAlignment(r, mutated, sc);
                 Assert.assertTrue(mutScore <= r.calculateScore(sc));
 
                 r = Aligner.alignGlobal(sc, mutated, sequence);
-                AlignerTest.assertAlignment(r, sequence, sc);
+                AlignmantTestUtils.assertAlignment(r, sequence, sc);
 
                 Assert.assertEquals(r.getRelativeMutations().mutate(mutated.getRange(r.getSequence1Range())),
                         sequence.getRange(r.getSequence2Range()));

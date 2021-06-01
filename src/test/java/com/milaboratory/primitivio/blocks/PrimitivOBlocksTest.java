@@ -25,11 +25,13 @@ import com.milaboratory.primitivio.PrimitivO;
 import com.milaboratory.primitivio.PrimitivOState;
 import com.milaboratory.test.TestUtil;
 import com.milaboratory.util.FormatUtils;
+import com.milaboratory.util.HashFunctions;
 import com.milaboratory.util.RandomUtil;
 import com.milaboratory.util.TempFileManager;
 import com.milaboratory.util.io.HasPosition;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Factory;
+import org.apache.commons.math3.random.Well19937a;
 import org.junit.*;
 
 import java.io.FileInputStream;
@@ -317,6 +319,67 @@ public class PrimitivOBlocksTest {
 
         Files.delete(target);
         Files.delete(hybridTarget);
+
+        pendingOpsPrinterLatch.countDown();
+    }
+
+    @Test
+    public void bigBlocks() throws IOException {
+        // Opening the latch will result in monitoring thread termination
+        CountDownLatch pendingOpsPrinterLatch = new CountDownLatch(1);
+        AtomicReference<PrimitivIOBlocksAbstract> statSource = new AtomicReference<>();
+        new Thread(() -> {
+            try {
+                while (!pendingOpsPrinterLatch.await(2, TimeUnit.SECONDS)) {
+                    PrimitivIOBlocksAbstract io = statSource.get();
+                    if (io == null)
+                        continue;
+                    PrimitivIOBlocksStatsAbstract stats = io.getStats();
+                    System.out.println("Pending / IO / Serde / Objs: " + stats.getPendingOps() +
+                            " / " + stats.getOngoingIOOps() +
+                            " / " + stats.getOngoingSerdes() +
+                            " / " + stats.getObjectCount());
+                }
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }).start();
+
+        Path target = TempFileManager.getTempFile().toPath();
+
+        PrimitivOBlocks<byte[]> io = new PrimitivOBlocks<byte[]>(executorService,
+                8, PrimitivOState.INITIAL,
+                100000, LZ4Factory.fastestInstance().fastCompressor());
+
+        io.resetStats();
+
+        statSource.set(io);
+
+        long k = 0;
+        try (PrimitivOBlocks<byte[]>.Writer writer = io.newWriter(target)) {
+            for (int i = 0; i < 20; i++) {
+                for (int j = 0; j < 1000; j++) {
+                    byte[] buffer = new byte[100000];
+                    for (int i1 = 0; i1 < buffer.length; i1 += 8) {
+                        ++k;
+                        long s = HashFunctions.JenkinWang64shift(k);
+                        buffer[i1] = (byte) (s & 0xFF);
+                        buffer[i1 + 1] = (byte) ((s >> 8) & 0xFF);
+                        buffer[i1 + 2] = (byte) ((s >> 16) & 0xFF);
+                        buffer[i1 + 3] = (byte) ((s >> 24) & 0xFF);
+                        buffer[i1 + 4] = (byte) ((s >> 32) & 0xFF);
+                        buffer[i1 + 5] = (byte) ((s >> 40) & 0xFF);
+                        buffer[i1 + 6] = (byte) ((s >> 48) & 0xFF);
+                        buffer[i1 + 7] = (byte) ((s >> 54) & 0xFF);
+                    }
+                    writer.write(buffer);
+                }
+                writer.flush();
+            }
+        }
+
+        System.out.println("O. Stats:");
+        System.out.println(io.getStats());
 
         pendingOpsPrinterLatch.countDown();
     }

@@ -119,7 +119,7 @@ public class AlignerCustomTest {
 
             //System.out.println(seq1.getRange(offset1, offset1 + length1));
             //System.out.println(seq2.getRange(offset2, offset2 + length2));
-            AlignerTest.assertAlignment(la, seq2, scoring);
+            AlignmantTestUtils.assertAlignment(la, seq2, scoring);
             totalAlLength += la.getSequence1Range().length() + la.getSequence2Range().length();
         }
         //System.out.println(totalAlLength / its / 2);
@@ -175,7 +175,7 @@ public class AlignerCustomTest {
             assertTrue(la.getSequence1Range().getFrom() >= offset1);
             assertTrue(la.getSequence2Range().getFrom() >= offset2);
 
-            AlignerTest.assertAlignment(la, seq2, scoring);
+            AlignmantTestUtils.assertAlignment(la, seq2, scoring);
             totalAlLength += la.getSequence1Range().length() + la.getSequence2Range().length();
         }
         //System.out.println(totalAlLength / its / 2);
